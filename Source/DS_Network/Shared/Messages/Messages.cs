@@ -1,6 +1,6 @@
 ﻿using MemoryPack;
 
-namespace Common.Messages;
+namespace DS.Network.Shared.Messages;
 
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(C_LoginRequestMessage))]

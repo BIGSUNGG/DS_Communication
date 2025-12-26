@@ -1,4 +1,4 @@
-﻿namespace Common.Messages.Receiver
+﻿namespace DS.Network.Shared.Messages.Receiver
 {
     public interface IMessageReceiver
     {

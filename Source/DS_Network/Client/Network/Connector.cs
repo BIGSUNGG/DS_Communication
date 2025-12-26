@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Client;
+namespace DS.Network.Client;
 
 public sealed class Connector
 {
