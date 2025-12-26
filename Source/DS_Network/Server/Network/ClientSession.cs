@@ -1,0 +1,30 @@
+using Common.Messages;
+using Common.Messages.Handler;
+using Common.Messages.Receiver;
+using Common.Messages.Sender;
+using Common.Session;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+namespace Server;
+
+public sealed class ClientSession : Session
+{
+    public int SessionId { get; set; }
+    public int? AccountId { get; set; }
+    public string? AccountName { get; set; }
+
+    public ClientSession(int sessionId, TcpClient tcpClient, Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
+        : base(tcpClient, receiverCreater, senderCreater)
+    {
+        SessionId = sessionId;
+    }
+
+    protected override void OnDisconnected()
+    {
+        Console.WriteLine($"技记 {SessionId} 立加 辆丰: {AccountName}");
+    }
+}
+
