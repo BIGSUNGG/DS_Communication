@@ -1,6 +1,6 @@
-﻿using DS.Network.Shared.Messages;
-using DS.Network.Shared.Messages.Converter;
-using DS.Network.Shared.Messages.Handler;
+﻿using DS.Communication.Shared.Messages;
+using DS.Communication.Shared.Messages.Converter;
+using DS.Communication.Shared.Messages.Handler;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DS.Network.Shared.Messages.Receiver;
+namespace DS.Communication.Shared.Messages.Receiver;
 
 public sealed class MessageReceiver : IMessageReceiver, IDisposable
 {

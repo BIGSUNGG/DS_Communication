@@ -1,4 +1,4 @@
-﻿namespace DS.Network.Shared.Messages.Handler
+﻿namespace DS.Communication.Shared.Messages.Handler
 {
     public interface IMessageHandler
     {

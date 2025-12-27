@@ -1,12 +1,12 @@
-﻿using DS.Network.Shared.Messages.Handler;
-using DS.Network.Shared.Session;
+﻿using DS.Communication.Shared.Messages.Handler;
+using DS.Communication.Shared.Session;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DS.Network.Shared.Messages.Handler
+namespace DS.Communication.Shared.Messages.Handler
 {
     public abstract class MessageHandler : IMessageHandler
     {
