@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MemoryPack" Version="1.21.4" />
+    <Reference Include="MessageProtocol.Core">
+      <HintPath>Dll\MessageProtocol.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

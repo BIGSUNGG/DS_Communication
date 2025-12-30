@@ -1,0 +1,28 @@
+using DS.Communication.Shared.Messages.Receiver;
+using DS.Communication.Shared.Messages.Sender;
+using DS.Communication.Shared.Session;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+namespace Server;
+
+public sealed class ClientSession : Session
+{
+    public int SessionId { get; set; }
+    public int? AccountId { get; set; }
+    public string? AccountName { get; set; }
+
+    public ClientSession(int sessionId, TcpClient tcpClient, Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
+        : base(tcpClient, receiverCreater, senderCreater)
+    {
+        SessionId = sessionId;
+    }
+
+    protected override void OnDisconnected()
+    {
+        Console.WriteLine($"���� {SessionId} ���� ����: {AccountName}");
+    }
+}
+

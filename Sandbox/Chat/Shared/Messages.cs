@@ -1,25 +1,13 @@
-﻿using MemoryPack;
+﻿using DS.MessageProtocol;
 
 namespace DS.Communication.Shared.Messages;
 
-[MemoryPackable]
-[MemoryPackUnion(0, typeof(C_LoginRequestMessage))]
-[MemoryPackUnion(1, typeof(S_LoginResponseMessage))]
-[MemoryPackUnion(2, typeof(C_RegisterRequestMessage))]
-[MemoryPackUnion(3, typeof(S_RegisterResponseMessage))]
-[MemoryPackUnion(4, typeof(C_ChatSendMessage))]
-[MemoryPackUnion(5, typeof(S_ChatNotifyMessage))]
-public abstract partial class Message
-{
-}
-
-[MemoryPackable]
+[MessageGroupElement(1)]
 public partial class C_LoginRequestMessage : Message
 {
     public string UserId { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private C_LoginRequestMessage() { }
     
     public C_LoginRequestMessage(string userId, string password)
@@ -29,13 +17,12 @@ public partial class C_LoginRequestMessage : Message
     }
 }
 
-[MemoryPackable]
+[MessageGroupElement(2)]
 public partial class S_LoginResponseMessage : Message
 {
     public bool IsSuccessful { get; set; }
     public string Message { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private S_LoginResponseMessage() { }
     
     public S_LoginResponseMessage(bool isSuccessful, string message = "")
@@ -45,13 +32,12 @@ public partial class S_LoginResponseMessage : Message
     }
 }
 
-[MemoryPackable]
+[MessageGroupElement(3)]
 public partial class C_RegisterRequestMessage : Message
 {
     public string UserId { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private C_RegisterRequestMessage() { }
     
     public C_RegisterRequestMessage(string userId, string password)
@@ -61,13 +47,12 @@ public partial class C_RegisterRequestMessage : Message
     }
 }
 
-[MemoryPackable]
+[MessageGroupElement(4)]
 public partial class S_RegisterResponseMessage : Message
 {
     public bool IsSuccessful { get; set; }
     public string Message { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private S_RegisterResponseMessage() { }
     
     public S_RegisterResponseMessage(bool isSuccessful, string message = "")
@@ -77,12 +62,11 @@ public partial class S_RegisterResponseMessage : Message
     }
 }
 
-[MemoryPackable]
+[MessageGroupElement(5)]
 public partial class C_ChatSendMessage : Message
 {
     public string Content { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private C_ChatSendMessage() { }
     
     public C_ChatSendMessage(string content)
@@ -91,13 +75,12 @@ public partial class C_ChatSendMessage : Message
     }
 }
 
-[MemoryPackable]
+[MessageGroupElement(6)]
 public partial class S_ChatNotifyMessage : Message
 {
     public string SenderName { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
 
-    [MemoryPackConstructor]
     private S_ChatNotifyMessage() { }
 
     public S_ChatNotifyMessage(string senderName, string content)

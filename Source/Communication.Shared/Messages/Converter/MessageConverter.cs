@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using DS.Communication.Shared.Messages;
-using MemoryPack;
 using System.IO;
+using DS.MessageProtocol.Serialize;
 
 namespace DS.Communication.Shared.Messages.Converter
 {
@@ -17,7 +17,7 @@ namespace DS.Communication.Shared.Messages.Converter
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
-            return MemoryPackSerializer.Serialize(message);
+            return MessageSerializer.Instance.Serialize(message);
         }
 
         public Message Deserialize(ReadOnlySpan<byte> message)
@@ -25,7 +25,7 @@ namespace DS.Communication.Shared.Messages.Converter
             if (message.Length == 0)
                 throw new ArgumentException("Message buffer is empty", nameof(message));
 
-            var deserialized = MemoryPackSerializer.Deserialize<Message>(message);
+            var deserialized = MessageSerializer.Instance.Deserialize<Message>(message.ToArray());
             if (deserialized == null)
                 throw new InvalidOperationException("Failed to deserialize message");
 
