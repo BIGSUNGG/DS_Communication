@@ -8,6 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="MessageProtocol">
+      <HintPath>Dll\MessageProtocol.dll</HintPath>
+    </Reference>
+    <Reference Include="MessageProtocol.CodeGenerator">
+      <HintPath>Dll\MessageProtocol.CodeGenerator.dll</HintPath>
+        <OutputItemType>Analyzer</OutputItemType>
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </Reference>
     <Reference Include="MessageProtocol.Core">
       <HintPath>Dll\MessageProtocol.Core.dll</HintPath>
     </Reference>

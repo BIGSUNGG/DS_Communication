@@ -11,7 +11,7 @@ namespace DS.Communication.Shared.Messages.Handler
     public abstract class MessageHandler : IMessageHandler
     {
         protected ISession _session;
-        protected Dictionary<Type, Action<Message>> _handlers = new Dictionary<Type, Action<Message>>();
+        protected Dictionary<Type, Action<object>> _handlers = new Dictionary<Type, Action<object>>();
         object _lock = new object();
 
         public MessageHandler(ISession session)
@@ -22,7 +22,7 @@ namespace DS.Communication.Shared.Messages.Handler
 
         protected abstract void RegisterHandler();
 
-        public void HandleMessage(Message message)
+        public void HandleMessage(object message)
         {
             lock (_lock)
             {

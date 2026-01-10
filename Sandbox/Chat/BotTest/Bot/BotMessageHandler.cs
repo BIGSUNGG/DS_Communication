@@ -29,21 +29,21 @@ internal sealed class BotMessageHandler : MessageHandler
         _handlers.Add(typeof(S_ChatNotifyMessage), HandleChatNotify);
     }
 
-    private void HandleLoginResponse(Message message)
+    private void HandleLoginResponse(object message)
     {
         var res = (S_LoginResponseMessage)message;
         Console.WriteLine($"[Bot:{_botClient.Name}] LoginResponse - Success={res.IsSuccessful}, Message={res.Message}");
         _botClient.CompleteLogin(res);
     }
 
-    private void HandleRegisterResponse(Message message)
+    private void HandleRegisterResponse(object message)
     {
         var res = (S_RegisterResponseMessage)message;
         Console.WriteLine($"[Bot:{_botClient.Name}] RegisterResponse - Success={res.IsSuccessful}, Message={res.Message}");
         _botClient.CompleteRegister(res);
     }
 
-    private void HandleChatNotify(Message message)
+    private void HandleChatNotify(object message)
     {
         var chat = (S_ChatNotifyMessage)message;
         Console.WriteLine($"[Bot:{_botClient.Name}] ChatNotify - {chat.SenderName}: {chat.Content}");

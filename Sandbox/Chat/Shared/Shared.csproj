@@ -11,9 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="MessageProtocol.Core">
-      <HintPath>..\..\..\Source\Communication.Shared\Dll\MessageProtocol.Core.dll</HintPath>
-    </Reference>
+    <!-- 프로젝트 참조로 변경하여 Source Generator가 작동하도록 함 -->
+    <ProjectReference Include="..\..\..\..\DS_MessageProtocol\Source\MessageProtocol\MessageProtocol.Core\MessageProtocol.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\DS_MessageProtocol\Source\MessageProtocol\MessageProtocol.CodeGenerator\MessageProtocol.CodeGenerator.csproj">
+      <OutputItemType>Analyzer</OutputItemType>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

@@ -20,7 +20,7 @@ public sealed class ClientMessageHandler : MessageHandler
         _handlers.Add(typeof(C_ChatSendMessage), HandleChatSendMessage);
     }
 
-    private void HandleLoginRequest(Message message)
+    private void HandleLoginRequest(object message)
     {
         C_LoginRequestMessage loginMessage = (C_LoginRequestMessage)message;
         ClientSession? client = _session as ClientSession;
@@ -49,7 +49,7 @@ public sealed class ClientMessageHandler : MessageHandler
         }
     }
 
-    private void HandleRegisterRequest(Message message)
+    private void HandleRegisterRequest(object message)
     {
         C_RegisterRequestMessage registerMessage = (C_RegisterRequestMessage)message;
         ClientSession? client = _session as ClientSession;
@@ -74,7 +74,7 @@ public sealed class ClientMessageHandler : MessageHandler
         }
     }
 
-    private void HandleChatSendMessage(Message message)
+    private void HandleChatSendMessage(object message)
     {
         C_ChatSendMessage chatMessage = (C_ChatSendMessage)message;
         ClientSession? client = _session as ClientSession;

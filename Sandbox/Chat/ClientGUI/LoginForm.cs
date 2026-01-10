@@ -87,26 +87,28 @@ namespace ClientGUI
 
         public void OnLoginResponse(S_LoginResponseMessage response)
         {
-            _isConnecting = false;
-            LoginButton.Enabled = true;
-            RegisterButton.Enabled = true;
+            Invoke(() => {
+                _isConnecting = false;
+                LoginButton.Enabled = true;
+                RegisterButton.Enabled = true;
 
-            if (response.IsSuccessful)
-            {
-                // UI 스레드에서 실행되도록 보장
-                if (InvokeRequired)
+                if (response.IsSuccessful)
                 {
-                    BeginInvoke(new Action(() => ShowChatForm(response.Message)));
+                    // UI 스레드에서 실행되도록 보장
+                    if (InvokeRequired)
+                    {
+                        BeginInvoke(new Action(() => ShowChatForm(response.Message)));
+                    }
+                    else
+                    {
+                        ShowChatForm(response.Message);
+                    }
                 }
                 else
                 {
-                    ShowChatForm(response.Message);
+                    MessageBox.Show(response.Message, "로그인 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-            }
-            else
-            {
-                MessageBox.Show(response.Message, "로그인 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            });
         }
 
         private void ShowChatForm(string message)
@@ -129,18 +131,21 @@ namespace ClientGUI
 
         public void OnRegisterResponse(S_RegisterResponseMessage response)
         {
-            _isConnecting = false;
-            LoginButton.Enabled = true;
-            RegisterButton.Enabled = true;
+            Invoke(() =>
+            {
+                _isConnecting = false;
+                LoginButton.Enabled = true;
+                RegisterButton.Enabled = true;
 
-            if (response.IsSuccessful)
-            {
-                MessageBox.Show(response.Message, "회원가입 성공", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                MessageBox.Show(response.Message, "회원가입 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+                if (response.IsSuccessful)
+                {
+                    MessageBox.Show(response.Message, "회원가입 성공", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show(response.Message, "회원가입 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            });
         }
 
         private void PasswordTextBox_KeyDown(object sender, KeyEventArgs e)

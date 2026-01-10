@@ -20,19 +20,19 @@ internal sealed class ServerMessageHandler : MessageHandler
         _handlers.Add(typeof(S_ChatNotifyMessage), HandleChatMessage);
     }
 
-    void HandleLoginResponse(Message message)
+    void HandleLoginResponse(object message)
     {
         var loginResponse = (S_LoginResponseMessage)message;
         UniqueForm.FindInstance<LoginForm>()?.OnLoginResponse(loginResponse);
     }
 
-    void HandleRegisterResponse(Message message)
+    void HandleRegisterResponse(object message)
     {
         var registerResponse = (S_RegisterResponseMessage)message;
         UniqueForm.FindInstance<LoginForm>()?.OnRegisterResponse(registerResponse);
     }
 
-    void HandleChatMessage(Message message)
+    void HandleChatMessage(object message)
     {
         var chatMessage = (S_ChatNotifyMessage)message;
         UniqueForm.FindInstance<ChatForm>()?.OnReceiveChatMessage(chatMessage);

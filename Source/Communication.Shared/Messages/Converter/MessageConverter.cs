@@ -5,27 +5,27 @@ using System.Reflection;
 using System.Threading.Tasks;
 using DS.Communication.Shared.Messages;
 using System.IO;
-using DS.MessageProtocol.Serialize;
+using MessageProtocol.Serialize;
 
 namespace DS.Communication.Shared.Messages.Converter
 {
     public class MessageConverter
     {
         public static MessageConverter Instance { get; private set; } = new();
-        public byte[] Serialize(Message message)
+        public byte[] Serialize(object message)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
-            return MessageSerializer.Instance.Serialize(message);
+            return MessageSerializer.Serialize(message);
         }
 
-        public Message Deserialize(ReadOnlySpan<byte> message)
+        public object Deserialize(ReadOnlySpan<byte> message)
         {
             if (message.Length == 0)
                 throw new ArgumentException("Message buffer is empty", nameof(message));
 
-            var deserialized = MessageSerializer.Instance.Deserialize<Message>(message.ToArray());
+            var deserialized = MessageSerializer.Deserialize(message.ToArray());
             if (deserialized == null)
                 throw new InvalidOperationException("Failed to deserialize message");
 

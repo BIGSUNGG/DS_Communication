@@ -14,7 +14,7 @@ public sealed class MessageReceiver : IMessageReceiver, IDisposable
 {
     private readonly IMessageHandler _messageHandler;
     private readonly NetworkStream _stream;
-    private readonly ConcurrentQueue<Message> _messageQueue;
+    private readonly ConcurrentQueue<object> _messageQueue;
     private readonly SemaphoreSlim _queueSemaphore;
     private readonly Task _processingTask;
     private readonly Task _receiveTask;
@@ -25,7 +25,7 @@ public sealed class MessageReceiver : IMessageReceiver, IDisposable
     {
         _stream = stream;
         _messageHandler = messageHandler;
-        _messageQueue = new ConcurrentQueue<Message>();
+        _messageQueue = new ConcurrentQueue<object>();
         _queueSemaphore = new SemaphoreSlim(0);
         _cancellationTokenSource = new CancellationTokenSource();
         

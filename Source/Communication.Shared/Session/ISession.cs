@@ -12,7 +12,7 @@ namespace DS.Communication.Shared.Session
 {
     public interface ISession
     {
-        public Task SendAsync(Message message);
+        public Task SendAsync(object message);
         public void Disconnect();
     }
 }

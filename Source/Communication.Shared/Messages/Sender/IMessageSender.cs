@@ -4,6 +4,6 @@ namespace DS.Communication.Shared.Messages.Sender
 {
     public interface IMessageSender
     {
-        Task SendAsync(Message message);
+        Task SendAsync(object message);
     }
 }

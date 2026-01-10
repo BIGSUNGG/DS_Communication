@@ -19,7 +19,7 @@ namespace DS.Communication.Shared.Messages.Sender
             _stream = stream;
         }
         
-        public async Task SendAsync(Message message)
+        public async Task SendAsync(object message)
         {
             if (_disposed)
             {

@@ -2,7 +2,7 @@
 {
     public interface IMessageHandler
     {
-        void HandleMessage(Message message);
+        void HandleMessage(object message);
 
         void OnDetectedDisconnection();
     }

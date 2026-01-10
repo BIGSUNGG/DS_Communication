@@ -1,6 +1,11 @@
-﻿using DS.MessageProtocol;
+﻿using MessageProtocol;
 
 namespace DS.Communication.Shared.Messages;
+
+[MessageGroupRoot(0)]
+public abstract partial class Message
+{
+}
 
 [MessageGroupElement(1)]
 public partial class C_LoginRequestMessage : Message
