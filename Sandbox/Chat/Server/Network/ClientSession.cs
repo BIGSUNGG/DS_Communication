@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Server;
 
-public sealed class ClientSession : Session
+public sealed class ClientSession : TCPSession
 {
     public int SessionId { get; set; }
     public int? AccountId { get; set; }

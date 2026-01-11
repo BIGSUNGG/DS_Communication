@@ -14,15 +14,12 @@ namespace Communication.Shared.Session
 {
     public abstract class Session : ISession, IDisposable
     {
-        TcpClient _tcpClient { get; set; }
+        protected bool _disposed;
         IMessageReceiver _messageReceiver { get; set; }
         IMessageSender _messageSender { get; set; }
-        protected bool _disposed;
-        private bool _disconnectedNotified;
 
-        public Session(TcpClient tcpClient, Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
+        public Session(Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
         {
-            _tcpClient = tcpClient;
             _messageReceiver = receiverCreater.Invoke(this);
             _messageSender = senderCreater.Invoke(this);
         }
@@ -35,39 +32,19 @@ namespace Communication.Shared.Session
             }
         }
 
-        public virtual void Disconnect()
+        public abstract bool IsConnected();
+
+        public void Disconnect()
         {
-            if (!_disconnectedNotified)
-            {
-                _disconnectedNotified = true;
+            if (IsConnected())
                 OnDisconnected();
-            }
-
-            try
-            {
-                if (_tcpClient.Connected)
-                    {
-                        try
-                        {
-                            _tcpClient.Client?.Shutdown(SocketShutdown.Both);
-                        }
-                        catch
-                        {
-                        }
-                    }
-
-                _tcpClient.Close();
-            }
-            catch
-            {
-            }
 
             Dispose();
         }
 
         protected abstract void OnDisconnected();
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (_disposed)
             {

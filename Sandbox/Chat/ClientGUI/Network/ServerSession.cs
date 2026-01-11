@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace Client;
 
-public sealed class ServerSession : Session
+public sealed class ServerSession : TCPSession
 {
     public ServerSession(TcpClient tcpClient, Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
         : base(tcpClient, receiverCreater, senderCreater) 

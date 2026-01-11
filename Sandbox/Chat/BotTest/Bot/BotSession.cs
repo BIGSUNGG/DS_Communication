@@ -9,7 +9,7 @@ namespace Client.Bot;
 /// Bot 전용 세션
 /// - 연결 종료 시 콘솔에만 출력
 /// </summary>
-internal sealed class BotSession : Session
+internal sealed class BotSession : TCPSession
 {
     private readonly string _name;
 

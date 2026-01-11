@@ -1,6 +1,7 @@
 using Communication.Shared.Messages;
 using Communication.Shared.Session;
 using Communication.Network.TCP.Server;
+using Communication.TCP.Shared.Messages;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;

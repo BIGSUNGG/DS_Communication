@@ -1,6 +1,6 @@
 namespace Communication.Shared.Messages;
 
-public class MessageReceiver : IMessageReceiver
+public abstract class MessageReceiver : IMessageReceiver
 {
     protected IMessageHandler _messageHandler;
 

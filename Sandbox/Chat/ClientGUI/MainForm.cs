@@ -3,6 +3,7 @@ using Client.Network;
 using Communication.Network.TCP.Client;
 using Communication.Shared.Messages;
 using Communication.Shared.Session;
+using Communication.TCP.Shared.Messages;
 
 namespace ClientGUI
 {

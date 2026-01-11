@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace Communication.Shared.Messages
+namespace Communication.TCP.Shared.Messages
 {
     public sealed class TCPMessageSender : MessageSender, IDisposable
     {      
