@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Source\Communication.TCP.Client\Communication.TCP.Client.csproj" />
-    <ProjectReference Include="..\..\..\Source\Communication.TCP.Shared\Communication.TCP.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP.Client\Communication.Network.TCP.Client.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 

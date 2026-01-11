@@ -9,8 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Communication.Shared\Communication.Shared.csproj" />
-    <ProjectReference Include="..\..\..\Source\Communication.TCP.Shared\Communication.TCP.Shared.csproj" />
-    <ProjectReference Include="..\..\..\Source\Communication.TCP.Server\Communication.TCP.Server.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP.Server\Communication.Network.TCP.Server.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <ProjectReference Include="..\DB\DB.csproj" />
   </ItemGroup>
