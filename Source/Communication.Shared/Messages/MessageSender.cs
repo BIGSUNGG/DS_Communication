@@ -10,5 +10,6 @@ namespace Communication.Shared.Messages
     public abstract class MessageSender : IMessageSender
     {      
         public abstract Task SendAsync(object message);
+        public abstract Task SendAsync(object message, object context);
     }
 }

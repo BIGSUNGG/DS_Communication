@@ -12,7 +12,9 @@ namespace Communication.Shared.Session
 {
     public interface ISession
     {
+        public Task SendAsync(object message, object context);
         public Task SendAsync(object message);
+
         public void Disconnect();
     }
 }

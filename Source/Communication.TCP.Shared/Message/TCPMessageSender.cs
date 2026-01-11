@@ -24,7 +24,12 @@ namespace Communication.TCP.Shared.Messages
             _cancellationTokenSource = new CancellationTokenSource();
             _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource));
         }
-        
+
+        public override async Task SendAsync(object message, object context)
+        {
+            await SendAsync(message);
+        }
+
         public override async Task SendAsync(object message)
         {
             byte[] serializedMessage = MessageConverter.Instance.Serialize(message);

@@ -24,6 +24,11 @@ namespace Communication.Shared.Session
             _messageSender = senderCreater.Invoke(this);
         }
 
+        public async Task SendAsync(object message, object context)
+        {
+            await SendAsync(message);
+        }
+
         public async Task SendAsync(object message)
         {
             if (_messageSender != null)
