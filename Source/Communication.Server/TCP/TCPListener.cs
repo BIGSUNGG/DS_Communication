@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Communication.Server;
+namespace Communication.Network.TCP.Server;
 
-internal sealed class Listener
+internal sealed class TCPListener
 {
     private readonly TcpListener _listener;
 
-    public Listener(IPAddress ipAddress, int port)
+    public TCPListener(IPAddress ipAddress, int port)
     {
         _listener = new TcpListener(ipAddress, port);
     }

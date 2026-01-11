@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Communication.Client;
+namespace Communication.Network.TCP.Client;
 
-public sealed class Connector
+public sealed class TCPConnector
 {
     private readonly string _host;
     private readonly int _port;
 
-    public Connector(string host, int port)
+    public TCPConnector(string host, int port)
     {
         _host = host;
         _port = port;

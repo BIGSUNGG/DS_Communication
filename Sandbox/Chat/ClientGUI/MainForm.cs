@@ -1,6 +1,6 @@
 using Client;
 using Client.Network;
-using Communication.Client;
+using Communication.Network.TCP.Client;
 using Communication.Shared.Messages;
 using Communication.Shared.Messages.Receiver;
 using Communication.Shared.Messages.Sender;
@@ -25,7 +25,7 @@ namespace ClientGUI
         {
             using var cts = new CancellationTokenSource();
 
-            var connector = new Connector(_host, _port);
+            var connector = new TCPConnector(_host, _port);
             ConnectBtn.Enabled = false;
             ConnectBtn.Text = "연결 중...";
 

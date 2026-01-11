@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Source\Communication.Client\Communication.Client.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Client\Communication.TCP.Client.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
