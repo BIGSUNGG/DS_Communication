@@ -1,4 +1,4 @@
-﻿using DS.Communication.Shared.Messages;
+using Communication.Shared.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 
-namespace DS.Communication.Shared.Session
+namespace Communication.Shared.Session
 {
     public interface ISession
     {

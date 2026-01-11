@@ -1,6 +1,6 @@
-using DS.Communication.Shared.Messages;
-using DS.Communication.Shared.Messages.Handler;
-using DS.Communication.Shared.Session;
+using Communication.Shared.Messages;
+using Communication.Shared.Messages.Handler;
+using Communication.Shared.Session;
 using DB.GateWay;
 using System;
 

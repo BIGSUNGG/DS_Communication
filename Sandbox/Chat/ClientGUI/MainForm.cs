@@ -1,10 +1,10 @@
 using Client;
 using Client.Network;
-using DS.Communication.Client;
-using DS.Communication.Shared.Messages;
-using DS.Communication.Shared.Messages.Receiver;
-using DS.Communication.Shared.Messages.Sender;
-using DS.Communication.Shared.Session;
+using Communication.Client;
+using Communication.Shared.Messages;
+using Communication.Shared.Messages.Receiver;
+using Communication.Shared.Messages.Sender;
+using Communication.Shared.Session;
 
 namespace ClientGUI
 {

@@ -1,6 +1,6 @@
-using DS.Communication.Shared.Messages.Receiver;
-using DS.Communication.Shared.Messages.Sender;
-using DS.Communication.Shared.Session;
+using Communication.Shared.Messages.Receiver;
+using Communication.Shared.Messages.Sender;
+using Communication.Shared.Session;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;

@@ -1,7 +1,7 @@
-﻿using DS.Communication.Shared.Messages;
-using DS.Communication.Shared.Messages.Handler;
-using DS.Communication.Shared.Messages.Receiver;
-using DS.Communication.Shared.Messages.Sender;
+using Communication.Shared.Messages;
+using Communication.Shared.Messages.Handler;
+using Communication.Shared.Messages.Receiver;
+using Communication.Shared.Messages.Sender;
 using MessageProtocol;
 using System;
 using System.Buffers;
@@ -13,7 +13,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DS.Communication.Shared.Session
+namespace Communication.Shared.Session
 {
     public abstract class Session : ISession, IDisposable
     {

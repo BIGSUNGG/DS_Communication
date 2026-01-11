@@ -1,8 +1,8 @@
 using ClientGUI;
-using DS.Communication.Shared.Messages;
-using DS.Communication.Shared.Messages.Handler;
-using DS.Communication.Shared.Session;
-using Message = DS.Communication.Shared.Messages.Message;
+using Communication.Shared.Messages;
+using Communication.Shared.Messages.Handler;
+using Communication.Shared.Session;
+using Message = Communication.Shared.Messages.Message;
 
 namespace Client;
 

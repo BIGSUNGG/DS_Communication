@@ -1,6 +1,6 @@
-﻿using DS.Communication.Shared.Messages;
+using Communication.Shared.Messages;
 
-namespace DS.Communication.Shared.Messages.Sender
+namespace Communication.Shared.Messages.Sender
 {
     public interface IMessageSender
     {

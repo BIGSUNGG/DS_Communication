@@ -1,5 +1,5 @@
 using Client.Network;
-using DS.Communication.Shared.Messages;
+using Communication.Shared.Messages;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

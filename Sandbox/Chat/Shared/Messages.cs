@@ -1,6 +1,6 @@
-﻿using MessageProtocol;
+using MessageProtocol;
 
-namespace DS.Communication.Shared.Messages;
+namespace Communication.Shared.Messages;
 
 [MessageGroupRoot(0)]
 public abstract partial class Message

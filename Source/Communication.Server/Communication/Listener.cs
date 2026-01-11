@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace DS.Communication.Server;
+namespace Communication.Server;
 
 internal sealed class Listener
 {

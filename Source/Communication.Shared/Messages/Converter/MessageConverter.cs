@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using DS.Communication.Shared.Messages;
+using Communication.Shared.Messages;
 using System.IO;
 using MessageProtocol.Serialize;
 
-namespace DS.Communication.Shared.Messages.Converter
+namespace Communication.Shared.Messages.Converter
 {
     public class MessageConverter
     {

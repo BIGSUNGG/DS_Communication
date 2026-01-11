@@ -1,12 +1,12 @@
-﻿using DS.Communication.Shared.Messages;
-using DS.Communication.Shared.Messages.Receiver;
-using DS.Communication.Shared.Messages.Sender;
+using Communication.Shared.Messages;
+using Communication.Shared.Messages.Receiver;
+using Communication.Shared.Messages.Sender;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using DS.Communication.Shared.Session;
+using Communication.Shared.Session;
 using DB.EF_Core;
 using Microsoft.EntityFrameworkCore;
 
