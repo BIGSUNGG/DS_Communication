@@ -2,6 +2,7 @@
 using DS.Communication.Shared.Messages.Handler;
 using DS.Communication.Shared.Messages.Receiver;
 using DS.Communication.Shared.Messages.Sender;
+using MessageProtocol;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
