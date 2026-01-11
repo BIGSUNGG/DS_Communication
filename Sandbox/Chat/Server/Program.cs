@@ -1,6 +1,4 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Messages.Receiver;
-using Communication.Shared.Messages.Sender;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;

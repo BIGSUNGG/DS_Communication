@@ -1,11 +1,10 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Messages.Converter;
 using System;
 using System.Buffers;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace Communication.Shared.Messages.Sender
+namespace Communication.Shared.Messages
 {
     public sealed class MessageSender : IMessageSender, IDisposable
     {      

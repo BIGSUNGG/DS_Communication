@@ -2,8 +2,6 @@ using Client;
 using Client.Network;
 using Communication.Network.TCP.Client;
 using Communication.Shared.Messages;
-using Communication.Shared.Messages.Receiver;
-using Communication.Shared.Messages.Sender;
 using Communication.Shared.Session;
 
 namespace ClientGUI

@@ -1,5 +1,4 @@
-using Communication.Shared.Messages.Receiver;
-using Communication.Shared.Messages.Sender;
+using Communication.Shared.Messages;
 using Communication.Shared.Session;
 using System.IO;
 using System.Net;
@@ -22,7 +21,7 @@ public sealed class ClientSession : Session
 
     protected override void OnDisconnected()
     {
-        Console.WriteLine($"���� {SessionId} ���� ����: {AccountName}");
+        Console.WriteLine($"클라이언트 {AccountName} 연결 종료");
     }
 }
 

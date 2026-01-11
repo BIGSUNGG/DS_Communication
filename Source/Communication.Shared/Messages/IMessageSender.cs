@@ -1,6 +1,6 @@
 using Communication.Shared.Messages;
 
-namespace Communication.Shared.Messages.Sender
+namespace Communication.Shared.Messages
 {
     public interface IMessageSender
     {

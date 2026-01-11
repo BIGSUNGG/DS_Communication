@@ -7,7 +7,7 @@ using Communication.Shared.Messages;
 using System.IO;
 using MessageProtocol.Serialize;
 
-namespace Communication.Shared.Messages.Converter
+namespace Communication.Shared.Messages
 {
     public class MessageConverter
     {

@@ -1,4 +1,4 @@
-namespace Communication.Shared.Messages.Handler
+namespace Communication.Shared.Messages
 {
     public interface IMessageHandler
     {

@@ -1,4 +1,4 @@
-namespace Communication.Shared.Messages.Receiver
+namespace Communication.Shared.Messages
 {
     public interface IMessageReceiver
     {
