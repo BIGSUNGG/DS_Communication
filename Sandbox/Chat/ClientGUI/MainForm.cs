@@ -33,8 +33,8 @@ namespace ClientGUI
 
                 var session = new ServerSession(
                     tcpClient,
-                    (Session s) => { return new MessageReceiver(tcpClient.GetStream(), new ServerMessageHandler(s)); },
-                    (Session s) => { return new MessageSender(tcpClient.GetStream()); }
+                    (Session s) => { return new TCPMessageReceiver(tcpClient.GetStream(), new ServerMessageHandler(s)); },
+                    (Session s) => { return new TCPMessageSender(tcpClient.GetStream()); }
                 );
 
                 ServerSessionManager.Instance.Session = session;

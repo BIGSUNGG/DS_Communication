@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Communication.Shared\Communication.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.TCP.Shared\Communication.TCP.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.TCP.Server\Communication.TCP.Server.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <ProjectReference Include="..\DB\DB.csproj" />
   </ItemGroup>

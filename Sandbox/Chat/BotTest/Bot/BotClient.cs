@@ -42,8 +42,8 @@ public sealed class BotClient : IDisposable
             var session = new BotSession(
                 Name,
                 _tcpClient,
-                s => new MessageReceiver(_tcpClient.GetStream(), new BotMessageHandler(s, this)),
-                s => new MessageSender(_tcpClient.GetStream()));
+                s => new TCPMessageReceiver(_tcpClient.GetStream(), new BotMessageHandler(s, this)),
+                s => new TCPMessageSender(_tcpClient.GetStream()));
 
             _session = session;
 

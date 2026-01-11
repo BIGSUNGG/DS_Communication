@@ -1,43 +1,94 @@
 using Communication.Shared.Session;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Communication.Shared.Messages;
 
-public abstract class MessageHandler : IMessageHandler
+public abstract class MessageHandler : IMessageHandler, IDisposable
 {
     protected ISession _session;
-    protected Dictionary<Type, Action<object>> _handlers = new Dictionary<Type, Action<object>>();
-    object _lock = new object();
+
+    bool _disposed = false;
+    protected Dictionary<Type, Action<object>> _messageHandleActions = new Dictionary<Type, Action<object>>();
+    private SemaphoreSlim _lock = new (0,1);
+    private Task _processMessageQueueTask;
+    private readonly CancellationTokenSource _cancellationTokenSource;
+    private ConcurrentQueue<object> _messageQueue = new ConcurrentQueue<object>();
 
     public MessageHandler(ISession session)
     {
         _session = session;
-        RegisterHandler();
+        _cancellationTokenSource = new();
+
+        RegisterMessageType();
+
+        _processMessageQueueTask= Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource));
     }
 
-    protected abstract void RegisterHandler();
+    protected abstract void RegisterMessageType();
 
     public void HandleMessage(object message)
     {
-        lock (_lock)
+        _messageQueue.Enqueue(message);
+        _lock.Release();
+    }
+
+    async void ProcessMessageQueueLoopAsync(CancellationTokenSource token)
+    {
+        while (!token.IsCancellationRequested)
         {
-            if (_handlers.TryGetValue(message.GetType(), out var handler))
+            await _lock.WaitAsync(token.Token);
+            try
             {
-                handler(message);
+                while (_messageQueue.TryDequeue(out var message))
+                {
+                    if (_messageHandleActions.TryGetValue(message.GetType(), out var handler))
+                    {
+                        handler(message);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"No handler registered for message type {message.GetType().Name}");
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"No handler registered for message type {message.GetType().Name}");
+                Trace.WriteLine($"Error processing message queue: {ex.Message}");
             }
-        }        
+        }
     }
 
     public virtual void OnDetectedDisconnection()
     {
         _session.Disconnect();
+    }
+
+    public void Dispose()
+    {
+        if(_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        _lock.Dispose();
+
+        try
+        {
+            _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+        }
+        catch
+        {
+        }
+
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
     }
 }

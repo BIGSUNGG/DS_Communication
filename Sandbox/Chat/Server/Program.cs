@@ -1,10 +1,11 @@
 using Communication.Shared.Messages;
+using Communication.Shared.Session;
+using Communication.Network.TCP.Server;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Communication.Shared.Session;
 using DB.EF_Core;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +30,7 @@ internal sealed class Program
             cts.Cancel();
         };
 
-        var listener = new Listener(IPAddress.Any, port);
+        var listener = new TCPListener(IPAddress.Any, port);
         listener.Start();
         Console.WriteLine($"TCP 채팅 서버 시작: 0.0.0.0:{port}");
 
@@ -53,8 +54,8 @@ internal sealed class Program
         var session = new ClientSession(
             sessionId,
             client,
-            (Session s) => { return new MessageReceiver(client.GetStream(), new ClientMessageHandler(s)); },
-            (Session s) => { return new MessageSender(client.GetStream()); }
+            (Session s) => { return new TCPMessageReceiver(client.GetStream(), new ClientMessageHandler(s)); },
+            (Session s) => { return new TCPMessageSender(client.GetStream()); }
         );
 
         ClientSessionManager.Instance.AddSession(session);

@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace Communication.Network.TCP.Server;
 
-internal sealed class TCPListener
+public sealed class TCPListener
 {
     private readonly TcpListener _listener;
 

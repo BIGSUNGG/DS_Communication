@@ -21,11 +21,11 @@ internal sealed class BotMessageHandler : MessageHandler
         _botClient = botClient;
     }
 
-    protected override void RegisterHandler()
+    protected override void RegisterMessageType()
     {
-        _handlers.Add(typeof(S_LoginResponseMessage), HandleLoginResponse);
-        _handlers.Add(typeof(S_RegisterResponseMessage), HandleRegisterResponse);
-        _handlers.Add(typeof(S_ChatNotifyMessage), HandleChatNotify);
+        _messageHandleActions.Add(typeof(S_LoginResponseMessage), HandleLoginResponse);
+        _messageHandleActions.Add(typeof(S_RegisterResponseMessage), HandleRegisterResponse);
+        _messageHandleActions.Add(typeof(S_ChatNotifyMessage), HandleChatNotify);
     }
 
     private void HandleLoginResponse(object message)

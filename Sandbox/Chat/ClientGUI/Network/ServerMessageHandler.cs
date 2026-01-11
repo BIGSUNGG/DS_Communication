@@ -12,11 +12,11 @@ internal sealed class ServerMessageHandler : MessageHandler
     {
     }
 
-    protected override void RegisterHandler()
+    protected override void RegisterMessageType()
     {
-        _handlers.Add(typeof(S_LoginResponseMessage), HandleLoginResponse);
-        _handlers.Add(typeof(S_RegisterResponseMessage), HandleRegisterResponse);
-        _handlers.Add(typeof(S_ChatNotifyMessage), HandleChatMessage);
+        _messageHandleActions.Add(typeof(S_LoginResponseMessage), HandleLoginResponse);
+        _messageHandleActions.Add(typeof(S_RegisterResponseMessage), HandleRegisterResponse);
+        _messageHandleActions.Add(typeof(S_ChatNotifyMessage), HandleChatMessage);
     }
 
     void HandleLoginResponse(object message)

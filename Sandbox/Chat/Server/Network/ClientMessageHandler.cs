@@ -12,11 +12,11 @@ public sealed class ClientMessageHandler : MessageHandler
     {
     }
 
-    protected override void RegisterHandler()
+    protected override void RegisterMessageType()
     {
-        _handlers.Add(typeof(C_LoginRequestMessage), HandleLoginRequest);
-        _handlers.Add(typeof(C_RegisterRequestMessage), HandleRegisterRequest);
-        _handlers.Add(typeof(C_ChatSendMessage), HandleChatSendMessage);
+        _messageHandleActions.Add(typeof(C_LoginRequestMessage), HandleLoginRequest);
+        _messageHandleActions.Add(typeof(C_RegisterRequestMessage), HandleRegisterRequest);
+        _messageHandleActions.Add(typeof(C_ChatSendMessage), HandleChatSendMessage);
     }
 
     private void HandleLoginRequest(object message)

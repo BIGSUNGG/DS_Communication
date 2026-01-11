@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,7 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Source\Communication.Client\Communication.TCP.Client.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.TCP.Client\Communication.TCP.Client.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.TCP.Shared\Communication.TCP.Shared.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
