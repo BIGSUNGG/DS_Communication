@@ -30,7 +30,7 @@ namespace Communication.Network.RUDP.Shared.Messages
         {
             DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered;
             
-            if (context is SendMessageContext sendContext)
+            if (context is MessageSendContext sendContext)
             {
                 deliveryMethod = sendContext.Method;
             }
@@ -43,7 +43,7 @@ namespace Communication.Network.RUDP.Shared.Messages
 
         public override async Task SendAsync(object message)
         {
-            await SendAsync(message, new SendMessageContext(DeliveryMethod.ReliableOrdered));
+            await SendAsync(message, new MessageSendContext(DeliveryMethod.ReliableOrdered));
         }
 
         private async Task ProcessMessageQueueLoopAsync(CancellationToken cancellationToken)
@@ -90,7 +90,13 @@ namespace Communication.Network.RUDP.Shared.Messages
 
             _disposed = true;
             _cancellationTokenSource.Cancel();
-            _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+            try
+            {
+                _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch 
+            {
+            }
             _cancellationTokenSource.Dispose();
             _sendLock.Dispose();
             _dataWriter.Reset();

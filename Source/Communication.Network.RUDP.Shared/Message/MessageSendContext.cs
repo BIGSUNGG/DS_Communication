@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Communication.Network.RUDP.Shared
+namespace Communication.Network.RUDP.Shared.Messages
 {
-    public class SendMessageContext
+    public class MessageSendContext
     {
         public DeliveryMethod Method { get; set; }
 
-        public SendMessageContext(DeliveryMethod method)
+        public MessageSendContext(DeliveryMethod method)
         {
             Method = method;
         }

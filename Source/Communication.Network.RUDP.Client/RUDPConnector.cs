@@ -54,11 +54,23 @@ public sealed class RUDPConnector
 
             _serverPeer = _netManager.Connect(_host, _port, _connectionKey);
 
+            // PollEvents를 백그라운드에서 계속 호출
+            var pollTask = Task.Run(async () =>
+            {
+                while (!_connectionTaskSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
+                {
+                    _netManager?.PollEvents();
+                    await Task.Delay(15, cancellationToken);
+                }
+            }, cancellationToken);
+
             // 연결 대기 (최대 5초)
             var timeout = Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             var completedTask = await Task.WhenAny(_connectionTaskSource.Task, timeout);
 
-            if (completedTask == timeout || !await _connectionTaskSource.Task)
+            // pollTask는 백그라운드에서 계속 실행되므로 여기서는 무시
+
+            if (completedTask == timeout || (_connectionTaskSource.Task.IsCompleted && !await _connectionTaskSource.Task))
             {
                 if (_netManager != null)
                 {

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>RUDP.Server</RootNamespace>
+    <AssemblyName>RUDP.Server</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Communication.Shared\Communication.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.RUDP.Shared\Communication.Network.RUDP.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.RUDP.Server\Communication.Network.RUDP.Server.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>
