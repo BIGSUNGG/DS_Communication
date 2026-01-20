@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj" />
+    <ProjectReference Include="..\Communication.Network.TCP_IOCP.Shared\Communication.Network.TCP_IOCP.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
