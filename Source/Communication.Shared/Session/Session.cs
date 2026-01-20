@@ -9,7 +9,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Communication.Shared.Session
+namespace Communication.Shared.Sessions
 {
     public abstract class Session : ISession, IDisposable
     {

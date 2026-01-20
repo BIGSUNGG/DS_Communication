@@ -1,6 +1,6 @@
 using ClientGUI;
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using Message = Communication.Shared.Messages.Message;
 
 namespace Client;

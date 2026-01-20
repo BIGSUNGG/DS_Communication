@@ -1,6 +1,6 @@
 using Client;
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 
 namespace ClientGUI
 {

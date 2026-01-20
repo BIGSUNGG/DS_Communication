@@ -1,4 +1,4 @@
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

@@ -1,5 +1,6 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
+using Communication.TCP.Shared.Sessions;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;

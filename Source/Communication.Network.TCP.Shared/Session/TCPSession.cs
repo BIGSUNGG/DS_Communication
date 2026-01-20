@@ -1,4 +1,5 @@
 using Communication.Shared.Messages;
+using Communication.Shared.Sessions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Communication.Shared.Session
+namespace Communication.TCP.Shared.Sessions
 {
     public abstract class TCPSession : Session
     {

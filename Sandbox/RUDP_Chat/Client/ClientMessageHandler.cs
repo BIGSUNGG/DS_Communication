@@ -1,5 +1,5 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using RUDP_Chat.Shared.Messages;
 using System;
 

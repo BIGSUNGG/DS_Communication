@@ -1,8 +1,8 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using System.Net.Sockets;
 
-namespace Communication.Network.TCP_IOCP.Shared.Session;
+namespace Communication.Network.TCP_IOCP.Shared.Sessions;
 
 public abstract class TCPSession : Session
 {

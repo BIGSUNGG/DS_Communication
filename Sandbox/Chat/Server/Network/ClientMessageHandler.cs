@@ -1,5 +1,5 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using DB.GateWay;
 using System;
 

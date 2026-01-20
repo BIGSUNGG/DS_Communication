@@ -1,5 +1,5 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using Communication.Network.TCP.Server;
 using Communication.TCP.Shared.Messages;
 using System.Collections.Concurrent;

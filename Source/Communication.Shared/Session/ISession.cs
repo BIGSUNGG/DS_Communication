@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 
-namespace Communication.Shared.Session
+namespace Communication.Shared.Sessions
 {
     public interface ISession
     {

@@ -1,9 +1,9 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using LiteNetLib;
 using System;
 
-namespace Communication.Shared.Session
+namespace Communication.Shared.Sessions
 {
     public abstract class RUDPSession : Session
     {

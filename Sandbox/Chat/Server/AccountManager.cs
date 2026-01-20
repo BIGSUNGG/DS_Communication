@@ -1,5 +1,5 @@
 using DB.GateWay;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using System.Collections.Concurrent;
 
 namespace Server;

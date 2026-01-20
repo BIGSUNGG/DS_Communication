@@ -1,5 +1,5 @@
 using Communication.Shared.Messages;
-using Communication.Shared.Session;
+using Communication.Shared.Sessions;
 using System;
 using System.Threading.Tasks;
 using Message = Communication.Shared.Messages.Message;
