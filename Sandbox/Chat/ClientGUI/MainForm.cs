@@ -32,10 +32,11 @@ namespace ClientGUI
             {
                 OnServerConnectSuccess();
 
+                var messageConverter = new MessageConverter();
                 var session = new ServerSession(
                     tcpClient,
-                    (Session s) => { return new TCPMessageReceiver(tcpClient.GetStream(), new ServerMessageHandler(s)); },
-                    (Session s) => { return new TCPMessageSender(tcpClient.GetStream()); }
+                    (Session s) => { return new TCPMessageReceiver(messageConverter, tcpClient.GetStream(), new ServerMessageHandler(s)); },
+                    (Session s) => { return new TCPMessageSender(messageConverter, tcpClient.GetStream()); }
                 );
 
                 ServerSessionManager.Instance.Session = session;

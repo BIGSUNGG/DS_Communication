@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -7,17 +7,5 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Reference Include="MessageProtocol">
-      <HintPath>Dll\MessageProtocol.dll</HintPath>
-    </Reference>
-    <Reference Include="MessageProtocol.Core">
-      <HintPath>Dll\MessageProtocol.Core.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Analyzer Include="Dll\MessageProtocol.CodeGenerator.dll" />
-  </ItemGroup>
 
 </Project>

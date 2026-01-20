@@ -18,7 +18,8 @@ namespace Communication.TCP.Shared.Messages
         private Task _processMessageQueueTask;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        public TCPMessageSender(NetworkStream stream)
+        public TCPMessageSender(IMessageConverter messageConverter, NetworkStream stream)
+            : base(messageConverter)
         {
             _stream = stream;
             _cancellationTokenSource = new CancellationTokenSource();
@@ -32,7 +33,7 @@ namespace Communication.TCP.Shared.Messages
 
         public override async Task SendAsync(object message)
         {
-            byte[] serializedMessage = MessageConverter.Instance.Serialize(message);
+            byte[] serializedMessage = _messageConverter.Serialize(message);
             _messageQueue.Enqueue(serializedMessage);
             _sendLock.Release();
         }

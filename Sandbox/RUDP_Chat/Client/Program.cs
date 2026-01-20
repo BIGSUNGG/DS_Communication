@@ -22,14 +22,15 @@ internal sealed class Program
         Console.WriteLine($"서버에 연결 중: {host}:{port}");
 
         var connector = new RUDPConnector(host, port);
+        var messageConverter = new MessageConverter();
         var connected = await connector.ConnectAsync(async (peer, manager, listener) =>
         {
             _netManager = manager;
             _session = new ClientSession(
                 peer,
                 manager,
-                (Session s) => { return new RUDPMessageReceiver(peer, manager, listener, new ClientMessageHandler(s)); },
-                (Session s) => { return new RUDPMessageSender(peer); }
+                (Session s) => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s)); },
+                (Session s) => { return new RUDPMessageSender(messageConverter, peer); }
             );
 
             Console.WriteLine("서버에 연결되었습니다. 채팅을 시작하세요! (종료: 'exit' 입력)");

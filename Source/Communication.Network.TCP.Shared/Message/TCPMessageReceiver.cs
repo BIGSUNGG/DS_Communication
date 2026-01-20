@@ -12,8 +12,8 @@ namespace Communication.TCP.Shared.Messages
         private Task _receiveTask;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        public TCPMessageReceiver(NetworkStream stream, IMessageHandler messageHandler)
-            : base(messageHandler)
+        public TCPMessageReceiver(IMessageConverter messageConverter, NetworkStream stream, IMessageHandler messageHandler)
+            : base(messageConverter, messageHandler)
         {
             _stream = stream;
             _cancellationTokenSource = new CancellationTokenSource();
@@ -75,7 +75,7 @@ namespace Communication.TCP.Shared.Messages
                     }
 
                     // 역직렬화 및 핸들러에 전달
-                    var message = MessageConverter.Instance.Deserialize(messageBytes);
+                    var message = _messageConverter.Deserialize(messageBytes);
                     _messageHandler.HandleMessage(message);
                 }
                 catch (OperationCanceledException)

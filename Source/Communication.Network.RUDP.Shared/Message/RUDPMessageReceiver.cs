@@ -13,8 +13,8 @@ namespace Communication.Network.RUDP.Shared.Messages
         private readonly EventBasedNetListener _listener;
         private bool _disposed;
 
-        public RUDPMessageReceiver(NetPeer netPeer, NetManager netManager, EventBasedNetListener listener, IMessageHandler messageHandler)
-            : base(messageHandler)
+        public RUDPMessageReceiver(IMessageConverter messageConverter, NetPeer netPeer, NetManager netManager, EventBasedNetListener listener, IMessageHandler messageHandler)
+            : base(messageConverter, messageHandler)
         {
             _netPeer = netPeer;            
             _netManager = netManager;
@@ -48,7 +48,7 @@ namespace Communication.Network.RUDP.Shared.Messages
                 reader.GetBytes(messageBytes, 0, messageBytes.Length);
                 reader.Recycle();
 
-                var message = MessageConverter.Instance.Deserialize(messageBytes);
+                var message = _messageConverter.Deserialize(messageBytes);
                 _messageHandler.HandleMessage(message);
             }
             catch (Exception ex)

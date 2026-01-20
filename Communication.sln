@@ -45,7 +45,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Sandbox\RUDP_Chat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Sandbox\RUDP_Chat\Shared\Shared.csproj", "{AE92CF8D-3D0B-461B-8974-671AED5909D4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RUDP", "RUDP", "{8CBC59A1-A680-4A9F-8D03-968F69040B64}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RUDP.Chat", "RUDP.Chat", "{8CBC59A1-A680-4A9F-8D03-968F69040B64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

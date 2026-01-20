@@ -1,17 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
-using Communication.Shared.Messages;
-using System.IO;
 using MessageProtocol.Serialize;
+using Communication.Shared.Messages;
 
-namespace Communication.Shared.Messages
+namespace RUDP_Chat.Shared.Messages
 {
-    public class MessageConverter
+    public class MessageConverter : IMessageConverter
     {
-        public static MessageConverter Instance { get; private set; } = new();
         public byte[] Serialize(object message)
         {
             if (message == null)

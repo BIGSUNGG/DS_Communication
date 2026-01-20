@@ -18,7 +18,8 @@ namespace Communication.Network.RUDP.Shared.Messages
         private Task _processMessageQueueTask;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        public RUDPMessageSender(NetPeer netPeer)
+        public RUDPMessageSender(IMessageConverter messageConverter, NetPeer netPeer)
+            : base(messageConverter)
         {
             _netPeer = netPeer;
             _dataWriter = new NetDataWriter();
@@ -35,7 +36,7 @@ namespace Communication.Network.RUDP.Shared.Messages
                 deliveryMethod = sendContext.Method;
             }
 
-            byte[] serializedMessage = MessageConverter.Instance.Serialize(message);
+            byte[] serializedMessage = _messageConverter.Serialize(message);
             _messageQueue.Enqueue((serializedMessage, deliveryMethod));
             _sendLock.Release();
             await Task.CompletedTask;

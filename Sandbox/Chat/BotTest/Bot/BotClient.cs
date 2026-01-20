@@ -40,11 +40,12 @@ public sealed class BotClient : IDisposable
             Console.WriteLine($"[Bot:{Name}] Connecting to {_host}:{_port}...");
             await _tcpClient.ConnectAsync(_host, _port, cancellationToken);
 
+            var messageConverter = new MessageConverter();
             var session = new BotSession(
                 Name,
                 _tcpClient,
-                s => new TCPMessageReceiver(_tcpClient.GetStream(), new BotMessageHandler(s, this)),
-                s => new TCPMessageSender(_tcpClient.GetStream()));
+                s => new TCPMessageReceiver(messageConverter, _tcpClient.GetStream(), new BotMessageHandler(s, this)),
+                s => new TCPMessageSender(messageConverter, _tcpClient.GetStream()));
 
             _session = session;
 

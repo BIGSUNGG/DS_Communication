@@ -1,5 +1,4 @@
 using Communication.Shared.Messages;
-using MessageProtocol;
 using System;
 using System.Buffers;
 using System.Collections.Generic;

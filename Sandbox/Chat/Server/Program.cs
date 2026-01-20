@@ -52,11 +52,12 @@ internal sealed class Program
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
         
         var sessionId = Interlocked.Increment(ref _nextSessionId);
+        var messageConverter = new MessageConverter();
         var session = new ClientSession(
             sessionId,
             client,
-            (Session s) => { return new TCPMessageReceiver(client.GetStream(), new ClientMessageHandler(s)); },
-            (Session s) => { return new TCPMessageSender(client.GetStream()); }
+            (Session s) => { return new TCPMessageReceiver(messageConverter, client.GetStream(), new ClientMessageHandler(s)); },
+            (Session s) => { return new TCPMessageSender(messageConverter, client.GetStream()); }
         );
 
         ClientSessionManager.Instance.AddSession(session);

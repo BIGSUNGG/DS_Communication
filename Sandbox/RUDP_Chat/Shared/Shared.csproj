@@ -18,5 +18,4 @@
 		</Reference>
 		<Analyzer Include="..\..\..\Source\Communication.Shared\Dll\MessageProtocol.CodeGenerator.dll" />
 	</ItemGroup>
-
 </Project>

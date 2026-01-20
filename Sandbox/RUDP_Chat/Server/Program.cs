@@ -3,6 +3,7 @@ using Communication.Shared.Session;
 using Communication.Network.RUDP.Server;
 using Communication.Network.RUDP.Shared.Messages;
 using System.Net;
+using RUDP_Chat.Shared.Messages;
 
 namespace RUDP_Chat.Server;
 
@@ -40,12 +41,13 @@ internal sealed class Program
     private static async Task OnClientConnectAsync(LiteNetLib.NetPeer peer, LiteNetLib.NetManager manager, LiteNetLib.EventBasedNetListener listener, CancellationToken cancellationToken)
     {
         var sessionId = Interlocked.Increment(ref _nextSessionId);
+        var messageConverter = new MessageConverter();
         var session = new ClientSession(
             sessionId,
             peer,
             manager,
-            (Session s) => { return new RUDPMessageReceiver(peer, manager, listener, new ClientMessageHandler(s)); },
-            (Session s) => { return new RUDPMessageSender(peer); }
+            (Session s) => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s)); },
+            (Session s) => { return new RUDPMessageSender(messageConverter, peer); }
         );
 
         ClientSessionManager.Instance.AddSession(session);
