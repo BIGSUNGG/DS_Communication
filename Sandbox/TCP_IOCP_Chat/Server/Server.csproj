@@ -5,15 +5,16 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>RUDP.Server</RootNamespace>
-    <AssemblyName>RUDP.Server</AssemblyName>
+    <RootNamespace>TCP_IOCP.Server</RootNamespace>
+    <AssemblyName>TCP_IOCP.Server</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Communication.Shared\Communication.Shared.csproj" />
-    <ProjectReference Include="..\..\..\Source\Communication.Network.RUDP.Shared\Communication.Network.RUDP.Shared.csproj" />
-    <ProjectReference Include="..\..\..\Source\Communication.Network.RUDP.Server\Communication.Network.RUDP.Server.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP_IOCP.Shared\Communication.Network.TCP_IOCP.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Communication.Network.TCP_IOCP.Server\Communication.Network.TCP_IOCP.Server.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
 </Project>
+

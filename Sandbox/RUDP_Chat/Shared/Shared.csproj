@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>RUDP.Shared</RootNamespace>
@@ -14,8 +14,8 @@
 
 	<ItemGroup>
 		<Reference Include="MessageProtocol.Core">
-			<HintPath>..\..\..\Source\Communication.Shared\Dll\MessageProtocol.Core.dll</HintPath>
+			<HintPath>..\..\Dll\MessageProtocol.Core.dll</HintPath>
 		</Reference>
-		<Analyzer Include="..\..\..\Source\Communication.Shared\Dll\MessageProtocol.CodeGenerator.dll" />
+		<Analyzer Include="..\..\Dll\MessageProtocol.CodeGenerator.dll" />
 	</ItemGroup>
 </Project>

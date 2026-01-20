@@ -4,6 +4,8 @@
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<RootNamespace>TCP_IOCP.Shared</RootNamespace>
+		<AssemblyName>TCP_IOCP.Shared</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,5 +18,5 @@
 		</Reference>
 		<Analyzer Include="..\..\Dll\MessageProtocol.CodeGenerator.dll" />
 	</ItemGroup>
-
 </Project>
+
