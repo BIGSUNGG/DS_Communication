@@ -33,7 +33,7 @@ namespace Communication.Network.RUDP.Shared.Messages
             
             if (context is MessageSendContext sendContext)
             {
-                deliveryMethod = sendContext.Method;
+                deliveryMethod = (DeliveryMethod)sendContext.Reliable;
             }
 
             byte[] serializedMessage = _messageConverter.Serialize(message);
@@ -44,7 +44,7 @@ namespace Communication.Network.RUDP.Shared.Messages
 
         public override async Task SendAsync(object message)
         {
-            await SendAsync(message, new MessageSendContext(DeliveryMethod.ReliableOrdered));
+            await SendAsync(message, new MessageSendContext(ReliableType.ReliableOrdered));
         }
 
         private async Task ProcessMessageQueueLoopAsync(CancellationToken cancellationToken)
