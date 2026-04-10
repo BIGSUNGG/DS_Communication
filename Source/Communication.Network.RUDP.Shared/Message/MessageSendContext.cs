@@ -11,6 +11,8 @@ namespace Communication.Network.RUDP.Shared.Messages
     {
         public DeliveryMethod Method { get; set; }
 
+        public MessageSendContext() { }
+
         public MessageSendContext(DeliveryMethod method)
         {
             Method = method;
