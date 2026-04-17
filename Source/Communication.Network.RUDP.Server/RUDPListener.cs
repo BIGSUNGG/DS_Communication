@@ -1,10 +1,11 @@
+using Communication.Network.RUDP.Shared.Messages;
 using LiteNetLib;
 using System.Net;
 using System.Net.Sockets;
 
 namespace Communication.Network.RUDP.Server;
 
-public sealed class RUDPListener
+public sealed class RUDPListener : IDisposable
 {
     private IPAddress _ipAddress;
     private int _port;
@@ -12,8 +13,12 @@ public sealed class RUDPListener
 
     private readonly NetManager _netManager;
     private readonly EventBasedNetListener _listener;
-    private Func<NetPeer, NetManager, EventBasedNetListener, Task>? _onClientAccepted;
+    private readonly RUDPNetworkReceiveDispatcher _receiveDispatcher;
+    private Func<NetPeer, NetManager, EventBasedNetListener, RUDPNetworkReceiveDispatcher, Task>? _onClientAccepted;
     private CancellationToken _cancellationToken;
+    private bool _stopped;
+
+    public RUDPNetworkReceiveDispatcher ReceiveDispatcher => _receiveDispatcher;
 
     public RUDPListener(IPAddress ipAddress, int port, string connectionKey = "")
     {
@@ -22,7 +27,8 @@ public sealed class RUDPListener
         _connectionKey = connectionKey;
 
         _listener = new EventBasedNetListener();
-        _netManager = new NetManager(_listener);  
+        _receiveDispatcher = new RUDPNetworkReceiveDispatcher(_listener);
+        _netManager = new NetManager(_listener);
 
         // 연결 요청 수락
         _listener.ConnectionRequestEvent += (request) =>
@@ -39,7 +45,7 @@ public sealed class RUDPListener
                 {
                     try
                     {
-                        await _onClientAccepted(peer, _netManager, _listener);
+                        await _onClientAccepted(peer, _netManager, _listener, _receiveDispatcher);
                     }
                     catch (Exception ex)
                     {
@@ -57,10 +63,22 @@ public sealed class RUDPListener
 
     public void Stop()
     {
+        if (_stopped)
+        {
+            return;
+        }
+
+        _stopped = true;
         _netManager.Stop();
+        _receiveDispatcher.Dispose();
     }
 
-    public async Task ListenAsync(Func<NetPeer, NetManager, EventBasedNetListener, Task> onClientAccepted, CancellationToken token)
+    public void Dispose()
+    {
+        Stop();
+    }
+
+    public async Task ListenAsync(Func<NetPeer, NetManager, EventBasedNetListener, RUDPNetworkReceiveDispatcher, Task> onClientAccepted, CancellationToken token)
     {
         _onClientAccepted = onClientAccepted;
         _cancellationToken = token;

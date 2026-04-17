@@ -2,6 +2,7 @@ using Communication.Shared.Messages;
 using Communication.Shared.Sessions;
 using Communication.Network.RUDP.Server;
 using Communication.Network.RUDP.Shared.Messages;
+using LiteNetLib;
 using System.Net;
 using RUDP_Chat.Shared.Messages;
 
@@ -29,7 +30,7 @@ internal sealed class Program
 
         try
         {
-            await listener.ListenAsync((peer, manager, eventListener) => OnClientConnectAsync(peer, manager, eventListener, cts.Token), cts.Token);
+            await listener.ListenAsync((peer, manager, eventListener, receiveDispatcher) => OnClientConnectAsync(peer, manager, eventListener, receiveDispatcher, cts.Token), cts.Token);
         }
         finally
         {
@@ -38,7 +39,7 @@ internal sealed class Program
         }
     }
 
-    private static async Task OnClientConnectAsync(LiteNetLib.NetPeer peer, LiteNetLib.NetManager manager, LiteNetLib.EventBasedNetListener listener, CancellationToken cancellationToken)
+    private static async Task OnClientConnectAsync(NetPeer peer, NetManager manager, EventBasedNetListener listener, RUDPNetworkReceiveDispatcher receiveDispatcher, CancellationToken cancellationToken)
     {
         var sessionId = Interlocked.Increment(ref _nextSessionId);
         var messageConverter = new MessageConverter();
@@ -46,7 +47,7 @@ internal sealed class Program
             sessionId,
             peer,
             manager,
-            (Session s) => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s)); },
+            (Session s) => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s), receiveDispatcher); },
             (Session s) => { return new RUDPMessageSender(messageConverter, peer); }
         );
 

@@ -11,31 +11,48 @@ namespace Communication.Network.RUDP.Shared.Messages
         private readonly NetPeer _netPeer;
         private readonly NetManager _netManager;
         private readonly EventBasedNetListener _listener;
+        private readonly RUDPNetworkReceiveDispatcher? _receiveDispatcher;
         private bool _disposed;
 
-        public RUDPMessageReceiver(IMessageConverter messageConverter, NetPeer netPeer, NetManager netManager, EventBasedNetListener listener, IMessageHandler messageHandler)
+        /// <param name="receiveDispatcher">서버 등 다중 세션: 한 리스너당 하나의 디스패처로 등록. 단일 클라이언트 연결만이면 null (리스너에 수신기 하나만 붙는 경우).</param>
+        public RUDPMessageReceiver(IMessageConverter messageConverter, NetPeer netPeer, NetManager netManager, EventBasedNetListener listener, IMessageHandler messageHandler, RUDPNetworkReceiveDispatcher? receiveDispatcher = null)
             : base(messageConverter, messageHandler)
         {
-            _netPeer = netPeer;            
+            _netPeer = netPeer;
             _netManager = netManager;
             _listener = listener;
+            _receiveDispatcher = receiveDispatcher;
 
-            // 메시지 수신 이벤트 구독
-            _listener.NetworkReceiveEvent += OnNetworkReceive;
-            
-            // 연결 종료 이벤트 구독
+            if (_receiveDispatcher != null)
+            {
+                _receiveDispatcher.RegisterReceiver(_netPeer, this);
+            }
+            else
+            {
+                _listener.NetworkReceiveEvent += OnNetworkReceiveSinglePeer;
+            }
+
             _listener.PeerDisconnectedEvent += OnPeerDisconnected;
         }
 
-        private void OnNetworkReceive(NetPeer fromPeer, NetPacketReader reader, byte channelNumber, DeliveryMethod deliveryMethod)
+        /// <summary>디스패처가 단일 수신 이벤트에서 호출합니다.</summary>
+        internal void DispatchFromNetwork(NetPacketReader reader)
         {
-            // 이 세션의 peer가 아니면 무시
+            ProcessPacketReader(reader);
+        }
+
+        private void OnNetworkReceiveSinglePeer(NetPeer fromPeer, NetPacketReader reader, byte channelNumber, DeliveryMethod deliveryMethod)
+        {
             if (fromPeer != _netPeer)
             {
-                reader.Recycle();
                 return;
             }
 
+            ProcessPacketReader(reader);
+        }
+
+        private void ProcessPacketReader(NetPacketReader reader)
+        {
             try
             {
                 if (reader.AvailableBytes == 0)
@@ -75,9 +92,16 @@ namespace Communication.Network.RUDP.Shared.Messages
             }
 
             _disposed = true;
-            
-            // 이벤트 구독 해제
-            _listener.NetworkReceiveEvent -= OnNetworkReceive;
+
+            if (_receiveDispatcher != null)
+            {
+                _receiveDispatcher.UnregisterReceiver(_netPeer);
+            }
+            else
+            {
+                _listener.NetworkReceiveEvent -= OnNetworkReceiveSinglePeer;
+            }
+
             _listener.PeerDisconnectedEvent -= OnPeerDisconnected;
         }
     }
