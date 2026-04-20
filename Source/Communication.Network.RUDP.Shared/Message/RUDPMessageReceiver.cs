@@ -71,7 +71,7 @@ namespace Communication.Network.RUDP.Shared.Messages
             catch (Exception ex)
             {
                 reader.Recycle();
-                Console.WriteLine($"Error handling received data: {ex.Message}");
+                Console.WriteLine($"Error handling received data: {ex.ToString()}");
                 OnDetectedDisconnection();
             }
         }
