@@ -1,6 +1,4 @@
 using LiteNetLib;
-using System.Net;
-using System.Net.Sockets;
 
 namespace Communication.Network.RUDP.Client;
 
@@ -14,6 +12,7 @@ public sealed class RUDPConnector
     private EventBasedNetListener? _listener;
     private Func<NetPeer, NetManager, EventBasedNetListener, Task>? _onConnected;
     private TaskCompletionSource<bool>? _connectionTaskSource;
+    private CancellationTokenSource? _pollingTokenSource;
 
     public RUDPConnector(string host, int port, string connectionKey = "")
     {
@@ -32,6 +31,7 @@ public sealed class RUDPConnector
             _listener = new EventBasedNetListener();
             _netManager = new NetManager(_listener);
             _netManager.Start();
+            _pollingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             // 연결 성공 이벤트
             _listener.PeerConnectedEvent += (peer) =>
@@ -44,7 +44,7 @@ public sealed class RUDPConnector
             };
 
             // 연결 실패 이벤트
-            _listener.PeerDisconnectedEvent += (peer, disconnectInfo) =>
+            _listener.PeerDisconnectedEvent += (_, _) =>
             {
                 if (_connectionTaskSource != null && !_connectionTaskSource.Task.IsCompleted)
                 {
@@ -54,30 +54,16 @@ public sealed class RUDPConnector
 
             _serverPeer = _netManager.Connect(_host, _port, _connectionKey);
 
-            // PollEvents를 백그라운드에서 계속 호출
-            var pollTask = Task.Run(async () =>
-            {
-                while (!_connectionTaskSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
-                {
-                    _netManager?.PollEvents();
-                    await Task.Delay(15, cancellationToken);
-                }
-            }, cancellationToken);
+            // 연결 이후에도 지속적으로 이벤트를 처리한다.
+            _ = Task.Run(() => RunPollingLoopAsync(_pollingTokenSource.Token), _pollingTokenSource.Token);
 
             // 연결 대기 (최대 5초)
             var timeout = Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             var completedTask = await Task.WhenAny(_connectionTaskSource.Task, timeout);
 
-            // pollTask는 백그라운드에서 계속 실행되므로 여기서는 무시
-
             if (completedTask == timeout || (_connectionTaskSource.Task.IsCompleted && !await _connectionTaskSource.Task))
             {
-                if (_netManager != null)
-                {
-                    _netManager.Stop();
-                    _netManager = null;
-                }
-                _listener = null;
+                StopInternal();
                 return false;
             }
 
@@ -87,33 +73,55 @@ public sealed class RUDPConnector
                 return true;
             }
 
-            if (_netManager != null)
-            {
-                _netManager.Stop();
-                _netManager = null;
-            }
-            _listener = null;
+            StopInternal();
             return false;
         }
         catch (OperationCanceledException)
         {
-            if (_netManager != null)
-            {
-                _netManager.Stop();
-                _netManager = null;
-            }
-            _listener = null;
+            StopInternal();
             return false;
         }
         catch
         {
-            if (_netManager != null)
-            {
-                _netManager.Stop();
-                _netManager = null;
-            }
-            _listener = null;
+            StopInternal();
             return false;
         }
+    }
+
+    public void Stop()
+    {
+        StopInternal();
+    }
+
+    private async Task RunPollingLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            _netManager?.PollEvents();
+
+            try
+            {
+                await Task.Delay(15, token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private void StopInternal()
+    {
+        _pollingTokenSource?.Cancel();
+        _pollingTokenSource?.Dispose();
+        _pollingTokenSource = null;
+        if (_netManager != null)
+        {
+            _netManager.Stop();
+            _netManager = null;
+        }
+
+        _listener = null;
+        _serverPeer = null;
     }
 }

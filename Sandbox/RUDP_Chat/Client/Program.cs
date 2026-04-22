@@ -3,15 +3,12 @@ using Communication.Shared.Sessions;
 using Communication.Network.RUDP.Client;
 using Communication.Network.RUDP.Shared.Messages;
 using RUDP_Chat.Shared.Messages;
-using System;
-using System.Threading.Tasks;
 
 namespace RUDP_Chat.Client;
 
 internal sealed class Program
 {
     private static ClientSession? _session;
-    private static LiteNetLib.NetManager? _netManager;
     private static bool _isRunning = true;
 
     private static async Task Main(string[] args)
@@ -25,12 +22,11 @@ internal sealed class Program
         var messageConverter = new MessageConverter();
         var connected = await connector.ConnectAsync(async (peer, manager, listener) =>
         {
-            _netManager = manager;
             _session = new ClientSession(
                 peer,
                 manager,
-                (Session s) => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s)); },
-                (Session s) => { return new RUDPMessageSender(messageConverter, peer); }
+                s => { return new RUDPMessageReceiver(messageConverter, peer, manager, listener, new ClientMessageHandler(s)); },
+                _ => { return new RUDPMessageSender(messageConverter, peer); }
             );
 
             Console.WriteLine("서버에 연결되었습니다. 채팅을 시작하세요! (종료: 'exit' 입력)");
@@ -48,15 +44,14 @@ internal sealed class Program
             return;
         }
 
-        // 메인 스레드에서 NetManager 폴링
-        while (_isRunning && _netManager != null)
+        // 폴링은 RUDPConnector가 백그라운드에서 처리한다.
+        while (_isRunning)
         {
-            _netManager.PollEvents();
             await Task.Delay(15);
         }
 
         _session?.Dispose();
-        _netManager?.Stop();
+        connector.Stop();
     }
 
     private static void ReadInputLoop()
@@ -71,15 +66,12 @@ internal sealed class Program
             if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
             {
                 _isRunning = false;
-                _session?.Disconnect();
+                _session.Disconnect();
                 break;
             }
 
-            if (_session != null)
-            {
-                var chatMessage = new C_ChatSendMessage(input);
-                _ = _session.SendAsync(chatMessage);
-            }
+            var chatMessage = new C_ChatSendMessage(input);
+            _ = _session.SendAsync(chatMessage);
         }
     }
 }
