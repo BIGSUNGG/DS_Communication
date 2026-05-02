@@ -69,7 +69,7 @@ public sealed class TCPMessageSender : MessageSender, IDisposable
         if (totalLength <= _sendBuffer.Length)
         {
             // 작은 메시지: 버퍼에 길이 + 본문 복사
-            BitConverter.TryWriteBytes(_sendBuffer, messageBytes.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(messageBytes.Length), 0, _sendBuffer, 0, 4);
             Array.Copy(messageBytes, 0, _sendBuffer, 4, messageBytes.Length);
             _sendEventArgs.SetBuffer(_sendBuffer, 0, totalLength);
         }
@@ -77,7 +77,7 @@ public sealed class TCPMessageSender : MessageSender, IDisposable
         {
             // 큰 메시지: 별도 버퍼 할당
             byte[] largeBuffer = new byte[totalLength];
-            BitConverter.TryWriteBytes(largeBuffer, messageBytes.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(messageBytes.Length), 0, largeBuffer, 0, 4);
             Array.Copy(messageBytes, 0, largeBuffer, 4, messageBytes.Length);
             _sendEventArgs.SetBuffer(largeBuffer, 0, totalLength);
             _sendEventArgs.UserToken = largeBuffer;

@@ -19,8 +19,18 @@ public sealed class TCPConnector
         try
         {
             var tcpClient = new TcpClient();
-            await tcpClient.ConnectAsync(_host, _port, cancellationToken);
-            await onConnected(tcpClient);
+            using (cancellationToken.Register(() => { try { tcpClient.Close(); } catch { } }))
+            {
+                await tcpClient.ConnectAsync(_host, _port).ConfigureAwait(false);
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcpClient.Close();
+                return false;
+            }
+
+            await onConnected(tcpClient).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException)

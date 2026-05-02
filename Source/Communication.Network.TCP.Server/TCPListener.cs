@@ -20,16 +20,15 @@ public sealed class TCPListener
     {
         while (!token.IsCancellationRequested)
         {
-            TcpClient client;
-            try
-            {
-                client = await _listener.AcceptTcpClientAsync(token);
-            }
-            catch (OperationCanceledException)
+            var acceptTask = _listener.AcceptTcpClientAsync();
+            var cancelTask = Task.Delay(Timeout.Infinite, token);
+            var completed = await Task.WhenAny(acceptTask, cancelTask).ConfigureAwait(false);
+            if (completed == cancelTask)
             {
                 break;
             }
 
+            var client = await acceptTask.ConfigureAwait(false);
             _ = Task.Run(() => onClientAccepted(client), token);
         }
     }

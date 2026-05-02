@@ -7,6 +7,8 @@
     <Nullable>enable</Nullable>
     <RootNamespace>TCP_IOCP.Client</RootNamespace>
     <AssemblyName>TCP_IOCP.Client</AssemblyName>
+    <!-- IOCP 라이브러리는 Unity용 net472; 샌드박스는 net9 — 의도적 교차 참조 -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

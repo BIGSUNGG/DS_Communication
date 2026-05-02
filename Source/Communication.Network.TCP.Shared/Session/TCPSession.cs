@@ -29,7 +29,12 @@ namespace Communication.TCP.Shared.Sessions
 
         protected override void OnDisconnected()
         {
-            _tcpClient.GetStream().Socket.Shutdown(SocketShutdown.Both);
+            try
+            {
+                _tcpClient.Client.Shutdown(SocketShutdown.Both);
+            }
+            catch { }
+
             _tcpClient.Close();
         }
 
