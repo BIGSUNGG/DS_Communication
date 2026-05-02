@@ -1,6 +1,6 @@
 # DS_Communication
 
-TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음입니다. **Unity** 및 **.NET Standard 2.0** 호환 환경에서 사용할 수 있습니다.
+TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음입니다. **Unity** 및 **.NET Standard 2.1** 호환 환경에서 사용할 수 있습니다.
 
 ## 패키지
 
