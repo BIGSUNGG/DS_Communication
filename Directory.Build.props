@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Sandbox 및 앱은 패키징 제외. Source/Directory.Build.props에서 IsPackable=true로 덮어씀. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>
