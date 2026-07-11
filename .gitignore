@@ -426,3 +426,12 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Obsidian (Document vault) - keep shared config, ignore personal workspace
+Document/.obsidian/workspace.json
+Document/.obsidian/workspace-mobile.json
+Document/.obsidian/workspaces.json
+Document/.obsidian/cache
+
+# Cursor hooks session state
+.cursor/hooks/.session-edits.json
