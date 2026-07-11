@@ -34,9 +34,11 @@ TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음. Unity 및 .NET St
 | 패키지 | 설명 |
 |--------|------|
 | `Communication.Shared` | 공통 메시지·세션 추상화 |
-| `Communication.Network.TCP.*` | TCP 소켓 클라이언트/서버 및 공유 타입 |
-| `Communication.Network.TCP_IOCP.*` | Windows IOCP 기반 TCP 스택 |
-| `Communication.Network.RUDP.*` | LiteNetLib 기반 RUDP 클라이언트/서버 및 공유 타입 |
+| `Communication.Network.TCP.{Client,Server,Shared}` | TcpClient 기반 TCP |
+| `Communication.Network.TCP_IOCP.{Client,Server,Shared}` | SocketAsyncEventArgs 기반 TCP |
+| `Communication.Network.RUDP.{Client,Server,Shared}` | LiteNetLib 기반 RUDP |
+
+상세: [[Packages]], [[Overview]], [[Components]]
 
 ## 형제 프로젝트
 

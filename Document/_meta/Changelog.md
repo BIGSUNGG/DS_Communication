@@ -1,7 +1,7 @@
 ---
 project: DS_Communication
 type: overview
-status: stub
+status: draft
 tags: [changelog]
 updated: 2026-07-11
 ---
@@ -12,4 +12,5 @@ updated: 2026-07-11
 
 ## 2026-07-11
 
+- 프로젝트·패키지·코드 구조 분석 반영: Architecture(Overview/Components/Data-Flow), Reference(Packages/Public-API/Configuration), Guides, FAQ, Glossary 초안 작성
 - Document Obsidian Vault 공통 스켈레톤 초기화

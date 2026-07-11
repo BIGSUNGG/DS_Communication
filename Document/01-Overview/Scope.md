@@ -14,10 +14,13 @@ updated: 2026-07-11
 
 ## In scope
 
-- TCP / TCP IOCP / RUDP 클라이언트·서버 스택
+- TCP / TCP IOCP / RUDP 클라이언트·서버 스택 (`Source/` 10패키지)
 - 세션·메시지 전송 추상화 (`Communication.Shared`)
+- length-prefix TCP 프레이밍, RUDP DeliveryMethod (`ReliableType`)
 - Unity / netstandard2.1 호환 런타임
 - Sandbox 샘플 (Chat, RUDP_Chat, TCP_IOCP_Chat)
+
+저장소 레이아웃·원칙: [[Overview]]
 
 ## Out of scope
 
