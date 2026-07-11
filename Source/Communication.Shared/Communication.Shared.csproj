@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <PackageId>Communication.Shared</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>공통 메시지·?�션 추상??�??�트?�크 ?�틸리티 (.NET Standard 2.1, Unity ?�환).</Description>
+    <Description>공통 메시지·세션 추상화 및 네트워크 유틸리티 (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

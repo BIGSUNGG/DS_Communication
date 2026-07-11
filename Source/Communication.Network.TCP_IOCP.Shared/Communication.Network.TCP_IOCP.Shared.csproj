@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP_IOCP.Shared</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>IOCP TCP 공유 메시지·?�션 컴포?�트 (.NET Standard 2.1, Unity ?�환).</Description>
+    <Description>IOCP TCP 공유 메시지·세션 컴포넌트 (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

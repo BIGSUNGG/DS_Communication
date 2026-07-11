@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP_IOCP.Server</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>IOCP 기반 TCP ?�버 (.NET Standard 2.1, Unity ?�환).</Description>
+    <Description>IOCP 기반 TCP 서버 (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

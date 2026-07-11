@@ -8,7 +8,7 @@ updated: 2026-07-11
 
 # Packages
 
-모든 Source 패키지 Version **1.0.1**, TargetFramework **netstandard2.1**.
+모든 Source 패키지 Version **1.0.2**, TargetFramework **netstandard2.1**.
 
 | PackageId | 설명 | 프로젝트 참조 / 외부 패키지 |
 |-----------|------|---------------------------|
@@ -41,7 +41,7 @@ NuGet.org / 로컬 `dotnet pack` 산출물. 패키지 README는 루트 `README.m
 | 기본 IsPackable | 루트 `Directory.Build.props` | `false` (Sandbox 등) |
 | Source IsPackable | `Source/Directory.Build.props` | `true` |
 | TFM / Nullable / LangVersion | `Source/Directory.Build.props` | netstandard2.1, enable, latest |
-| 개별 Version | 각 `.csproj` | 1.0.1 |
+| 개별 Version | 각 `.csproj` | 1.0.2 |
 
 ## 관련
 

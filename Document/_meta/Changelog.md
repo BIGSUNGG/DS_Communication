@@ -12,6 +12,7 @@ updated: 2026-07-11
 
 ## 2026-07-11
 
+- 패키지 Version **1.0.2** (NuGet 태그 `v1.0.2`; 1.0.1 csproj Description 인코딩 손상 보정 포함)
 - 패키지 Version 1.0.0 → **1.0.1** (NuGet 태그 `v1.0.1` 게시용)
 - Known-Issues P0/P1/P2 코드 수정 반영: Semaphore 시그널, Session context, IOCP Accept·송신, TCP Flush/단일 Write, RUDP Poll 1ms·AcceptIfKey, EF Tools 제거; Open 항목(할당·스택 통합)만 문서에 잔여
 - Known-Issues: 구조·성능·병목(P0 Semaphore/Session context/IOCP Accept·송신 레이스, P1 할당·Flush·Poll 15ms, P2 스택 복제·의존 비대칭 등) 문서화

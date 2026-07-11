@@ -1,10 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+ï»¿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP.Server</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>TCP ¼ÒÄÏ ±â¹İ ¼­¹ö ¶óÀÌºê·¯¸® (.NET Standard 2.1, Unity È£È¯).</Description>
+    <Description>TCP ì†Œì¼“ ê¸°ë°˜ ì„œë²„ ë¼ì´ë¸ŒëŸ¬ë¦¬ (.NET Standard 2.1, Unity í˜¸í™˜).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
