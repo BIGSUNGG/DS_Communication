@@ -34,16 +34,7 @@ jobs:
           mkdir -p "$OUT"
           VER="${{ steps.ver.outputs.version }}"
           for proj in \
-            Source/Communication.Shared/Communication.Shared.csproj \
-            Source/Communication.Network.TCP.Client/Communication.Network.TCP.Client.csproj \
-            Source/Communication.Network.TCP.Server/Communication.Network.TCP.Server.csproj \
-            Source/Communication.Network.TCP.Shared/Communication.Network.TCP.Shared.csproj \
-            Source/Communication.Network.TCP_IOCP.Client/Communication.Network.TCP_IOCP.Client.csproj \
-            Source/Communication.Network.TCP_IOCP.Server/Communication.Network.TCP_IOCP.Server.csproj \
-            Source/Communication.Network.TCP_IOCP.Shared/Communication.Network.TCP_IOCP.Shared.csproj \
-            Source/Communication.Network.RUDP.Client/Communication.Network.RUDP.Client.csproj \
-            Source/Communication.Network.RUDP.Server/Communication.Network.RUDP.Server.csproj \
-            Source/Communication.Network.RUDP.Shared/Communication.Network.RUDP.Shared.csproj
+            Source/Communication.Shared/Communication.Shared.csproj
           do
             dotnet pack "$proj" \
               -c Release \

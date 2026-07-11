@@ -1,14 +1,15 @@
 # DS_Communication
 
-TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음입니다. **Unity** 및 **.NET Standard 2.1** 호환 환경에서 사용할 수 있습니다.
+직렬화 라이브러리 재작성 준비 중입니다.
 
-## 패키지
+기존 TCP / RUDP 네트워크 통신 코드와 문서는 [`Legacy/`](Legacy/)에 아카이브되어 있습니다.
 
-| 패키지 | 설명 |
-|--------|------|
-| `Communication.Shared` | 공통 메시지·세션 추상화 |
-| `Communication.Network.TCP.*` | TCP 소켓 클라이언트/서버 및 공유 타입 |
-| `Communication.Network.TCP_IOCP.*` | Windows IOCP 기반 TCP 스택 |
-| `Communication.Network.RUDP.*` | LiteNetLib 기반 RUDP 클라이언트/서버 및 공유 타입 |
+## 현재 골격
+
+| 경로 | 설명 |
+|------|------|
+| `Communication.sln` | `Communication.Shared`만 포함 |
+| `Source/Communication.Shared` | 빈 프로젝트 (구현 예정) |
+| `Document/` | 빈 Obsidian vault |
 
 소스 및 샘플: [GitHub 저장소](https://github.com/BIGSUNGG/DS_Communication)

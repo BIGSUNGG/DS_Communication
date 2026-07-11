@@ -1,18 +1,26 @@
 # AGENTS.md — DS_Communication
 
+## Rebuild status
+
+This repo is being rebuilt around serialization. Previous network stack and docs live under `Legacy/`. Do not treat `Legacy/` as the active source of truth unless the task is explicitly about the archive.
+
 ## Document vault (required)
 
 This repo keeps an Obsidian vault at `Document/`. Agents must **read and write** it whenever they analyze, change, or test code.
 
-1. **Start**: read `Document/00-AI/CONTEXT.md`, then `GLOSSARY.md` and related Architecture/Reference notes.
+1. **Start**: read `Document/00-AI/CONTEXT.md` when it exists, then `GLOSSARY.md` and related Architecture/Reference notes. If the vault is still empty, create the needed notes as work proceeds.
 2. **Same turn**: any change under `Source/`, `Test/`, `Sandbox/`, `Examples/`, or `TemplateSource/` must update `Document/`.
 3. **Structure**: package, folder, or public API changes belong in `02-Architecture/` and `03-Reference/` (see mapping in skill `ds-document-vault`).
 4. **Meta**: refresh YAML `updated` / `status`; append `_meta/Changelog.md` when docs change.
 5. **Conventions**: `Document/00-AI/CONVENTIONS.md` and skill `ds-document-vault`.
 
-Human entry: `Document/01-Overview/Home.md`.
+Human entry: `Document/01-Overview/Home.md` (create when documenting begins).
+
+Archived vault: `Legacy/Document/`.
 
 ## Project
 
 - Display name: DS_Communication
+- Active project: `Source/Communication.Shared`
+- Archive: `Legacy/Source`, `Legacy/Test`, `Legacy/Sandbox`, `Legacy/Document`
 - Sibling stack: DS_RPC depends on DS_MessageProtocol and DS_Communication.
