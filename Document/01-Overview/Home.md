@@ -47,6 +47,7 @@ TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음. Unity 및 .NET St
 ### Troubleshooting
 
 - [[FAQ]]
+- [[Known-Issues]] — 구조·성능·병목
 
 ### Meta
 

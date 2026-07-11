@@ -34,6 +34,7 @@ A: 타깃이 netstandard2.1이다. Unity 버전이 해당 API·의존(LiteNetLib
 
 ## 관련
 
+- [[Known-Issues]] — 구조·성능·병목 (코드 분석)
 - [[How-To]]
 - [[Getting-Started]]
 - [[Data-Flow]]

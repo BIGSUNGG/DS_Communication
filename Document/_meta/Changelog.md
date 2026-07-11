@@ -12,5 +12,6 @@ updated: 2026-07-11
 
 ## 2026-07-11
 
+- Known-Issues: 구조·성능·병목(P0 Semaphore/Session context/IOCP Accept·송신 레이스, P1 할당·Flush·Poll 15ms, P2 스택 복제·의존 비대칭 등) 문서화
 - 프로젝트·패키지·코드 구조 분석 반영: Architecture(Overview/Components/Data-Flow), Reference(Packages/Public-API/Configuration), Guides, FAQ, Glossary 초안 작성
 - Document Obsidian Vault 공통 스켈레톤 초기화

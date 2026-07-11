@@ -28,6 +28,7 @@ TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음. Unity 및 .NET St
 5. [[Packages]]
 6. `05-Decisions/` ADR (있을 경우)
 7. [[CONVENTIONS]]
+8. [[Known-Issues]] — 구조·성능 이슈 (분석·수정 시)
 
 ## 패키지 요약
 
