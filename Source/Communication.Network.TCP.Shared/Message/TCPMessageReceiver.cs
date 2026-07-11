@@ -1,11 +1,11 @@
 using Communication.Shared.Messages;
-using System;
+using System.Buffers;
+using System.Diagnostics;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace Communication.TCP.Shared.Messages
 {
-    public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
+    public class TCPMessageReceiver : MessageReceiver, IDisposable
     {
         private readonly NetworkStream _stream;
         private bool _disposed;
@@ -23,7 +23,7 @@ namespace Communication.TCP.Shared.Messages
         private async Task ReceiveLoopAsync(CancellationTokenSource cancellationTokenSource)
         {
             byte[] lengthBuffer = new byte[4];
-            
+
             while (!cancellationTokenSource.IsCancellationRequested && !_disposed)
             {
                 try
@@ -61,22 +61,29 @@ namespace Communication.TCP.Shared.Messages
                     }
 
                     // 메시지 본문 읽기
-                    byte[] messageBytes = new byte[messageLength];
-                    bytesRead = 0;
-                    while (bytesRead < messageLength)
+                    byte[] messageBytes = ArrayPool<byte>.Shared.Rent(messageLength);
+                    try
                     {
-                        int read = await _stream.ReadAsync(messageBytes, bytesRead, messageLength - bytesRead, cancellationTokenSource.Token);
-                        if (read == 0)
+                        bytesRead = 0;
+                        while (bytesRead < messageLength)
                         {
-                            OnDetectedDisconnection();
-                            return;
+                            int read = await _stream.ReadAsync(messageBytes, bytesRead, messageLength - bytesRead, cancellationTokenSource.Token);
+                            if (read == 0)
+                            {
+                                OnDetectedDisconnection();
+                                return;
+                            }
+                            bytesRead += read;
                         }
-                        bytesRead += read;
-                    }
 
-                    // 역직렬화 및 핸들러에 전달
-                    var message = _messageConverter.Deserialize(messageBytes);
-                    _messageHandler.HandleMessage(message);
+                        // 역직렬화 및 핸들러에 전달
+                        var message = _messageConverter.Deserialize(messageBytes.AsSpan(0, messageLength));
+                        _messageHandler.HandleMessage(message);
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(messageBytes);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -84,7 +91,7 @@ namespace Communication.TCP.Shared.Messages
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error receiving message: {ex.Message}");
+                    Trace.WriteLine($"Error receiving message: {ex.Message}");
                     OnDetectedDisconnection();
                     break;
                 }

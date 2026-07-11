@@ -1,9 +1,8 @@
 using Communication.Shared.Messages;
 using Communication.Shared.Sessions;
 using LiteNetLib;
-using System;
 
-namespace Communication.Shared.Sessions
+namespace Communication.Network.RUDP.Shared.Sessions
 {
     public abstract class RUDPSession : Session
     {
@@ -17,7 +16,7 @@ namespace Communication.Shared.Sessions
             _netManager = netManager;
         }
 
-        public override bool IsConnected()
+        protected override bool IsTransportConnected()
         {
             return _netPeer != null && _netPeer.ConnectionState == ConnectionState.Connected;
         }
@@ -34,6 +33,18 @@ namespace Communication.Shared.Sessions
         {
             base.Dispose();
             // NetPeer와 NetManager는 외부에서 관리되므로 여기서 dispose하지 않음
+        }
+    }
+}
+
+namespace Communication.Shared.Sessions
+{
+    [Obsolete("Use Communication.Network.RUDP.Shared.Sessions.RUDPSession instead.")]
+    public abstract class RUDPSession : Communication.Network.RUDP.Shared.Sessions.RUDPSession
+    {
+        protected RUDPSession(NetPeer netPeer, NetManager netManager, Func<Session, IMessageReceiver> receiverCreater, Func<Session, IMessageSender> senderCreater)
+            : base(netPeer, netManager, receiverCreater, senderCreater)
+        {
         }
     }
 }

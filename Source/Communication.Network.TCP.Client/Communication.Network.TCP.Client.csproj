@@ -9,4 +9,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj" />
+    <ProjectReference Include="..\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

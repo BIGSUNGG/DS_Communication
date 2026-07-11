@@ -41,13 +41,14 @@ TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음. Unity 및 .NET St
 
 ### Decisions
 
+- [[0001-transport-pipeline-unification]] — SignalGate/옵션 공유 vs 전체 파이프라인 통합·Converter major
 - [[_Template]] — ADR 템플릿
 - (ADR은 `05-Decisions/NNNN-*.md`)
 
 ### Troubleshooting
 
 - [[FAQ]]
-- [[Known-Issues]] — 구조·성능·병목
+- [[Known-Issues]] — 구조·성능·병목 + 해결 방안
 
 ### Meta
 

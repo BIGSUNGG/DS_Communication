@@ -1,28 +1,29 @@
 using Communication.Shared.Messages;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Sockets;
 
 namespace Communication.TCP.Shared.Messages
 {
-    public sealed class TCPMessageSender : MessageSender, IDisposable
+    public class TCPMessageSender : MessageSender, IDisposable
     {
+        private const int MaxCoalesceBytes = 64 * 1024;
+
         private bool _disposed;
-
         private readonly NetworkStream _stream;
-
-        private readonly SemaphoreSlim _signal = new(0, 1);
-        private int _signalPending;
-        private readonly ConcurrentQueue<byte[]> _messageQueue = new();
-        private Task _processMessageQueueTask;
+        private readonly ConcurrentQueue<(byte[] Payload, TaskCompletionSource<bool>? FlushTcs)> _messageQueue = new();
+        private readonly SemaphoreSlim _backpressure;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private int _sending; // 0 = idle, 1 = sending
 
-        public TCPMessageSender(IMessageConverter messageConverter, NetworkStream stream)
+        public TCPMessageSender(IMessageConverter messageConverter, NetworkStream stream, MessageQueueOptions? options = null)
             : base(messageConverter)
         {
             _stream = stream;
+            options ??= new MessageQueueOptions();
+            _backpressure = new SemaphoreSlim(options.MaxPendingMessages, options.MaxPendingMessages);
             _cancellationTokenSource = new CancellationTokenSource();
-            _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource.Token));
         }
 
         public override async Task SendAsync(object message, object context)
@@ -30,21 +31,106 @@ namespace Communication.TCP.Shared.Messages
             await SendAsync(message).ConfigureAwait(false);
         }
 
-        public override Task SendAsync(object message)
+        public override async Task SendAsync(object message)
         {
-            byte[] serializedMessage = _messageConverter.Serialize(message);
-            _messageQueue.Enqueue(serializedMessage);
-            Signal();
-            return Task.CompletedTask;
+            await EnqueueAsync(message, flush: false, CancellationToken.None).ConfigureAwait(false);
         }
 
-        private void Signal()
+        public override async Task SendAndFlushAsync(object message, object? context = null, CancellationToken cancellationToken = default)
         {
-            if (Interlocked.CompareExchange(ref _signalPending, 1, 0) == 0)
+            await EnqueueAsync(message, flush: true, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task EnqueueAsync(object message, bool flush, CancellationToken cancellationToken)
+        {
+            if (_disposed)
             {
+                throw new ObjectDisposedException(nameof(TCPMessageSender));
+            }
+
+            await _backpressure.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            byte[] serializedMessage = _messageConverter.Serialize(message);
+            TaskCompletionSource<bool>? flushTcs = flush
+                ? new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)
+                : null;
+
+            _messageQueue.Enqueue((serializedMessage, flushTcs));
+
+            if (Interlocked.CompareExchange(ref _sending, 1, 0) == 0)
+            {
+                _ = StartSendAsync();
+            }
+
+            if (flushTcs != null)
+            {
+                using (cancellationToken.Register(static state =>
+                {
+                    ((TaskCompletionSource<bool>)state!).TrySetCanceled();
+                }, flushTcs))
+                {
+                    await flushTcs.Task.ConfigureAwait(false);
+                }
+            }
+        }
+
+        private async Task StartSendAsync()
+        {
+            try
+            {
+                while (!_disposed && !_cancellationTokenSource.IsCancellationRequested)
+                {
+                    if (!_messageQueue.TryPeek(out _))
+                    {
+                        Interlocked.Exchange(ref _sending, 0);
+                        if (!_messageQueue.IsEmpty && Interlocked.CompareExchange(ref _sending, 1, 0) == 0)
+                        {
+                            continue;
+                        }
+                        return;
+                    }
+
+                    await SendCoalescedBatchAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error sending message: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _sending, 0);
+                if (!_disposed && !_messageQueue.IsEmpty && Interlocked.CompareExchange(ref _sending, 1, 0) == 0)
+                {
+                    _ = StartSendAsync();
+                }
+            }
+        }
+
+        private async Task SendCoalescedBatchAsync(CancellationToken cancellationToken)
+        {
+            List<(byte[] Payload, TaskCompletionSource<bool>? FlushTcs)> batch = new();
+            int totalBytes = 0;
+
+            while (_messageQueue.TryPeek(out var next))
+            {
+                int needed = 4 + next.Payload.Length;
+                if (batch.Count > 0 && totalBytes + needed > MaxCoalesceBytes)
+                {
+                    break;
+                }
+
+                if (!_messageQueue.TryDequeue(out next))
+                {
+                    break;
+                }
+
                 try
                 {
-                    _signal.Release();
+                    _backpressure.Release();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -52,63 +138,52 @@ namespace Communication.TCP.Shared.Messages
                 catch (SemaphoreFullException)
                 {
                 }
+
+                batch.Add(next);
+                totalBytes += needed;
+
+                if (next.FlushTcs != null)
+                {
+                    // flush 경계: 해당 메시지까지 포함해 쓰고 완료한다
+                    break;
+                }
             }
-        }
 
-        private async Task ProcessMessageQueueLoopAsync(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
+            if (batch.Count == 0)
             {
-                try
+                return;
+            }
+
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(totalBytes);
+            try
+            {
+                int offset = 0;
+                foreach (var item in batch)
                 {
-                    await _signal.WaitAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (ObjectDisposedException)
-                {
-                    break;
+                    BitConverter.TryWriteBytes(buffer.AsSpan(offset, 4), item.Payload.Length);
+                    offset += 4;
+                    Buffer.BlockCopy(item.Payload, 0, buffer, offset, item.Payload.Length);
+                    offset += item.Payload.Length;
                 }
 
-                try
+                await _stream.WriteAsync(buffer.AsMemory(0, totalBytes), cancellationToken).ConfigureAwait(false);
+
+                foreach (var item in batch)
                 {
-                    while (_messageQueue.TryDequeue(out byte[] messageBytes))
-                    {
-                        try
-                        {
-                            int totalLength = 4 + messageBytes.Length;
-                            byte[] buffer = ArrayPool<byte>.Shared.Rent(totalLength);
-                            try
-                            {
-                                BitConverter.TryWriteBytes(buffer.AsSpan(0, 4), messageBytes.Length);
-                                Buffer.BlockCopy(messageBytes, 0, buffer, 4, messageBytes.Length);
-                                await _stream.WriteAsync(buffer, 0, totalLength, cancellationToken).ConfigureAwait(false);
-                            }
-                            finally
-                            {
-                                ArrayPool<byte>.Shared.Return(buffer);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error sending message: {ex.Message}");
-                        }
-                    }
+                    item.FlushTcs?.TrySetResult(true);
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error sending message: {ex.Message}");
+                foreach (var item in batch)
                 {
-                    Console.WriteLine($"Error sending message: {ex.Message}");
+                    item.FlushTcs?.TrySetException(ex);
                 }
-                finally
-                {
-                    Interlocked.Exchange(ref _signalPending, 0);
-                    if (!_messageQueue.IsEmpty)
-                    {
-                        Signal();
-                    }
-                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 
@@ -121,24 +196,22 @@ namespace Communication.TCP.Shared.Messages
 
             _disposed = true;
             _cancellationTokenSource.Cancel();
-            try
-            {
-                _signal.Release();
-            }
-            catch
-            {
-            }
 
-            try
+            while (_messageQueue.TryDequeue(out var item))
             {
-                _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
-            }
-            catch
-            {
+                try
+                {
+                    _backpressure.Release();
+                }
+                catch
+                {
+                }
+
+                item.FlushTcs?.TrySetCanceled();
             }
 
             _cancellationTokenSource.Dispose();
-            _signal.Dispose();
+            _backpressure.Dispose();
         }
     }
 }

@@ -26,9 +26,9 @@ TCP / RUDP 네트워크 통신용 .NET 라이브러리 모음. Unity 및 .NET St
 3. [[Scope]]
 4. [[Overview]] (Architecture)
 5. [[Packages]]
-6. `05-Decisions/` ADR (있을 경우)
+6. `05-Decisions/` ADR — 특히 [[0001-transport-pipeline-unification]] (전송 유틸 공유·Converter major 범위)
 7. [[CONVENTIONS]]
-8. [[Known-Issues]] — 구조·성능 이슈 (분석·수정 시)
+8. [[Known-Issues]] — Fixed vs Open(Converter `byte[]` Serialize); 분석·수정 시
 
 ## 패키지 요약
 

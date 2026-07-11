@@ -14,11 +14,15 @@ public sealed class RUDPConnector
     private TaskCompletionSource<bool>? _connectionTaskSource;
     private CancellationTokenSource? _pollingTokenSource;
 
-    public RUDPConnector(string host, int port, string connectionKey = "")
+    /// <summary>LiteNetLib PollEvents 루프 간격(ms). 기본값 1.</summary>
+    public int PollIntervalMs { get; set; } = 1;
+
+    public RUDPConnector(string host, int port, string connectionKey = "", int pollIntervalMs = 1)
     {
         _host = host;
         _port = port;
         _connectionKey = connectionKey;
+        PollIntervalMs = pollIntervalMs > 0 ? pollIntervalMs : 1;
     }
 
     public async Task<bool> ConnectAsync(Func<NetPeer, NetManager, EventBasedNetListener, Task> onConnected, CancellationToken cancellationToken = default)
@@ -101,7 +105,7 @@ public sealed class RUDPConnector
 
             try
             {
-                await Task.Delay(1, token);
+                await Task.Delay(PollIntervalMs, token);
             }
             catch (OperationCanceledException)
             {

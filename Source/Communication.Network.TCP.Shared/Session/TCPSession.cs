@@ -1,14 +1,6 @@
 using Communication.Shared.Messages;
 using Communication.Shared.Sessions;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Communication.TCP.Shared.Sessions
 {
@@ -22,7 +14,7 @@ namespace Communication.TCP.Shared.Sessions
             _tcpClient = tcpClient;
         }
 
-        public override bool IsConnected()
+        protected override bool IsTransportConnected()
         {
             return _tcpClient.Connected;
         }

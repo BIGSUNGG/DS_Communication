@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -7,6 +8,7 @@ public sealed class TCPListener : IDisposable
 {
     private readonly Socket _listenerSocket;
     private readonly IPEndPoint _endPoint;
+    private readonly ConcurrentBag<SocketAsyncEventArgs> _acceptArgsPool = new();
     private bool _isListening;
     private bool _disposed;
 
@@ -43,11 +45,13 @@ public sealed class TCPListener : IDisposable
         while (!token.IsCancellationRequested && _isListening)
         {
             SocketAsyncEventArgs? acceptEventArgs = null;
+            EventHandler<SocketAsyncEventArgs>? completedHandler = null;
             try
             {
-                acceptEventArgs = new SocketAsyncEventArgs();
+                acceptEventArgs = RentAcceptArgs();
                 var tcs = new TaskCompletionSource<SocketAsyncEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
-                acceptEventArgs.Completed += (_, e) => tcs.TrySetResult(e);
+                completedHandler = (_, e) => tcs.TrySetResult(e);
+                acceptEventArgs.Completed += completedHandler;
 
                 bool pending = _listenerSocket.AcceptAsync(acceptEventArgs);
                 if (pending)
@@ -60,7 +64,6 @@ public sealed class TCPListener : IDisposable
                         }
                         catch (OperationCanceledException)
                         {
-                            acceptEventArgs?.Dispose();
                             break;
                         }
                     }
@@ -68,7 +71,6 @@ public sealed class TCPListener : IDisposable
 
                 if (acceptEventArgs.SocketError != SocketError.Success)
                 {
-                    acceptEventArgs.Dispose();
                     if (!_isListening || token.IsCancellationRequested)
                         break;
                     continue;
@@ -76,8 +78,6 @@ public sealed class TCPListener : IDisposable
 
                 var clientSocket = acceptEventArgs.AcceptSocket;
                 acceptEventArgs.AcceptSocket = null;
-                acceptEventArgs.Dispose();
-                acceptEventArgs = null;
 
                 if (clientSocket != null && !token.IsCancellationRequested)
                 {
@@ -86,16 +86,46 @@ public sealed class TCPListener : IDisposable
             }
             catch (ObjectDisposedException)
             {
-                acceptEventArgs?.Dispose();
                 break;
             }
             catch (SocketException)
             {
-                acceptEventArgs?.Dispose();
                 if (!_isListening)
                     break;
             }
+            finally
+            {
+                if (acceptEventArgs != null)
+                {
+                    if (completedHandler != null)
+                        acceptEventArgs.Completed -= completedHandler;
+                    ReturnAcceptArgs(acceptEventArgs);
+                }
+            }
         }
+    }
+
+    private SocketAsyncEventArgs RentAcceptArgs()
+    {
+        if (_acceptArgsPool.TryTake(out var args))
+        {
+            args.AcceptSocket = null;
+            return args;
+        }
+
+        return new SocketAsyncEventArgs();
+    }
+
+    private void ReturnAcceptArgs(SocketAsyncEventArgs args)
+    {
+        if (_disposed)
+        {
+            args.Dispose();
+            return;
+        }
+
+        args.AcceptSocket = null;
+        _acceptArgsPool.Add(args);
     }
 
     public void Dispose()
@@ -106,5 +136,10 @@ public sealed class TCPListener : IDisposable
         _disposed = true;
         Stop();
         _listenerSocket?.Dispose();
+
+        while (_acceptArgsPool.TryTake(out var args))
+        {
+            args.Dispose();
+        }
     }
 }

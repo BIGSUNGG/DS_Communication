@@ -1,5 +1,6 @@
 using Communication.Network.RUDP.Shared.Messages;
 using LiteNetLib;
+using System.Diagnostics;
 using System.Net;
 
 namespace Communication.Network.RUDP.Server;
@@ -16,13 +17,17 @@ public sealed class RUDPListener : IDisposable
     private Func<NetPeer, NetManager, EventBasedNetListener, RUDPNetworkReceiveDispatcher, Task>? _onClientAccepted;
     private bool _stopped;
 
+    /// <summary>LiteNetLib PollEvents 루프 간격(ms). 기본값 1.</summary>
+    public int PollIntervalMs { get; set; } = 1;
+
     public RUDPNetworkReceiveDispatcher ReceiveDispatcher => _receiveDispatcher;
 
-    public RUDPListener(IPAddress ipAddress, int port, string connectionKey = "")
+    public RUDPListener(IPAddress ipAddress, int port, string connectionKey = "", int pollIntervalMs = 1)
     {
         _ipAddress = ipAddress;
         _port = port;
         _connectionKey = connectionKey;
+        PollIntervalMs = pollIntervalMs > 0 ? pollIntervalMs : 1;
 
         _listener = new EventBasedNetListener();
         _receiveDispatcher = new RUDPNetworkReceiveDispatcher(_listener);
@@ -53,7 +58,7 @@ public sealed class RUDPListener : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error handling client connection: {ex.Message}");
+            Trace.WriteLine($"Error handling client connection: {ex.Message}");
         }
     }
 
@@ -86,7 +91,7 @@ public sealed class RUDPListener : IDisposable
         while (!token.IsCancellationRequested)
         {
             _netManager.PollEvents();
-            await Task.Delay(1, token).ConfigureAwait(false);
+            await Task.Delay(PollIntervalMs, token).ConfigureAwait(false);
         }
     }
 }

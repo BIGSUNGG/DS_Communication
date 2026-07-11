@@ -1,5 +1,6 @@
 using Communication.Shared.Messages;
-using System;
+using System.Buffers;
+using System.Diagnostics;
 using System.Net.Sockets;
 
 namespace Communication.Network.TCP_IOCP.Shared.Messages;
@@ -9,22 +10,23 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
     private readonly Socket _socket;
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    
+
     private readonly SocketAsyncEventArgs _receiveEventArgs;
     private readonly byte[] _receiveBuffer = new byte[64 * 1024]; // 64KB 버퍼
     private int _bufferOffset = 0;
     private int _bytesNeeded = 4; // 처음에는 길이 4바이트 필요
     private bool _readingLength = true;
+    private byte[]? _rentedLargeBuffer;
 
     public TCPMessageReceiver(IMessageConverter messageConverter, Socket socket, IMessageHandler messageHandler)
         : base(messageConverter, messageHandler)
     {
         _socket = socket ?? throw new ArgumentNullException(nameof(socket));
         _cancellationTokenSource = new CancellationTokenSource();
-        
+
         _receiveEventArgs = new SocketAsyncEventArgs();
         _receiveEventArgs.Completed += OnReceiveCompleted;
-        
+
         StartReceive();
     }
 
@@ -43,7 +45,7 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error starting receive: {ex.Message}");
+            Trace.WriteLine($"Error starting receive: {ex.Message}");
             OnDetectedDisconnection();
         }
     }
@@ -127,7 +129,7 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error deserializing message: {ex.Message}");
+                    Trace.WriteLine($"Error deserializing message: {ex.Message}");
                 }
 
                 // 다음 메시지 읽기 시작
@@ -141,20 +143,19 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing receive: {ex.Message}");
+            Trace.WriteLine($"Error processing receive: {ex.Message}");
             OnDetectedDisconnection();
         }
     }
 
     private void ReadLargeMessage(int messageLength)
     {
-        // 큰 메시지는 별도 버퍼에 읽기
-        byte[] largeBuffer = new byte[messageLength];
-        
-        // 나머지 읽기
+        byte[] largeBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
+        _rentedLargeBuffer = largeBuffer;
+
         _receiveEventArgs.SetBuffer(largeBuffer, 0, messageLength);
         _receiveEventArgs.UserToken = (largeBuffer, messageLength);
-        
+
         if (!_socket.ReceiveAsync(_receiveEventArgs))
         {
             ProcessLargeMessageReceive(_receiveEventArgs, largeBuffer, messageLength);
@@ -164,7 +165,10 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
     private void ProcessLargeMessageReceive(SocketAsyncEventArgs e, byte[] buffer, int messageLength)
     {
         if (_disposed || _cancellationTokenSource.IsCancellationRequested)
+        {
+            ReturnRentedLargeBuffer();
             return;
+        }
 
         try
         {
@@ -172,20 +176,23 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
             {
                 if (e.SocketError == SocketError.OperationAborted)
                 {
+                    ReturnRentedLargeBuffer();
                     return;
                 }
+                ReturnRentedLargeBuffer();
                 OnDetectedDisconnection();
                 return;
             }
 
             if (e.BytesTransferred == 0)
             {
+                ReturnRentedLargeBuffer();
                 OnDetectedDisconnection();
                 return;
             }
 
             int totalReceived = e.Offset + e.BytesTransferred;
-            
+
             if (totalReceived < messageLength)
             {
                 // 아직 더 읽어야 함
@@ -205,7 +212,11 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deserializing large message: {ex.Message}");
+                Trace.WriteLine($"Error deserializing large message: {ex.Message}");
+            }
+            finally
+            {
+                ReturnRentedLargeBuffer();
             }
 
             // 다음 메시지 읽기 시작
@@ -217,8 +228,18 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing large message receive: {ex.Message}");
+            Trace.WriteLine($"Error processing large message receive: {ex.Message}");
+            ReturnRentedLargeBuffer();
             OnDetectedDisconnection();
+        }
+    }
+
+    private void ReturnRentedLargeBuffer()
+    {
+        if (_rentedLargeBuffer != null)
+        {
+            ArrayPool<byte>.Shared.Return(_rentedLargeBuffer);
+            _rentedLargeBuffer = null;
         }
     }
 
@@ -230,6 +251,8 @@ public sealed class TCPMessageReceiver : MessageReceiver, IDisposable
         _disposed = true;
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
+
+        ReturnRentedLargeBuffer();
 
         // EventArgs 정리
         _receiveEventArgs.Completed -= OnReceiveCompleted;

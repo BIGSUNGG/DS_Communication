@@ -38,15 +38,24 @@ updated: 2026-07-11
 |------|----------|------|
 | TCP / TCP_IOCP Client | `host`, `port` | |
 | TCP / TCP_IOCP Server | `IPAddress`, `port` | |
-| RUDP Client/Server | `host`/`IPAddress`, `port`, `connectionKey` | 키 불일치 시 연결 실패 |
-| RUDP Client | 연결 대기 ~5초; poll `Delay(1)` | `RUDPConnector` 내부 |
-| RUDP Server | `AcceptIfKey(connectionKey)` | 키 불일치 시 거절 |
+| RUDP Client/Server | `host`/`IPAddress`, `port`, `connectionKey` | 키 불일치 시 연결 실패; Server는 `AcceptIfKey` |
+| RUDP Client/Server | `pollIntervalMs` / `PollIntervalMs` | 기본 1; `Task.Delay` 폴링 간격(ms). Client 연결 대기 ~5초 |
 | RUDP Send | `MessageSendContext.Reliable` | 기본 ReliableOrdered; Session context 오버로드로 전달 |
+
+### MessageQueueOptions (`Communication.Shared.Messages`)
+
+Sender·`MessageHandler` 생성자에 선택 전달.
+
+| 속성 | 기본 | 의미 |
+|------|------|------|
+| `MaxPendingMessages` | `10_000` | 큐 백프레셔 상한 (SemaphoreSlim) |
+| `InlineDispatch` | `false` | `true`면 Handler 전용 큐/Task 없이 Receiver 경로에서 동기 디스패치 |
 
 직렬화·핸들러·세션 ID 등은 앱/`IMessageConverter`·Sandbox에서 구성.
 
 ## 관련
 
 - [[Packages]]
+- [[Public-API]]
 - [[Getting-Started]]
 - [[Overview]]

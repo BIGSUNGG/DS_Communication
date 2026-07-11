@@ -14,7 +14,7 @@ public abstract class TCPSession : Session
         _socket = socket ?? throw new ArgumentNullException(nameof(socket));
     }
 
-    public override bool IsConnected()
+    protected override bool IsTransportConnected()
     {
         return _socket != null && _socket.Connected;
     }

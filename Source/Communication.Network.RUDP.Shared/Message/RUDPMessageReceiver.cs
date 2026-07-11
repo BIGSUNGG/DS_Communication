@@ -1,8 +1,7 @@
 using Communication.Shared.Messages;
 using LiteNetLib;
-using LiteNetLib.Utils;
-using System;
-using System.Threading.Tasks;
+using System.Buffers;
+using System.Diagnostics;
 
 namespace Communication.Network.RUDP.Shared.Messages
 {
@@ -61,17 +60,25 @@ namespace Communication.Network.RUDP.Shared.Messages
                     return;
                 }
 
-                byte[] messageBytes = new byte[reader.AvailableBytes];
-                reader.GetBytes(messageBytes, 0, messageBytes.Length);
-                reader.Recycle();
+                int length = reader.AvailableBytes;
+                byte[] messageBytes = ArrayPool<byte>.Shared.Rent(length);
+                try
+                {
+                    reader.GetBytes(messageBytes, 0, length);
+                    reader.Recycle();
 
-                var message = _messageConverter.Deserialize(messageBytes);
-                _messageHandler.HandleMessage(message);
+                    var message = _messageConverter.Deserialize(messageBytes.AsSpan(0, length));
+                    _messageHandler.HandleMessage(message);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(messageBytes);
+                }
             }
             catch (Exception ex)
             {
                 reader.Recycle();
-                Console.WriteLine($"Error handling received data: {ex.ToString()}");
+                Trace.WriteLine($"Error handling received data: {ex}");
                 OnDetectedDisconnection();
             }
         }

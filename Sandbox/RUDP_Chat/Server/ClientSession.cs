@@ -2,6 +2,7 @@ using Communication.Shared.Messages;
 using Communication.Shared.Sessions;
 using LiteNetLib;
 using System;
+using RUDPSession = Communication.Network.RUDP.Shared.Sessions.RUDPSession;
 
 namespace RUDP_Chat.Server;
 

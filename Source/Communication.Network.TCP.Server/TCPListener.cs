@@ -20,16 +20,53 @@ public sealed class TCPListener
     {
         while (!token.IsCancellationRequested)
         {
-            var acceptTask = _listener.AcceptTcpClientAsync();
-            var cancelTask = Task.Delay(Timeout.Infinite, token);
-            var completed = await Task.WhenAny(acceptTask, cancelTask).ConfigureAwait(false);
-            if (completed == cancelTask)
+            Task<TcpClient> acceptTask;
+            try
+            {
+                acceptTask = _listener.AcceptTcpClientAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+            catch (InvalidOperationException)
             {
                 break;
             }
 
-            var client = await acceptTask.ConfigureAwait(false);
-            _ = onClientAccepted(client);
+            Task cancelTask;
+            try
+            {
+                cancelTask = Task.Delay(Timeout.Infinite, token);
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+
+            var completed = await Task.WhenAny(acceptTask, cancelTask).ConfigureAwait(false);
+            if (completed == cancelTask || token.IsCancellationRequested)
+            {
+                break;
+            }
+
+            try
+            {
+                var client = await acceptTask.ConfigureAwait(false);
+                _ = onClientAccepted(client);
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+            catch (SocketException)
+            {
+                break;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 }

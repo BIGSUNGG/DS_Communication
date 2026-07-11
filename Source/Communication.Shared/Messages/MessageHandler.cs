@@ -1,6 +1,8 @@
-using Communication.Shared.Sessions;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
+using Communication.Shared.Sessions;
+using Communication.Shared.Threading;
 
 namespace Communication.Shared.Messages;
 
@@ -10,44 +12,60 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
 
     bool _disposed = false;
     protected Dictionary<Type, Action<object>> _messageHandleActions = new Dictionary<Type, Action<object>>();
-    private readonly SemaphoreSlim _signal = new(0, 1);
-    private int _signalPending;
-    private Task _processMessageQueueTask;
+    private readonly SignalGate _signal = new();
+    private Task? _processMessageQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private ConcurrentQueue<object> _messageQueue = new ConcurrentQueue<object>();
+    private readonly ConcurrentQueue<object> _messageQueue = new();
+    private int _pendingCount;
+    private readonly SemaphoreSlim _capacity;
+    private readonly MessageQueueOptions _options;
 
-    public MessageHandler(ISession session)
+    public MessageHandler(ISession session, MessageQueueOptions? options = null)
     {
         _session = session;
+        _options = options ?? new MessageQueueOptions();
+        _capacity = new SemaphoreSlim(_options.MaxPendingMessages, _options.MaxPendingMessages);
         _cancellationTokenSource = new();
 
         RegisterMessageType();
 
-        _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource.Token));
+        if (!_options.InlineDispatch)
+        {
+            _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource.Token));
+        }
     }
+
+    public bool InlineDispatch => _options.InlineDispatch;
 
     protected abstract void RegisterMessageType();
 
     public void HandleMessage(object message)
     {
+        if (_options.InlineDispatch)
+        {
+            DispatchOne(message);
+            return;
+        }
+
+        if (!_capacity.Wait(0))
+        {
+            _capacity.Wait();
+        }
+
         _messageQueue.Enqueue(message);
-        Signal();
+        Interlocked.Increment(ref _pendingCount);
+        _signal.Signal();
     }
 
-    private void Signal()
+    private void DispatchOne(object message)
     {
-        if (Interlocked.CompareExchange(ref _signalPending, 1, 0) == 0)
+        if (_messageHandleActions.TryGetValue(message.GetType(), out var handler))
         {
-            try
-            {
-                _signal.Release();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (SemaphoreFullException)
-            {
-            }
+            handler(message);
+        }
+        else
+        {
+            Trace.WriteLine($"No handler registered for message type {message.GetType().Name}; skipping.");
         }
     }
 
@@ -72,14 +90,9 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
             {
                 while (_messageQueue.TryDequeue(out var message))
                 {
-                    if (_messageHandleActions.TryGetValue(message.GetType(), out var handler))
-                    {
-                        handler(message);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"No handler registered for message type {message.GetType().Name}");
-                    }
+                    Interlocked.Decrement(ref _pendingCount);
+                    _capacity.Release();
+                    DispatchOne(message);
                 }
             }
             catch (Exception ex)
@@ -88,17 +101,18 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
             }
             finally
             {
-                Interlocked.Exchange(ref _signalPending, 0);
-                if (!_messageQueue.IsEmpty)
-                {
-                    Signal();
-                }
+                _signal.ResetPendingAndResignalIf(() => !_messageQueue.IsEmpty);
             }
         }
     }
 
     public virtual void OnDetectedDisconnection()
     {
+        if (_session is Session session)
+        {
+            session.MarkDisconnected();
+        }
+
         _session.Disconnect();
     }
 
@@ -112,23 +126,20 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
         _disposed = true;
 
         _cancellationTokenSource.Cancel();
-        try
-        {
-            _signal.Release();
-        }
-        catch
-        {
-        }
-
-        try
-        {
-            _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
-        }
-        catch
-        {
-        }
-
         _signal.Dispose();
+
+        if (_processMessageQueueTask != null)
+        {
+            try
+            {
+                _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch
+            {
+            }
+        }
+
+        _capacity.Dispose();
         _cancellationTokenSource.Dispose();
     }
 }

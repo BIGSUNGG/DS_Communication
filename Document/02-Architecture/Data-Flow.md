@@ -8,7 +8,7 @@ updated: 2026-07-11
 
 # Data Flow
 
-요청·메시지·패킷이 시스템을 통과하는 경로. (TCP 송신 Flush 제거·단일 Write, RUDP AcceptIfKey·poll 1ms 반영)
+요청·메시지·패킷이 시스템을 통과하는 경로. (TCP coalesce·ArrayPool 수신, `SendAndFlushAsync`, RUDP `PollIntervalMs`·AcceptIfKey 반영)
 
 ## Happy path (공통)
 
@@ -24,19 +24,19 @@ sequenceDiagram
   App->>ConnectorOrListener: Connect / Listen
   ConnectorOrListener->>App: onConnected / onAccepted
   App->>Session: new Session + Converter + Handler
-  App->>Session: SendAsync(message)
-  Session->>Sender: SendAsync
+  App->>Session: SendAsync / SendAndFlushAsync
+  Session->>Sender: enqueue (+ optional flush TCS)
   Sender->>Converter: Serialize
-  Sender-->>Receiver: wire bytes
-  Receiver->>Converter: Deserialize
+  Sender-->>Receiver: wire bytes (coalesced batch)
+  Receiver->>Converter: Deserialize (ArrayPool span)
   Receiver->>Handler: HandleMessage
   Handler->>App: registered Action
 ```
 
 1. **연결** — Client: `*Connector.ConnectAsync(...)`; Server: `*Listener.Start` + `ListenAsync` / peer 이벤트.
 2. **세션** — 콜백에서 `TcpClient` / `Socket` / `NetPeer`로 앱 Session 생성. Receiver·Sender factory에 `IMessageConverter`·`IMessageHandler` 주입.
-3. **송신** — `Session.SendAsync` → Sender 큐 → 직렬화 → 전송.
-4. **수신** — Receiver 루프/이벤트 → 역직렬화 → `Handler.HandleMessage` → 타입별 Action 큐 처리.
+3. **송신** — `Session.SendAsync`는 큐잉 후 즉시 반환. `SendAndFlushAsync`는 해당 메시지가 wire에 쓰일 때까지 await. Sender는 drain 시 여러 메시지를 ~64KB까지 **coalesce**해 단일 Write.
+4. **수신** — Receiver가 body를 `ArrayPool`로 읽고 `Deserialize(span)` → `Handler.HandleMessage`. `InlineDispatch`면 Handler 큐 없이 동기 디스패치.
 
 ## TCP (및 TCP_IOCP)
 
@@ -44,15 +44,15 @@ sequenceDiagram
 
 **송신** (`TCPMessageSender`):
 
-1. `Serialize(message)` → `byte[]`
-2. 큐 enqueue 후 송신 루프가 length(4B)+payload를 **한 버퍼**에 모아 `WriteAsync` (메시지마다 Flush하지 않음)
+1. `Serialize(message)` → `byte[]` (계약상 할당 — [[Known-Issues]])
+2. 백프레셔(`MaxPendingMessages`) 후 큐 enqueue; idle이면 송신 루프 기동
+3. drain에서 length+payload를 ArrayPool 버퍼에 이어 붙인 뒤 **단일 WriteAsync** (flush 경계에서 배치 종료)
 
 **수신** (`TCPMessageReceiver`):
 
-1. length 4바이트 완전 읽기 (부분 읽기 시 재시도)
-2. body `length` 바이트 읽기
-3. `Deserialize` → `HandleMessage`
-4. stream 종료(0 bytes) 시 `OnDetectedDisconnection`
+1. length 4바이트 완전 읽기
+2. body `ArrayPool` Rent → 읽기 → `Deserialize(span)` → Return
+3. stream 종료(0 bytes) 시 `OnDetectedDisconnection` → `MarkDisconnected`
 
 TCP는 `NetworkStream`(TcpClient), TCP_IOCP는 `Socket` 기반 동일 length-prefix 계약.
 
@@ -60,20 +60,20 @@ TCP는 `NetworkStream`(TcpClient), TCP_IOCP는 `Socket` 기반 동일 length-pre
 
 **연결**
 
-- Client: `NetManager` 시작 → `Connect(host, port, connectionKey)` → PeerConnected (타임아웃 약 5초) → poll 루프 유지 (`Task.Delay(1)`)
-- Server: `ConnectionRequestEvent`에서 `AcceptIfKey(connectionKey)` → `PeerConnectedEvent`에서 앱 콜백; `RUDPNetworkReceiveDispatcher`가 NetworkReceiveEvent를 peer별 Receiver에 분배
+- Client: `NetManager` 시작 → `Connect(host, port, connectionKey)` → PeerConnected (타임아웃 약 5초) → poll 루프 (`PollIntervalMs`, 기본 1)
+- Server: `AcceptIfKey(connectionKey)` → peer 콜백; `RUDPNetworkReceiveDispatcher`가 peer별 Receiver에 분배
 
 **송신** (`RUDPMessageSender`):
 
 1. context가 `MessageSendContext`이면 `ReliableType` → LiteNetLib `DeliveryMethod`
 2. 기본: `ReliableOrdered`
-3. 큐 → `NetPeer.Send`
+3. 큐 → `NetPeer.Send` (`SendAndFlushAsync` 지원)
 
 **수신**
 
-1. Dispatcher `OnNetworkReceive` → 등록된 `RUDPMessageReceiver.DispatchFromNetwork`
+1. Dispatcher → `RUDPMessageReceiver.DispatchFromNetwork`
 2. Deserialize → HandleMessage
-3. 미등록 peer 패킷은 `Recycle` (다른 세션 패킷 유실 방지 설계)
+3. 미등록 peer 패킷은 `Recycle`
 
 ## 에러·재시도·종료
 
@@ -81,10 +81,10 @@ TCP는 `NetworkStream`(TcpClient), TCP_IOCP는 `Socket` 기반 동일 length-pre
 |------|------|
 | TCP Connect 실패 / cancel | `ConnectAsync` → `false` |
 | RUDP 연결 타임아웃·실패 | StopInternal 후 `false` |
-| 송신 중 예외 | Sender 루프에서 로그 후 계속 (또는 연결 끊김으로 이어짐) |
-| 수신 중 끊김 | `OnDetectedDisconnection` → Handler |
-| `Session.Disconnect` | `IsConnected`면 `OnDisconnected` 후 `Dispose` (Receiver/Sender dispose) |
-| RUDP Session Dispose | NetPeer/NetManager는 외부 소유 — Session이 dispose하지 않음 |
+| 송신 중 예외 | Sender 루프에서 Trace; flush TCS는 fault |
+| 수신 중 끊김 | `OnDetectedDisconnection` → 로컬 disconnect 플래그 |
+| `Session.Disconnect` | transport가 살아 있으면 `OnDisconnected` 후 `Dispose` |
+| RUDP Session Dispose | NetPeer/NetManager는 외부 소유 |
 
 라이브러리 수준 자동 재연결은 없다. 재시도는 앱 책임.
 
@@ -93,4 +93,6 @@ TCP는 `NetworkStream`(TcpClient), TCP_IOCP는 `Socket` 기반 동일 length-pre
 - [[Overview]]
 - [[Components]]
 - [[Public-API]]
+- [[Configuration]]
 - [[FAQ]]
+- [[Known-Issues]]
