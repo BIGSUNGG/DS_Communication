@@ -1,7 +1,6 @@
 using Communication.Network.RUDP.Shared.Messages;
 using LiteNetLib;
 using System.Net;
-using System.Net.Sockets;
 
 namespace Communication.Network.RUDP.Server;
 
@@ -15,7 +14,6 @@ public sealed class RUDPListener : IDisposable
     private readonly EventBasedNetListener _listener;
     private readonly RUDPNetworkReceiveDispatcher _receiveDispatcher;
     private Func<NetPeer, NetManager, EventBasedNetListener, RUDPNetworkReceiveDispatcher, Task>? _onClientAccepted;
-    private CancellationToken _cancellationToken;
     private bool _stopped;
 
     public RUDPNetworkReceiveDispatcher ReceiveDispatcher => _receiveDispatcher;
@@ -30,30 +28,33 @@ public sealed class RUDPListener : IDisposable
         _receiveDispatcher = new RUDPNetworkReceiveDispatcher(_listener);
         _netManager = new NetManager(_listener);
 
-        // 연결 요청 수락
         _listener.ConnectionRequestEvent += (request) =>
         {
-            request.Accept();
+            request.AcceptIfKey(_connectionKey);
         };
 
-        // 클라이언트 연결 이벤트
         _listener.PeerConnectedEvent += (peer) =>
         {
             if (_onClientAccepted != null)
             {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _onClientAccepted(peer, _netManager, _listener, _receiveDispatcher);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error handling client connection: {ex.Message}");
-                    }
-                }, _cancellationToken);
+                _ = HandleClientAcceptedAsync(peer);
             }
-        };      
+        };
+    }
+
+    private async Task HandleClientAcceptedAsync(NetPeer peer)
+    {
+        try
+        {
+            if (_onClientAccepted != null)
+            {
+                await _onClientAccepted(peer, _netManager, _listener, _receiveDispatcher).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error handling client connection: {ex.Message}");
+        }
     }
 
     public void Start()
@@ -81,12 +82,11 @@ public sealed class RUDPListener : IDisposable
     public async Task ListenAsync(Func<NetPeer, NetManager, EventBasedNetListener, RUDPNetworkReceiveDispatcher, Task> onClientAccepted, CancellationToken token)
     {
         _onClientAccepted = onClientAccepted;
-        _cancellationToken = token;
 
         while (!token.IsCancellationRequested)
         {
             _netManager.PollEvents();
-            await Task.Delay(15, token);
+            await Task.Delay(1, token).ConfigureAwait(false);
         }
     }
 }

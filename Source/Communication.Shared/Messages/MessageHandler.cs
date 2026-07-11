@@ -1,11 +1,6 @@
 using Communication.Shared.Sessions;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Communication.Shared.Messages;
 
@@ -15,7 +10,8 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
 
     bool _disposed = false;
     protected Dictionary<Type, Action<object>> _messageHandleActions = new Dictionary<Type, Action<object>>();
-    private SemaphoreSlim _lock = new (0,1);
+    private readonly SemaphoreSlim _signal = new(0, 1);
+    private int _signalPending;
     private Task _processMessageQueueTask;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private ConcurrentQueue<object> _messageQueue = new ConcurrentQueue<object>();
@@ -27,7 +23,7 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
 
         RegisterMessageType();
 
-        _processMessageQueueTask= Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource));
+        _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource.Token));
     }
 
     protected abstract void RegisterMessageType();
@@ -35,14 +31,43 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
     public void HandleMessage(object message)
     {
         _messageQueue.Enqueue(message);
-        _lock.Release();
+        Signal();
     }
 
-    async void ProcessMessageQueueLoopAsync(CancellationTokenSource token)
+    private void Signal()
+    {
+        if (Interlocked.CompareExchange(ref _signalPending, 1, 0) == 0)
+        {
+            try
+            {
+                _signal.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (SemaphoreFullException)
+            {
+            }
+        }
+    }
+
+    private async Task ProcessMessageQueueLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            await _lock.WaitAsync(token.Token);
+            try
+            {
+                await _signal.WaitAsync(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
+            }
+
             try
             {
                 while (_messageQueue.TryDequeue(out var message))
@@ -61,6 +86,14 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
             {
                 Trace.WriteLine($"Error processing message queue: {ex.Message}");
             }
+            finally
+            {
+                Interlocked.Exchange(ref _signalPending, 0);
+                if (!_messageQueue.IsEmpty)
+                {
+                    Signal();
+                }
+            }
         }
     }
 
@@ -71,14 +104,21 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
 
     public void Dispose()
     {
-        if(_disposed)
+        if (_disposed)
         {
             return;
         }
 
         _disposed = true;
 
-        _lock.Dispose();
+        _cancellationTokenSource.Cancel();
+        try
+        {
+            _signal.Release();
+        }
+        catch
+        {
+        }
 
         try
         {
@@ -88,7 +128,7 @@ public abstract class MessageHandler : IMessageHandler, IDisposable
         {
         }
 
-        _cancellationTokenSource.Cancel();
+        _signal.Dispose();
         _cancellationTokenSource.Dispose();
     }
 }

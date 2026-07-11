@@ -42,60 +42,59 @@ public sealed class TCPListener : IDisposable
 
         while (!token.IsCancellationRequested && _isListening)
         {
+            SocketAsyncEventArgs? acceptEventArgs = null;
             try
             {
-                var acceptEventArgs = new SocketAsyncEventArgs();
-                acceptEventArgs.Completed += (sender, e) => OnAcceptCompleted(e, onClientAccepted, token);
+                acceptEventArgs = new SocketAsyncEventArgs();
+                var tcs = new TaskCompletionSource<SocketAsyncEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+                acceptEventArgs.Completed += (_, e) => tcs.TrySetResult(e);
 
-                if (!_listenerSocket.AcceptAsync(acceptEventArgs))
+                bool pending = _listenerSocket.AcceptAsync(acceptEventArgs);
+                if (pending)
                 {
-                    // 동기적으로 완료된 경우
-                    await ProcessAccept(acceptEventArgs, onClientAccepted, token);
+                    using (token.Register(() => tcs.TrySetCanceled(token)))
+                    {
+                        try
+                        {
+                            acceptEventArgs = await tcs.Task.ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            acceptEventArgs?.Dispose();
+                            break;
+                        }
+                    }
+                }
+
+                if (acceptEventArgs.SocketError != SocketError.Success)
+                {
+                    acceptEventArgs.Dispose();
+                    if (!_isListening || token.IsCancellationRequested)
+                        break;
+                    continue;
+                }
+
+                var clientSocket = acceptEventArgs.AcceptSocket;
+                acceptEventArgs.AcceptSocket = null;
+                acceptEventArgs.Dispose();
+                acceptEventArgs = null;
+
+                if (clientSocket != null && !token.IsCancellationRequested)
+                {
+                    _ = onClientAccepted(clientSocket);
                 }
             }
             catch (ObjectDisposedException)
             {
+                acceptEventArgs?.Dispose();
                 break;
             }
             catch (SocketException)
             {
+                acceptEventArgs?.Dispose();
                 if (!_isListening)
                     break;
             }
-        }
-    }
-
-    private void OnAcceptCompleted(SocketAsyncEventArgs e, Func<Socket, Task> onClientAccepted, CancellationToken token)
-    {
-        if (e.SocketError == SocketError.Success)
-        {
-            _ = Task.Run(async () => await ProcessAccept(e, onClientAccepted, token));
-        }
-        else
-        {
-            e.Dispose();
-        }
-    }
-
-    private async Task ProcessAccept(SocketAsyncEventArgs e, Func<Socket, Task> onClientAccepted, CancellationToken token)
-    {
-        try
-        {
-            var clientSocket = e.AcceptSocket;
-            e.AcceptSocket = null;
-
-            if (clientSocket != null && !token.IsCancellationRequested)
-            {
-                await onClientAccepted(clientSocket);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error processing accept: {ex.Message}");
-        }
-        finally
-        {
-            e.Dispose();
         }
     }
 

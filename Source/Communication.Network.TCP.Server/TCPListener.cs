@@ -29,8 +29,7 @@ public sealed class TCPListener
             }
 
             var client = await acceptTask.ConfigureAwait(false);
-            _ = Task.Run(() => onClientAccepted(client), token);
+            _ = onClientAccepted(client);
         }
     }
 }
-

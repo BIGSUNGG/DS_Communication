@@ -15,7 +15,7 @@ updated: 2026-07-11
 | `Communication.Shared` | 공통 메시지·세션 추상화 | System.Buffers 4.5.1, System.Memory 4.5.5 |
 | `Communication.Network.TCP.Shared` | TCP Session·Sender·Receiver | → Communication.Shared |
 | `Communication.Network.TCP.Client` | `TCPConnector` | (없음) |
-| `Communication.Network.TCP.Server` | `TCPListener` | EF Core Tools 9.0.0 (PrivateAssets; 런타임 비포함) |
+| `Communication.Network.TCP.Server` | `TCPListener` | (없음) |
 | `Communication.Network.TCP_IOCP.Shared` | IOCP TCP Session·메시지 | → Communication.Shared |
 | `Communication.Network.TCP_IOCP.Client` | IOCP `TCPConnector` | → Shared, TCP_IOCP.Shared |
 | `Communication.Network.TCP_IOCP.Server` | IOCP `TCPListener` | → Shared, TCP_IOCP.Shared |

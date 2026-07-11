@@ -1,10 +1,7 @@
 using Communication.Shared.Messages;
-using Communication.Network.RUDP.Shared;
 using LiteNetLib;
 using LiteNetLib.Utils;
-using System;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
 namespace Communication.Network.RUDP.Shared.Messages
 {
@@ -13,7 +10,8 @@ namespace Communication.Network.RUDP.Shared.Messages
         private bool _disposed;
         private readonly NetPeer _netPeer;
         private readonly NetDataWriter _dataWriter;
-        private readonly SemaphoreSlim _sendLock = new(0, 1);
+        private readonly SemaphoreSlim _signal = new(0, 1);
+        private int _signalPending;
         private readonly ConcurrentQueue<(byte[] data, DeliveryMethod method)> _messageQueue = new();
         private Task _processMessageQueueTask;
         private readonly CancellationTokenSource _cancellationTokenSource;
@@ -27,10 +25,10 @@ namespace Communication.Network.RUDP.Shared.Messages
             _processMessageQueueTask = Task.Run(() => ProcessMessageQueueLoopAsync(_cancellationTokenSource.Token));
         }
 
-        public override async Task SendAsync(object message, object context)
+        public override Task SendAsync(object message, object context)
         {
             DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered;
-            
+
             if (context is MessageSendContext sendContext)
             {
                 deliveryMethod = (DeliveryMethod)sendContext.Reliable;
@@ -38,20 +36,49 @@ namespace Communication.Network.RUDP.Shared.Messages
 
             byte[] serializedMessage = _messageConverter.Serialize(message);
             _messageQueue.Enqueue((serializedMessage, deliveryMethod));
-            _sendLock.Release();
-            await Task.CompletedTask;
+            Signal();
+            return Task.CompletedTask;
         }
 
         public override async Task SendAsync(object message)
         {
-            await SendAsync(message, new MessageSendContext(ReliableType.ReliableOrdered));
+            await SendAsync(message, new MessageSendContext(ReliableType.ReliableOrdered)).ConfigureAwait(false);
+        }
+
+        private void Signal()
+        {
+            if (Interlocked.CompareExchange(ref _signalPending, 1, 0) == 0)
+            {
+                try
+                {
+                    _signal.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                catch (SemaphoreFullException)
+                {
+                }
+            }
         }
 
         private async Task ProcessMessageQueueLoopAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await _sendLock.WaitAsync(cancellationToken);
+                try
+                {
+                    await _signal.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+
                 try
                 {
                     while (_messageQueue.TryDequeue(out var messageData))
@@ -71,13 +98,17 @@ namespace Communication.Network.RUDP.Shared.Messages
                         }
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error processing message queue: {ex.Message}");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _signalPending, 0);
+                    if (!_messageQueue.IsEmpty)
+                    {
+                        Signal();
+                    }
                 }
             }
         }
@@ -93,13 +124,22 @@ namespace Communication.Network.RUDP.Shared.Messages
             _cancellationTokenSource.Cancel();
             try
             {
-                _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+                _signal.Release();
             }
-            catch 
+            catch
             {
             }
+
+            try
+            {
+                _processMessageQueueTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch
+            {
+            }
+
             _cancellationTokenSource.Dispose();
-            _sendLock.Dispose();
+            _signal.Dispose();
             _dataWriter.Reset();
         }
     }

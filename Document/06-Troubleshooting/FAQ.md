@@ -14,7 +14,7 @@ A: `Communication.Network.TCP.Client` / `.Server`는 Connector·Listener만 제�
 
 ## Q: RUDP 연결이 항상 실패한다
 
-A: `connectionKey`가 클라이언트·서버에서 일치하는지 확인. Client는 약 5초 대기 후 실패한다. 방화벽/포트·LiteNetLib poll 루프가 유지되는지도 본다.
+A: `connectionKey`가 클라이언트·서버에서 일치하는지 확인. 서버는 `AcceptIfKey`로 키를 검증한다. Client는 약 5초 대기 후 실패한다. 방화벽/포트·LiteNetLib poll 루프가 유지되는지도 본다.
 
 ## Q: 메시지 바이트가 깨지거나 길이 오류가 난다
 

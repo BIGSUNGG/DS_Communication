@@ -39,8 +39,9 @@ updated: 2026-07-11
 | TCP / TCP_IOCP Client | `host`, `port` | |
 | TCP / TCP_IOCP Server | `IPAddress`, `port` | |
 | RUDP Client/Server | `host`/`IPAddress`, `port`, `connectionKey` | 키 불일치 시 연결 실패 |
-| RUDP Client | 연결 대기 ~5초 | `RUDPConnector` 내부 |
-| RUDP Send | `MessageSendContext.Reliable` | 기본 ReliableOrdered |
+| RUDP Client | 연결 대기 ~5초; poll `Delay(1)` | `RUDPConnector` 내부 |
+| RUDP Server | `AcceptIfKey(connectionKey)` | 키 불일치 시 거절 |
+| RUDP Send | `MessageSendContext.Reliable` | 기본 ReliableOrdered; Session context 오버로드로 전달 |
 
 직렬화·핸들러·세션 ID 등은 앱/`IMessageConverter`·Sandbox에서 구성.
 

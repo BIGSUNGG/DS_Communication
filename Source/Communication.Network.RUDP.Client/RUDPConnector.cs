@@ -101,7 +101,7 @@ public sealed class RUDPConnector
 
             try
             {
-                await Task.Delay(15, token);
+                await Task.Delay(1, token);
             }
             catch (OperationCanceledException)
             {

@@ -8,7 +8,7 @@ updated: 2026-07-11
 
 # Data Flow
 
-요청·메시지·패킷이 시스템을 통과하는 경로.
+요청·메시지·패킷이 시스템을 통과하는 경로. (TCP 송신 Flush 제거·단일 Write, RUDP AcceptIfKey·poll 1ms 반영)
 
 ## Happy path (공통)
 
@@ -45,7 +45,7 @@ sequenceDiagram
 **송신** (`TCPMessageSender`):
 
 1. `Serialize(message)` → `byte[]`
-2. 큐 enqueue 후 송신 루프가 `Write(length 4B)` + `Write(payload)` + Flush
+2. 큐 enqueue 후 송신 루프가 length(4B)+payload를 **한 버퍼**에 모아 `WriteAsync` (메시지마다 Flush하지 않음)
 
 **수신** (`TCPMessageReceiver`):
 
@@ -60,8 +60,8 @@ TCP는 `NetworkStream`(TcpClient), TCP_IOCP는 `Socket` 기반 동일 length-pre
 
 **연결**
 
-- Client: `NetManager` 시작 → `Connect(host, port, connectionKey)` → PeerConnected (타임아웃 약 5초) → poll 루프 유지
-- Server: `ConnectionRequestEvent` Accept → `PeerConnectedEvent`에서 앱 콜백; `RUDPNetworkReceiveDispatcher`가 NetworkReceiveEvent를 peer별 Receiver에 분배
+- Client: `NetManager` 시작 → `Connect(host, port, connectionKey)` → PeerConnected (타임아웃 약 5초) → poll 루프 유지 (`Task.Delay(1)`)
+- Server: `ConnectionRequestEvent`에서 `AcceptIfKey(connectionKey)` → `PeerConnectedEvent`에서 앱 콜백; `RUDPNetworkReceiveDispatcher`가 NetworkReceiveEvent를 peer별 Receiver에 분배
 
 **송신** (`RUDPMessageSender`):
 

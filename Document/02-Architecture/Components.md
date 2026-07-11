@@ -44,7 +44,7 @@ TCP Client/Server 프로젝트는 Shared에 대한 ProjectReference가 없다. �
 | `Communication.Shared` | 세션·메시지 추상화, Handler 큐 | System.Buffers, System.Memory | `Session/`, `Messages/` |
 | `Communication.Network.TCP.Shared` | TcpClient 기반 Session·Sender·Receiver | Shared | `Session/TCPSession.cs`, `Message/TCPMessage*.cs` |
 | `Communication.Network.TCP.Client` | `TCPConnector` (host/port → TcpClient) | (없음) | `TCPConnector.cs` |
-| `Communication.Network.TCP.Server` | `TCPListener` (Accept 루프) | (없음; EF Tools PrivateAssets) | `TCPListener.cs` |
+| `Communication.Network.TCP.Server` | `TCPListener` (Accept 루프) | (없음) | `TCPListener.cs` |
 | `Communication.Network.TCP_IOCP.Shared` | Socket 기반 Session·Sender·Receiver | Shared | `Session/`, `Message/` |
 | `Communication.Network.TCP_IOCP.Client` | `TCPConnector` (SocketAsyncEventArgs Connect) | Shared, TCP_IOCP.Shared | `TCPConnector.cs` |
 | `Communication.Network.TCP_IOCP.Server` | `TCPListener` (Socket Accept) | Shared, TCP_IOCP.Shared | `TCPListener.cs` |

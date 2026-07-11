@@ -25,7 +25,10 @@ namespace Communication.Shared.Sessions
 
         public async Task SendAsync(object message, object context)
         {
-            await SendAsync(message);
+            if (_messageSender != null)
+            {
+                await _messageSender.SendAsync(message, context);
+            }
         }
 
         public async Task SendAsync(object message)
