@@ -1,5 +1,6 @@
 using System.Net;
 using Communication.Network.TCP;
+using TcpClient = System.Net.Sockets.TcpClient;
 using Communication.Shared.Channels;
 using Communication.Shared.Connection;
 using Communication.Shared.Messages;
@@ -227,5 +228,62 @@ public class TcpLoopbackTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => connector.ConnectAsync("127.0.0.1", 1, cancellationToken: cts.Token));
         Assert.Null(connector.Channel);
+    }
+
+    [Fact]
+    public async Task MaxConnections_OverLimitConnection_IsRejectedImmediately()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IByteChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+        listener.Start(new TcpTransportOptions { MaxConnections = 2 });
+        int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+        // 상한(2)까지는 수락된다.
+        using var c1 = new TcpClient();
+        using var c2 = new TcpClient();
+        await c1.ConnectAsync(IPAddress.Loopback, port);
+        await c2.ConnectAsync(IPAddress.Loopback, port);
+        await WaitUntilAsync(() =>
+        {
+            lock (accepted) return accepted.Count == 2;
+        });
+        Assert.Equal(2, listener.ActiveConnectionCount);
+
+        // 상한 초과 연결 — 수락 직후 서버가 즉시 닫는다(읽기가 0으로 끝남).
+        using var c3 = new TcpClient();
+        await c3.ConnectAsync(IPAddress.Loopback, port);
+        byte[] buffer = new byte[16];
+        int read = await c3.GetStream().ReadAsync(buffer).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(0, read); // 서버 측 닫힘 — 연결 거부.
+        Assert.Equal(2, listener.ActiveConnectionCount); // 상한은 그대로.
+        lock (accepted) Assert.Equal(2, accepted.Count); // 거부된 연결은 Accepted 통지를 받지 않는다.
+
+        // 슬롯 회수 — 채널 Dispose 후엔 다시 수락된다.
+        lock (accepted) accepted[0].Dispose();
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 1);
+
+        using var c4 = new TcpClient();
+        await c4.ConnectAsync(IPAddress.Loopback, port);
+        await WaitUntilAsync(() =>
+        {
+            lock (accepted) return accepted.Count == 3;
+        });
+        Assert.Equal(2, listener.ActiveConnectionCount);
+
+        lock (accepted)
+        {
+            foreach (IByteChannel channel in accepted)
+            {
+                channel.Dispose();
+            }
+        }
     }
 }

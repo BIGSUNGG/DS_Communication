@@ -17,6 +17,22 @@ public sealed class TcpTransportOptions
     /// Nagle은 중복 지연만 추가한다. <c>false</c>면 OS 설정(Nagle 켜짐)을 유지한다.
     /// </summary>
     public bool NoDelay { get; set; } = true;
+
+    /// <summary>
+    /// 동시 수락 연결 수 상한. 상한 도달 시 새 수락 연결은 즉시 닫히고 수락은 계속된다(연결 고갈 공격 방어).
+    /// <c>null</c>이면 무제한. 채널(세션)이 Dispose되면 수에서 빠진다.
+    /// </summary>
+    public int? MaxConnections
+    {
+        get => _maxConnections;
+        set
+        {
+            if (value is { } v && v <= 0) throw new ArgumentOutOfRangeException(nameof(value));
+            _maxConnections = value;
+        }
+    }
+
+    private int? _maxConnections;
 }
 
 /// <summary>

@@ -27,6 +27,14 @@ updated: 2026-09-01
 
 `TcpTransportOptions.NoDelay`에 설정 — `TcpConnector`/`TcpListener`가 연결·수락 소켓에 적용. `false`면 OS 설정을 유지한다.
 
+## MaxConnections (TCP)
+
+| 옵션 | 설명 | 기본 |
+| ------ | ------ | ------------ |
+| `MaxConnections` | 동시 수락 연결 수 상한(연결 고갈 공격 방어). 상한 도달 시 새 수락 연결은 **즉시 닫고 수락 계속** — 거부 연결은 `Accepted` 통지를 받지 않는다. 채널(세션) Dispose 시 슬롯 회수. `0`·음수 거부 | `null`(무제한) |
+
+`TcpTransportOptions.MaxConnections`에 설정 — `TcpListener`가 수락 루프에서 강제하고 `ActiveConnectionCount`로 현황을 노출한다.
+
 ## SocketKeepAliveOptions (TCP / TCP_IOCP)
 
 | 옵션 | 설명 |

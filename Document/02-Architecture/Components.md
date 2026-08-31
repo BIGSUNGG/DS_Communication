@@ -15,7 +15,7 @@ updated: 2026-07-11
 ## Shared — 연결·세션
 
 | 타입 | 책임 |
-|------|------|
+| ------ | ------ |
 | `IConnector` | `ConnectAsync` → `bool`, 성공 시 `Channel` 노출. Session은 만들지 않음. |
 | `IListener` | Accept 시 Channel 콜백. Session은 앱이 생성. |
 | `ISession` | Send / Disconnect / IsConnected / `Disconnected(DisconnectReason)`. |
@@ -37,7 +37,7 @@ updated: 2026-07-11
 ## Shared — 채널·프레이밍
 
 | 타입 | 책임 |
-|------|------|
+| ------ | ------ |
 | `IByteChannel` | Read/Write. TCP·TCP_IOCP·IPC.Stream. |
 | `IMessageChannel` | 메시지 Send + 수신. RUDP. |
 | `ISharedMemoryChannel` | Claim/Commit·Consume. 후속. |
@@ -59,17 +59,17 @@ updated: 2026-07-11
 ## Network.TCP
 
 | 타입 | 책임 |
-|------|------|
-| `TcpConnector` / `TcpListener` | TCP 연결·수락. |
+| ------ | ------ |
+| `TcpConnector` / `TcpListener` | TCP 연결·수락. 리스너는 `MaxConnections` 상한 강제 — 초과 수락 연결은 즉시 닫고 수락 계속, `ActiveConnectionCount`로 현황 노출. |
 | `TcpSession` | `IByteChannel` + Framer + Pipeline. |
-| `TcpTransportOptions` | 버퍼·타임아웃·**`KeepAlive`**. |
+| `TcpTransportOptions` | `NoDelay`·`KeepAlive`·**`MaxConnections`**(동시 수락 상한). |
 | `SocketKeepAliveOptions` | OS TCP keep-alive (사용자 설정). |
-| `StreamByteChannel` | `NetworkStream` → `IByteChannel`. |
+| `StreamByteChannel` | `NetworkStream` → `IByteChannel`. Dispose 훅으로 리스너 연결 수 회수. |
 
 ## Network.TCP_IOCP
 
 | 타입 | 책임 |
-|------|------|
+| ------ | ------ |
 | `TcpIocpConnector` / `TcpIocpListener` | Socket 연결·수락. |
 | `TcpIocpSession` | 동일 Framer·Pipeline, IOCP 채널. |
 | `TcpIocpTransportOptions` | IOCP 버퍼·풀·동시성·**`KeepAlive`**. |
@@ -78,7 +78,7 @@ updated: 2026-07-11
 ## Network.RUDP
 
 | 타입 | 책임 |
-|------|------|
+| ------ | ------ |
 | `RudpConnector` / `RudpListener` | LiteNetLib 연결·수락·펌프. |
 | `RudpSession` | `IMessageChannel` + Pipeline. |
 | `RudpMessageChannel` | peer 매핑. |
