@@ -3,12 +3,16 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-08-31
+updated: 2026-09-01
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-01
+
+- 송신 직렬화 실패 **항목 격리**: 실패한 메시지의 `flush`만 예외 완료하고 송신 루프는 계속 — 세션 끊김(`Disconnected(Error)`)으로 격상하지 않음(수신 핸들러 예외 격리와 대칭). 바이트 배치 경로는 부분 프레임을 되감아 폐기, 격리된 항목의 백프레셔 슬롯은 반환 → [[../02-Architecture/Pipeline|Pipeline]]·[[../03-Reference/Public-API|Public-API]] 동기화, 회귀 테스트 포함 43건 통과
 
 ## 2026-08-31
 

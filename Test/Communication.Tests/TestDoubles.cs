@@ -121,11 +121,22 @@ internal sealed class StringConverter : IMessageConverter
     public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
 }
 
-/// <summary>직렬화에서 항상 예외를 던지는 변환기(송신 실패 경로 검증용).</summary>
-internal sealed class ThrowingConverter : IMessageConverter
+/// <summary>지정한 메시지에서만 직렬화 예외를 던지는 변환기(격리 경로 검증용).</summary>
+internal sealed class SelectiveThrowingConverter : IMessageConverter
 {
+    private readonly string _throwOn;
+
+    public SelectiveThrowingConverter(string throwOn) => _throwOn = throwOn;
+
     public void Serialize(object message, IBufferWriter<byte> writer)
-        => throw new InvalidOperationException("serialize exploded");
+    {
+        if (message is string text && text == _throwOn)
+        {
+            throw new InvalidOperationException("serialize exploded");
+        }
+
+        writer.Write(Encoding.UTF8.GetBytes((string)message));
+    }
 
     public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
 }

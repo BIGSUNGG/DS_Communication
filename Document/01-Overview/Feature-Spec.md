@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, feature-spec]
-updated: 2026-08-31
+updated: 2026-09-01
 ---
 
 # Feature Spec — 레거시에서 이어받을 기능 명세
@@ -42,7 +42,7 @@ updated: 2026-08-31
 | ID | 기능 | 스펙 |
 | ---- | ------ | ------ |
 | F3-1 | Converter | `Serialize(object, IBufferWriter<byte>)` / `Deserialize(ReadOnlySpan<byte>)` — 송신 힙 할당 제거 (레거시 `byte[]` 계약 폐기) |
-| F3-2 | TCP 프레이밍 | length-prefix(4B LE) + payload 단일 write; 송신 coalesce 배치 |
+| F3-2 | TCP 프레이밍 | length-prefix(4B LE) + payload 단일 write; 송신 coalesce 배치; 직렬화·프레임 검증 실패는 **해당 항목만 격리**(플러시 예외 완료)하고 송신 계속 — 끊김으로 격상 안 함 |
 | F3-3 | 백프레셔 | 송신/Handler 큐 상한(`MaxPendingMessages`, 기본 `10_000`); 상한 도달 시 **공간 날 때까지 비동기 대기** |
 | F3-4 | 핸들러 디스패치 | 타입→핸들러 등록 디스패치; **미등록 타입은 skip**(예외 아님); 핸들러 `Action` 예외는 **Trace 후 수신 루프 계속** |
 | F3-5 | 디스패치 모드 | 내부 큐 / `InlineDispatch`(수신 경로 동기 디스패치) 선택 — 기본 **내부 큐**(`InlineDispatch=false`, 레거시 동일) |
@@ -92,10 +92,10 @@ updated: 2026-08-31
 | ---- | ---- |
 | F1-1·F1-2·F1-6 TCP 연결·수락·취소 | 구현 — `TcpConnector`·`TcpListener`, loopback 테스트 통과 |
 | F2 세션 수명·송신 (F2-1~F2-6) | 구현 — 끊김 후 송신 faulted Task 포함 |
-| F3 메시지 파이프라인 (F3-1~F3-8) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리 |
+| F3 메시지 파이프라인 (F3-1~F3-8) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리 |
 | F4-1 TCP keep-alive | 구현 — Windows IOControl / Unix 원시 옵션, 미지원 필드 무시 |
 | F5 플랫폼·패키지 | 구현 — netstandard2.1, 전송당 1 패키지, `IByteChannel` |
-| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 41건 통과, `Sandbox/Chat.TCP` 실행 확인 |
+| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 43건 통과, `Sandbox/Chat.TCP` 실행 확인 |
 | F1-3 (TCP_IOCP), F1-4·F1-5·F4-2~F4-4 (RUDP) | 미착수 — 로드맵 4~5단계 |
 | F4-3 RUDP 수신 분배 등 | 미착수 |
 

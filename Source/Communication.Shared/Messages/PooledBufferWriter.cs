@@ -32,6 +32,17 @@ internal sealed class PooledBufferWriter : IBufferWriter<byte>, IDisposable
 
     public int WrittenCount => _written;
 
+    /// <summary>쓰인 위치를 지정한 곳으로 되돌린다(부분 직렬화 프레임 폐기용).</summary>
+    public void RewindTo(int count)
+    {
+        if (count < 0 || count > _written)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        _written = count;
+    }
+
     public void Clear()
     {
         _written = 0;

@@ -188,25 +188,29 @@ public class MessagePipelineTests
     }
 
     [Fact]
-    public async Task ThrowingConverter_FaultsFlushAndRaisesErrorDisconnect()
+    public async Task SerializeFailure_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeByteChannel();
         var handler = new RecordingHandler();
-        using var pipeline = new MessagePipeline(channel, new ThrowingConverter(), handler);
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingConverter(throwOn: "bad"), handler);
 
         DisconnectReason? reason = null;
         pipeline.Disconnected += (r, e) => reason = r;
         pipeline.Start();
 
-        // 직렬화 예외 → 해당 flush fault 후 Error 끊김으로 격상.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("x"));
+        // 직렬화 예외 → 해당 항목의 flush만 fault, 연결은 유지.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("bad"));
 
-        await WaitUntilAsync(() => reason != null);
-        Assert.Equal(DisconnectReason.Error, reason);
+        await pipeline.SendAndFlushAsync("good"); // 이후 메시지는 정상 송신.
+        await Task.Delay(50); // 뒤늦은 끊김 통지가 없는지 흡수.
+
+        Assert.Null(reason); // 직렬화 실패는 끊김으로 격상되지 않는다.
+        byte[] write = Assert.Single(channel.Writes); // 실패한 항목의 바이트는 와이어에 없음.
+        Assert.Equal("good", Encoding.UTF8.GetString(write.AsSpan(4))); // 4바이트 길이 헤더 이후.
     }
 
     [Fact]
-    public async Task Send_EmptyPayload_FaultsFlushAndRaisesErrorDisconnect()
+    public async Task Send_EmptyPayload_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeByteChannel();
         var handler = new RecordingHandler();
@@ -217,13 +221,51 @@ public class MessagePipelineTests
         pipeline.Start();
 
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("x"));
+        await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("y")); // 루프 생존 — 다음 항목도 처리됨.
+        await Task.Delay(50);
 
-        await WaitUntilAsync(() => reason != null);
-        Assert.Equal(DisconnectReason.Error, reason);
+        Assert.Null(reason);
+        Assert.Empty(channel.Writes);
     }
 
     [Fact]
-    public async Task MessageChannel_SendEmptyPayload_FaultsFlushAndRaisesErrorDisconnect()
+    public async Task SerializeFailure_ReleasesSlot_BackPressureNotShrunk()
+    {
+        var channel = new FakeByteChannel();
+        var options = new MessageQueueOptions { MaxPendingMessages = 1 };
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingConverter(throwOn: "bad"), new RecordingHandler(), options);
+        pipeline.Start();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("bad"));
+
+        // 격리된 항목의 슬롯이 반환되어야 다음 큐잉이 완료된다 (미반환 시 타임아웃).
+        Task second = pipeline.SendAsync("good");
+        await WaitUntilAsync(() => second.IsCompleted);
+    }
+
+    [Fact]
+    public async Task MessageChannel_SerializeFailure_FaultsFlushOnly_PipelineStaysConnected()
+    {
+        var channel = new FakeMessageChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingConverter(throwOn: "bad"), handler);
+
+        DisconnectReason? reason = null;
+        pipeline.Disconnected += (r, e) => reason = r;
+        pipeline.Start();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("bad"));
+
+        await pipeline.SendAndFlushAsync("good");
+        await Task.Delay(50);
+
+        Assert.Null(reason);
+        (byte[] Payload, SendOptions? Options) sent = Assert.Single(channel.Sent);
+        Assert.Equal("good", Encoding.UTF8.GetString(sent.Payload));
+    }
+
+    [Fact]
+    public async Task MessageChannel_SendEmptyPayload_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeMessageChannel();
         var handler = new RecordingHandler();
@@ -234,9 +276,10 @@ public class MessagePipelineTests
         pipeline.Start();
 
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("x"));
+        await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("y")); // 루프 생존.
+        await Task.Delay(50);
 
-        await WaitUntilAsync(() => reason != null);
-        Assert.Equal(DisconnectReason.Error, reason);
+        Assert.Null(reason);
         Assert.Empty(channel.Sent); // 빈 페이로드는 채널까지 가지 않는다.
     }
 

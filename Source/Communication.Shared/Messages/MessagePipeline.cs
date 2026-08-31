@@ -231,13 +231,11 @@ public sealed class MessagePipeline : IDisposable
         writer.Clear();
         _batch.Clear();
 
-        try
+        while (_sendQueue.TryDequeue(out PendingSend item))
         {
-            while (_sendQueue.TryDequeue(out PendingSend item))
+            int frameStart = writer.WrittenCount;
+            try
             {
-                _batch.Add(item); // 직렬화 중 실패해도 이 항목의 flush를 fault 하도록 먼저 등록
-
-                int frameStart = writer.WrittenCount;
                 writer.GetSpan(LengthPrefixFramer.HeaderSize);
                 writer.Advance(LengthPrefixFramer.HeaderSize);
                 _converter.Serialize(item.Message, writer);
@@ -251,22 +249,27 @@ public sealed class MessagePipeline : IDisposable
                 }
 
                 BinaryPrimitives.WriteInt32LittleEndian(writer.GetWritableSpan().Slice(frameStart), payloadLength);
+            }
+            catch (Exception e)
+            {
+                // 직렬화·검증 실패 — 이 항목만 격리(부분 프레임 되감기)하고 나머지는 계속 보낸다.
+                writer.RewindTo(frameStart);
+                item.Flush?.TrySetException(e);
+                ReleaseSlotQuietly();
+                Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");
+                continue;
+            }
 
-                if (writer.WrittenCount >= _options.CoalesceLimitBytes)
-                {
-                    break;
-                }
+            _batch.Add(item);
+            if (writer.WrittenCount >= _options.CoalesceLimitBytes)
+            {
+                break;
             }
         }
-        catch (Exception e)
-        {
-            // 직렬화·검증 실패 — 큐에서 꺼낸 항목(현재 항목 포함) 전부의 flush를 fault.
-            foreach (PendingSend item in _batch)
-            {
-                item.Flush?.TrySetException(e);
-            }
 
-            throw;
+        if (_batch.Count == 0)
+        {
+            return; // 전부 직렬화 격리됨 — 전송할 바이트 없음.
         }
 
         try
@@ -275,18 +278,18 @@ public sealed class MessagePipeline : IDisposable
         }
         catch (Exception e)
         {
-            foreach (PendingSend item in _batch)
+            foreach (PendingSend pending in _batch)
             {
-                item.Flush?.TrySetException(e);
+                pending.Flush?.TrySetException(e);
             }
 
             throw;
         }
 
         _sendSlots.Release(_batch.Count); // 배치 단위 1회 해제 (항목별 Flush 완료는 유지)
-        foreach (PendingSend item in _batch)
+        foreach (PendingSend pending in _batch)
         {
-            item.Flush?.TrySetResult(true);
+            pending.Flush?.TrySetResult(true);
         }
     }
 
@@ -314,8 +317,11 @@ public sealed class MessagePipeline : IDisposable
                     }
                     catch (Exception e)
                     {
+                        // 직렬화 실패 — 이 항목만 격리하고 송신은 계속한다.
                         item.Flush?.TrySetException(e);
-                        throw;
+                        ReleaseSlotQuietly();
+                        Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");
+                        continue;
                     }
 
                     try
@@ -539,6 +545,18 @@ public sealed class MessagePipeline : IDisposable
         }
         catch (ObjectDisposedException)
         {
+        }
+    }
+
+    private void ReleaseSlotQuietly()
+    {
+        try
+        {
+            _sendSlots.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 정지 중 해제 — 무시.
         }
     }
 
