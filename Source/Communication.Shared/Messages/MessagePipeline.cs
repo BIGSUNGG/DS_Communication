@@ -97,7 +97,18 @@ public sealed class MessagePipeline : IDisposable
     public Task SendAsync(object message, SendOptions? options = null) => EnqueueAsync(message, options, null);
 
     /// <summary>큐잉 후 와이어 기록 완료까지 기다린다.</summary>
-    public async Task SendAndFlushAsync(object message, SendOptions? options = null, CancellationToken cancellationToken = default)
+    public Task SendAndFlushAsync(object message, SendOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            // 이미 취소됨 — 큐잉하지 않고 즉시 취소 완료.
+            return Task.FromCanceled(cancellationToken);
+        }
+
+        return SendAndFlushCoreAsync(message, options, cancellationToken);
+    }
+
+    private async Task SendAndFlushCoreAsync(object message, SendOptions? options, CancellationToken cancellationToken)
     {
         TaskCompletionSource<bool> flush = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await EnqueueAsync(message, options, flush).ConfigureAwait(false);

@@ -317,6 +317,29 @@ public class MessagePipelineTests
     }
 
     [Fact]
+    public async Task SendAndFlush_PrecancelledToken_DoesNotEnqueue_ReturnsCanceled()
+    {
+        var channel = new FakeByteChannel();
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), new RecordingHandler());
+        pipeline.Start();
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // 이미 취소된 토큰 — 큐잉 없이 즉시 취소 완료.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => pipeline.SendAndFlushAsync("x", cancellationToken: cts.Token));
+
+        await Task.Delay(50); // 큐에 들어갔다면 송신 루프가 기록했을 시간.
+        Assert.Empty(channel.Writes);
+
+        // 큐에 잔류하지 않음 — 이후 정상 송신 하나가 유일한 기록으로 남는다.
+        await pipeline.SendAndFlushAsync("y");
+        byte[] write = Assert.Single(channel.Writes);
+        Assert.Equal("y", Encoding.UTF8.GetString(write.AsSpan(4)));
+    }
+
+    [Fact]
     public async Task Receive_ZeroLengthFrame_RaisesErrorDisconnect()
     {
         var channel = new FakeByteChannel();
