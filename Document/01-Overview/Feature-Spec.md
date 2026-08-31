@@ -95,7 +95,7 @@ updated: 2026-09-01
 | F3 메시지 파이프라인 (F3-1~F3-8) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리 |
 | F4-1 TCP keep-alive | 구현 — Windows IOControl / Unix 원시 옵션, 미지원 필드 무시 |
 | F5 플랫폼·패키지 | 구현 — netstandard2.1, 전송당 1 패키지, `IByteChannel` |
-| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 43건 통과, `Sandbox/Chat.TCP` 실행 확인 |
+| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 51건 통과, `Sandbox/Chat.TCP` 실행 확인 |
 | F1-3 (TCP_IOCP), F1-4·F1-5·F4-2~F4-4 (RUDP) | 미착수 — 로드맵 4~5단계 |
 | F4-3 RUDP 수신 분배 등 | 미착수 |
 

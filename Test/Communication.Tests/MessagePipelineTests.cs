@@ -210,6 +210,30 @@ public class MessagePipelineTests
     }
 
     [Fact]
+    public async Task SerializeFailure_MidBatch_RewindsOnlyFailedFrame()
+    {
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingConverter(throwOn: "bad"), handler);
+
+        // Start 전에 큐잉해 세 항목이 단일 코얼리스 배치로 드레인 — "bad"는 배치 중간(frameStart > 0)에서 실패.
+        Task good = pipeline.SendAndFlushAsync("good");
+        Task bad = pipeline.SendAndFlushAsync("bad");
+        Task good2 = pipeline.SendAndFlushAsync("good2");
+        pipeline.Start();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => bad.WaitAsync(TimeSpan.FromSeconds(5)));
+        await Task.WhenAll(good, good2).WaitAsync(TimeSpan.FromSeconds(5)); // 앞뒤 항목 flush는 정상 완료
+
+        // 실패 프레임만 부분 되감기 — 단일 write에 "bad" 앞뒤 프레임이 순서대로 정확히 담긴다.
+        byte[] written = Assert.Single(channel.Writes);
+        int firstLength = BinaryPrimitives.ReadInt32LittleEndian(written);
+        Assert.Equal("good", Encoding.UTF8.GetString(written, 4, firstLength));
+        int secondLength = BinaryPrimitives.ReadInt32LittleEndian(written.AsSpan(4 + firstLength));
+        Assert.Equal("good2", Encoding.UTF8.GetString(written, 4 + firstLength + 4, secondLength));
+    }
+
+    [Fact]
     public async Task Send_EmptyPayload_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeByteChannel();
