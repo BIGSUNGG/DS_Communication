@@ -234,6 +234,31 @@ public class MessagePipelineTests
     }
 
     [Fact]
+    public async Task SendAndFlush_Completes_WhenDisposedDuringChannelWrite()
+    {
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler);
+        channel.OnWrite = () => pipeline.Dispose(); // 쓰기 직후·슬롯 해제 전 Dispose 경쟁 창 재현
+        pipeline.Start();
+
+        // Flush 완료가 슬롯 해제보다 먼저라, Dispose가 슬롯을 정리해도 호출자는 hang하지 않는다.
+        await pipeline.SendAndFlushAsync("hello").WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SendAndFlush_MessageChannel_Completes_WhenDisposedDuringSend()
+    {
+        var channel = new FakeMessageChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler);
+        channel.OnSend = () => pipeline.Dispose(); // 송신 직후·슬롯 해제 전 Dispose 경쟁 창 재현
+        pipeline.Start();
+
+        await pipeline.SendAndFlushAsync("hello").WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task Send_EmptyPayload_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeByteChannel();

@@ -38,6 +38,9 @@ internal sealed class FakeByteChannel : IByteChannel
     /// <summary>첫 쓰기가 채널에 진입하면 완료되는 신호.</summary>
     public Task WriteEntered => _writeEntered.Task;
 
+    /// <summary>쓰기가 기록된 직후 호출되는 훅(테스트용).</summary>
+    public Action? OnWrite { get; set; }
+
     /// <summary>읽힐 바이트를 공급한다.</summary>
     public void Feed(ReadOnlySpan<byte> data)
     {
@@ -104,6 +107,8 @@ internal sealed class FakeByteChannel : IByteChannel
         {
             _writes.Add(buffer.ToArray());
         }
+
+        OnWrite?.Invoke();
     }
 
     public void Dispose() => _connected = false;
@@ -190,6 +195,9 @@ internal sealed class FakeMessageChannel : IMessageChannel
     /// <summary>원격 수신처럼 <see cref="MessageReceived"/>를 발생시킨다.</summary>
     public void RaiseReceived(ReadOnlyMemory<byte> payload) => MessageReceived?.Invoke(payload);
 
+    /// <summary>송신이 기록된 직후 호출되는 훅(테스트용).</summary>
+    public Action? OnSend { get; set; }
+
     public ValueTask SendAsync(ReadOnlyMemory<byte> payload, SendOptions? options = null, CancellationToken cancellationToken = default)
     {
         Exception? failure = _sendFailure;
@@ -203,6 +211,7 @@ internal sealed class FakeMessageChannel : IMessageChannel
             _sent.Add((payload.ToArray(), options));
         }
 
+        OnSend?.Invoke();
         return default;
     }
 

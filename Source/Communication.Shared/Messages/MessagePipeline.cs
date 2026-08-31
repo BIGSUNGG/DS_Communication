@@ -297,11 +297,13 @@ public sealed class MessagePipeline : IDisposable
             throw;
         }
 
-        _sendSlots.Release(_batch.Count); // 배치 단위 1회 해제 (항목별 Flush 완료는 유지)
+        // Flush를 먼저 완료하고 슬롯을 해제한다 — Dispose가 그 사이에 _sendSlots를 정리해도 호출자 완료는 보장된다.
         foreach (PendingSend pending in _batch)
         {
             pending.Flush?.TrySetResult(true);
         }
+
+        _sendSlots.Release(_batch.Count); // 배치 단위 1회 해제
     }
 
     private async Task SendLoopMessageAsync()
@@ -338,8 +340,8 @@ public sealed class MessagePipeline : IDisposable
                     try
                     {
                         await _messageChannel!.SendAsync(writer.WrittenMemory, item.Options, _cts.Token).ConfigureAwait(false);
+                        item.Flush?.TrySetResult(true); // Flush 먼저 완료 — Dispose 경쟁으로 슬롯 해제가 무산돼도 호출자 완료는 보장
                         _sendSlots.Release();
-                        item.Flush?.TrySetResult(true);
                     }
                     catch (Exception e)
                     {

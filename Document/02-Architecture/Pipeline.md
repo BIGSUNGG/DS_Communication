@@ -29,7 +29,7 @@ updated: 2026-09-01
 1. `SendAsync(message, options?)`
 2. 큐 + 백프레셔
 3. Serialize → `IBufferWriter` → (length-prefix + coalesce if byte channel) → Channel
-4. 직렬화 결과가 빈 페이로드면 송신 거부(바이트 채널은 `MaxFrameLength` 상한도 검사) — 빈 프레임은 상대편 EOF와 구분이 안 됨. 직렬화·검증 실패는 **해당 항목만 격리**(플러시 예외 완료 + 부분 프레임 폐기, 슬롯 반환)하고 송신 루프는 계속 — 세션 끊김으로 격상하지 않는다
+4. 직렬화 결과가 빈 페이로드면 송신 거부(바이트 채널은 `MaxFrameLength` 상한도 검사) — 빈 프레임은 상대편 EOF와 구분이 안 됨. 직렬화·검증 실패는 **해당 항목만 격리**(플러시 예외 완료 + 부분 프레임 폐기, 슬롯 반환)하고 송신 루프는 계속 — 세션 끊김으로 격상하지 않는다. 성공 경로는 **Flush 완료가 슬롯 해제보다 먼저** — Dispose가 그 사이에 슬롯을 정리해도 호출자 완료는 보장된다
 5. RUDP: `options as RudpSendOptions` → Delivery 매핑
 
 ## 수신
