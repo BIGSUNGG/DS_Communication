@@ -124,6 +124,48 @@ public class FramingTests
     }
 
     [Fact]
+    public async Task LargeDeclaredFrame_PartialArrival_BufferStaysNearAccumulated()
+    {
+        // 증폭 공격 시나리오: 선언 길이 64MB 헤더만 보내고 본문을 거의 흘려보내지 않는다.
+        // 버퍼는 선언 길이가 아니라 누적량 기준으로만 성장해야 한다.
+        var channel = new FakeByteChannel();
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, LengthPrefixFramer.MaxFrameLength); // 64MB
+        channel.Feed(header);
+        channel.Feed(new byte[] { 0x01, 0x02, 0x03, 0x04 }); // 본문 4바이트만 도착
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        ValueTask<ReadOnlyMemory<byte>> pending = reader.ReadFrameAsync();
+
+        // 프레임 미완성 — 읽기는 아직 대기 중이어야 한다.
+        await Task.Delay(50);
+        Assert.False(pending.IsCompleted);
+        Assert.True(
+            reader.BufferCapacity < 1024 * 1024,
+            $"버퍼 {reader.BufferCapacity}바이트 — 선언 길이 기준 사전 할당 의심");
+
+        // 스트림 종료로 풀어준다 — 미완성 프레임이므로 EndOfStream.
+        channel.Complete();
+        await Assert.ThrowsAsync<EndOfStreamException>(() => pending.AsTask());
+    }
+
+    [Fact]
+    public async Task LargeFrame_IncrementalGrowth_StillRoundTrips()
+    {
+        // 누적량 기준 성장으로 바꾼 뒤에도 기본 버퍼(64KB)를 여러 배 넘는 프레임이
+        // 성장 경로를 타고 정상 재조립되어야 한다.
+        var channel = new FakeByteChannel();
+        byte[] payload = new byte[512 * 1024];
+        new Random(7).NextBytes(payload);
+        FeedFrame(channel, payload);
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        ReadOnlyMemory<byte> frame = await reader.ReadFrameAsync();
+        Assert.Equal(payload, frame.ToArray());
+        Assert.True(reader.BufferCapacity <= 2 * (payload.Length + 4), "누적량 기준 성장 상한(2배) 초과");
+    }
+
+    [Fact]
     public void WriteFrame_ProducesLittleEndianLengthPrefix()
     {
         var writer = new System.Buffers.ArrayBufferWriter<byte>();

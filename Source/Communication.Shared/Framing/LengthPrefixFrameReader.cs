@@ -11,6 +11,8 @@ namespace Communication.Shared.Framing;
 /// <summary>
 /// <see cref="IByteChannel"/>에서 length-prefix 프레임을 읽는다.
 /// 단일 누적 버퍼(ArrayPool)에 부분 읽기를 모으고, 완성된 프레임은 버퍼의 제로카피 슬라이스로 돌려준다.
+/// 버퍼는 선언된 프레임 길이가 아니라 실제 누적된 데이터 기준으로만 성장한다 —
+/// 헤더만으로 거대 버퍼를 선할당하는 메모리 증폭 공격을 막는다.
 /// </summary>
 public sealed class LengthPrefixFrameReader : IDisposable
 {
@@ -80,8 +82,12 @@ public sealed class LengthPrefixFrameReader : IDisposable
                     return new ReadOnlyMemory<byte>(_buffer, LengthPrefixFramer.HeaderSize, length);
                 }
 
-                // 프레임이 남은 공간보다 큼 — 버퍼 성장(이미 앞부분 정리는 됨).
-                EnsureCapacity(frameTotal);
+                // 버퍼가 가득 찼을 때만 2배 성장 — 선언 길이 기준 사전 할당은 하지 않는다.
+                // (헤더만 보내고 본문을 흘려보내는 느린 증폭 공격에서 메모리를 누적량에 묶는다.)
+                if (_end >= _buffer.Length)
+                {
+                    EnsureCapacity(_buffer.Length + 1);
+                }
             }
 
             int read = await _channel.ReadAsync(_buffer.AsMemory(_end), cancellationToken).ConfigureAwait(false);
@@ -99,7 +105,7 @@ public sealed class LengthPrefixFrameReader : IDisposable
         }
     }
 
-    /// <summary>전체 프레임을 수용하도록 버퍼를 키운다(2배 성장, ArrayPool 재렌탈).</summary>
+    /// <summary>버퍼를 키운다(2배 성장, ArrayPool 재렌탈).</summary>
     private void EnsureCapacity(int required)
     {
         if (_buffer.Length >= required)
@@ -113,6 +119,9 @@ public sealed class LengthPrefixFrameReader : IDisposable
         ArrayPool<byte>.Shared.Return(_buffer);
         _buffer = bigger;
     }
+
+    /// <summary>테스트 전용 — 현재 누적 버퍼 용량.</summary>
+    internal int BufferCapacity => _buffer.Length;
 
     /// <summary>누적 버퍼를 풀에 반환한다.</summary>
     public void Dispose()

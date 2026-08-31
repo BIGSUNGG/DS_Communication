@@ -34,7 +34,7 @@ updated: 2026-09-01
 
 ## 수신
 
-스트림: `LengthPrefixFrameReader` — **단일 누적 버퍼**(ArrayPool, 기본 ~64KB)에 부분 읽기를 모으고, 완성된 프레임은 내부 버퍼의 **제로카피 슬라이스**로 반환(다음 읽기 전까지 유효). 프레임이 버퍼보다 크면 버퍼만 성장. 슬라이스 → Deserialize → Handler.
+스트림: `LengthPrefixFrameReader` — **단일 누적 버퍼**(ArrayPool, 기본 ~64KB)에 부분 읽기를 모으고, 완성된 프레임은 내부 버퍼의 **제로카피 슬라이스**로 반환(다음 읽기 전까지 유효). 버퍼는 **선언된 프레임 길이가 아니라 실제 누적된 데이터 기준으로만 성장**(버퍼가 가득 찼을 때만 2배) — 헤더만으로 거대 버퍼를 선할당하는 메모리 증폭 공격 방지. 슬라이스 → Deserialize → Handler.
 메시지 채널: payload span → Deserialize → Handler.
 EOF/오류 → Session.`MarkDisconnected` → `Disconnected` 이벤트. 길이 0 프레임은 프로토콜 위반(Error).
 
