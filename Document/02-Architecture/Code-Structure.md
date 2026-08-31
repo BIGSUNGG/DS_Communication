@@ -32,7 +32,7 @@ DS_Communication/
 └── Legacy/                            # 아카이브 (수정·확장 대상 아님)
 ```
 
-현재 활성: Shared + TCP 구현 완료, Test·Sandbox 운영 중. RUDP·TCP_IOCP 미착수. (`Sandbox/UsageExamples`는 소스 없는 빌드 잔재)
+현재 활성: Shared + TCP 구현 완료, Test·Sandbox 운영 중. RUDP·TCP_IOCP 미착수.
 
 ## 패키지 ↔ 폴더
 
