@@ -105,9 +105,15 @@ public sealed class TcpListener : IDisposable
             StreamByteChannel channel = new(client);
             KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
 
+            if (accepted is null)
+            {
+                channel.Dispose(); // 구독자 없음 — 연결이 새지 않도록 정리 후 수락 계속.
+                continue;
+            }
+
             try
             {
-                accepted?.Invoke(channel);
+                accepted.Invoke(channel);
             }
             catch (Exception e)
             {

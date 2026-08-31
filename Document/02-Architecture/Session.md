@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, session]
-updated: 2026-07-11
+updated: 2026-08-31
 ---
 
 # Session
@@ -17,10 +17,10 @@ Connector/Listener → Channel → 앱이 `new *Session(...)`. 끊김 관측은 
 ## 책임
 
 | 한다 | 하지 않는다 |
-|------|-------------|
+| ------ | ------------- |
 | Send / Disconnect / IsConnected | Connect/Accept (Connector/Listener) |
 | Pipeline·Channel 소유 | Converter 구현 |
-| `Disconnected(DisconnectReason)` | Handler 끊김 콜백 · 재접속 (앱) |
+| `Disconnected(DisconnectReason)` — 구독자별 호출, 예외 격리(Trace) | Handler 끊김 콜백 · 재접속 (앱) |
 
 ## 생성 (앱)
 

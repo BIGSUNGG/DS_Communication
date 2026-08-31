@@ -153,4 +153,16 @@ public class TcpLoopbackTests
             Assert.Null(connector.Channel);
         }
     }
+
+    [Fact]
+    public async Task Connect_Cancelled_ThrowsOperationCanceled()
+    {
+        var connector = new TcpConnector();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => connector.ConnectAsync("127.0.0.1", 1, cancellationToken: cts.Token));
+        Assert.Null(connector.Channel);
+    }
 }

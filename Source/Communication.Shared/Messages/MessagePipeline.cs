@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -34,7 +33,9 @@ public sealed class MessagePipeline : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private readonly LengthPrefixFrameReader? _frameReader;
     private readonly List<PendingSend> _batch = new();
+    private int _started;              // Start 1회 가드
     private int _stopped;              // 0 = 동작, 1 = 정지
+    private int _disposed;             // Dispose 1회 가드 — 끊김 통지가 _stopped를 선점해도 정리는 반드시 수행
     private int _notifiedDisconnect;   // 끊김 통지 1회 보장
 
     /// <summary>바이트 스트림 채널(길이 프레이밍 + coalesce 송신) 파이프라인.</summary>
@@ -67,8 +68,14 @@ public sealed class MessagePipeline : IDisposable
     public bool IsChannelConnected => _byteChannel?.IsConnected ?? _messageChannel!.IsConnected;
 
     /// <summary>송신·수신 루프를 시작한다. 한 번만 호출한다.</summary>
+    /// <exception cref="InvalidOperationException">이미 시작된 파이프라인인 경우.</exception>
     public void Start()
     {
+        if (Interlocked.Exchange(ref _started, 1) != 0)
+        {
+            throw new InvalidOperationException("Start은 한 번만 호출할 수 있습니다.");
+        }
+
         if (_byteChannel != null)
         {
             _ = Task.Run(SendLoopByteAsync);
@@ -108,10 +115,12 @@ public sealed class MessagePipeline : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
         }
+
+        Volatile.Write(ref _stopped, 1);
 
         if (_messageChannel != null)
         {
@@ -135,6 +144,10 @@ public sealed class MessagePipeline : IDisposable
             leftover.Flush?.TrySetException(new InvalidOperationException("파이프라인이 정지되어 송신하지 못했습니다."));
         }
 
+        // 루프는 ObjectDisposedException을 잡아 조용히 탈출한다.
+        _sendSlots.Dispose();
+        _receiveSlots.Dispose();
+        _frameReader?.Dispose();
         _cts.Dispose();
     }
 
@@ -151,15 +164,34 @@ public sealed class MessagePipeline : IDisposable
         {
             throw new InvalidOperationException("파이프라인이 정지되어 송신할 수 없습니다.");
         }
+        catch (ObjectDisposedException)
+        {
+            throw new InvalidOperationException("파이프라인이 정지되어 송신할 수 없습니다.");
+        }
 
         if (_stopped != 0)
         {
-            _sendSlots.Release();
+            try
+            {
+                _sendSlots.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // 정지 중 해제 — 무시.
+            }
+
             throw new InvalidOperationException("파이프라인이 정지되어 송신할 수 없습니다.");
         }
 
         _sendQueue.Enqueue(new PendingSend(message, options, flush));
         _sendGate.Signal();
+
+        // Dispose 경쟁: 직전 정지면 Dispose 드레인이 이 항목을 놓쳤을 수 있다.
+        // 드레인과 TrySet 계열이라 중복 시 먼저 faults가 남는다.
+        if (_stopped != 0)
+        {
+            flush?.TrySetException(new InvalidOperationException("파이프라인이 정지되어 송신하지 못했습니다."));
+        }
     }
 
     private async Task SendLoopByteAsync()
@@ -199,19 +231,42 @@ public sealed class MessagePipeline : IDisposable
         writer.Clear();
         _batch.Clear();
 
-        while (_sendQueue.TryDequeue(out PendingSend item))
+        try
         {
-            int frameStart = writer.WrittenCount;
-            writer.GetSpan(LengthPrefixFramer.HeaderSize);
-            writer.Advance(LengthPrefixFramer.HeaderSize);
-            _converter.Serialize(item.Message, writer);
-            BinaryPrimitives.WriteInt32LittleEndian(writer.GetWritableSpan().Slice(frameStart), writer.WrittenCount - frameStart - LengthPrefixFramer.HeaderSize);
-            _batch.Add(item);
-
-            if (writer.WrittenCount >= _options.CoalesceLimitBytes)
+            while (_sendQueue.TryDequeue(out PendingSend item))
             {
-                break;
+                _batch.Add(item); // 직렬화 중 실패해도 이 항목의 flush를 fault 하도록 먼저 등록
+
+                int frameStart = writer.WrittenCount;
+                writer.GetSpan(LengthPrefixFramer.HeaderSize);
+                writer.Advance(LengthPrefixFramer.HeaderSize);
+                _converter.Serialize(item.Message, writer);
+
+                // 빈 payload는 상대편에서 EOF와 구분이 안 되므로 송신을 거부한다.
+                int payloadLength = writer.WrittenCount - frameStart - LengthPrefixFramer.HeaderSize;
+                if (payloadLength <= 0 || payloadLength > LengthPrefixFramer.MaxFrameLength)
+                {
+                    throw new ArgumentException(
+                        $"직렬화 결과 페이로드 길이 {payloadLength}는 0보다 크고 {LengthPrefixFramer.MaxFrameLength} 이하여야 합니다.");
+                }
+
+                BinaryPrimitives.WriteInt32LittleEndian(writer.GetWritableSpan().Slice(frameStart), payloadLength);
+
+                if (writer.WrittenCount >= _options.CoalesceLimitBytes)
+                {
+                    break;
+                }
             }
+        }
+        catch (Exception e)
+        {
+            // 직렬화·검증 실패 — 큐에서 꺼낸 항목(현재 항목 포함) 전부의 flush를 fault.
+            foreach (PendingSend item in _batch)
+            {
+                item.Flush?.TrySetException(e);
+            }
+
+            throw;
         }
 
         try
@@ -228,9 +283,9 @@ public sealed class MessagePipeline : IDisposable
             throw;
         }
 
+        _sendSlots.Release(_batch.Count); // 배치 단위 1회 해제 (항목별 Flush 완료는 유지)
         foreach (PendingSend item in _batch)
         {
-            _sendSlots.Release();
             item.Flush?.TrySetResult(true);
         }
     }
@@ -247,7 +302,22 @@ public sealed class MessagePipeline : IDisposable
                 while (_sendQueue.TryDequeue(out PendingSend item))
                 {
                     writer.Clear();
-                    _converter.Serialize(item.Message, writer);
+
+                    try
+                    {
+                        _converter.Serialize(item.Message, writer);
+                        if (writer.WrittenCount == 0)
+                        {
+                            // 빈 payload는 송신하지 않는다(메시지 채널은 길이 상한 없음).
+                            throw new ArgumentException("직렬화 결과 페이로드가 비어 있습니다.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        item.Flush?.TrySetException(e);
+                        throw;
+                    }
+
                     try
                     {
                         await _messageChannel!.SendAsync(writer.WrittenMemory, item.Options, _cts.Token).ConfigureAwait(false);
@@ -286,24 +356,15 @@ public sealed class MessagePipeline : IDisposable
         {
             while (true)
             {
-                int length = await _frameReader!.ReadFrameLengthAsync(_cts.Token).ConfigureAwait(false);
-                if (length == 0)
+                ReadOnlyMemory<byte> frame = await _frameReader!.ReadFrameAsync(_cts.Token).ConfigureAwait(false);
+                if (frame.IsEmpty)
                 {
                     RequestDisconnect(DisconnectReason.Remote, null);
                     return;
                 }
 
-                byte[] rented = ArrayPool<byte>.Shared.Rent(length);
-                try
-                {
-                    await _frameReader.ReadExactAsync(rented.AsMemory(0, length), _cts.Token).ConfigureAwait(false);
-                    object message = _converter.Deserialize(rented.AsSpan(0, length));
-                    await DispatchReceivedAsync(message).ConfigureAwait(false);
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
+                object message = _converter.Deserialize(frame.Span);
+                await DispatchReceivedAsync(message).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)
@@ -397,8 +458,10 @@ public sealed class MessagePipeline : IDisposable
             {
                 await _dispatchGate.WaitAsync(_cts.Token).ConfigureAwait(false);
 
+                int count = 0;
                 while (_receiveQueue.TryDequeue(out object? message))
                 {
+                    count++;
                     try
                     {
                         _handler.HandleMessage(message);
@@ -407,10 +470,11 @@ public sealed class MessagePipeline : IDisposable
                     {
                         Trace.TraceError($"핸들러 예외 — 격리 후 계속: {e}");
                     }
-                    finally
-                    {
-                        _receiveSlots.Release();
-                    }
+                }
+
+                if (count > 0)
+                {
+                    _receiveSlots.Release(count); // 드레인 단위 1회 해제
                 }
 
                 _dispatchGate.ResetPendingAndResignalIf(() => !_receiveQueue.IsEmpty);
@@ -421,6 +485,34 @@ public sealed class MessagePipeline : IDisposable
         }
         catch (ObjectDisposedException)
         {
+        }
+        finally
+        {
+            // 끊김·정지 직전에 큐에 들어온 메시지는 탈출 전까지 전달한다.
+            int leftover = 0;
+            while (_receiveQueue.TryDequeue(out object? message))
+            {
+                leftover++;
+                try
+                {
+                    _handler.HandleMessage(message);
+                }
+                catch (Exception e)
+                {
+                    Trace.TraceError($"핸들러 예외 — 격리 후 계속: {e}");
+                }
+            }
+
+            if (leftover > 0)
+            {
+                try
+                {
+                    _receiveSlots.Release(leftover);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
         }
     }
 
@@ -437,6 +529,17 @@ public sealed class MessagePipeline : IDisposable
         }
 
         Disconnected?.Invoke(reason, exception);
+
+        // 통지 뒤에 정지 — 단독 파이프라인도 이후 송신이 fault 되고 루프가 탈출한다.
+        // 순서 주의: 먼저 정지하면 구독자가 다시 이 경로를 타거나 정리가 통지를 막을 수 있다.
+        Volatile.Write(ref _stopped, 1);
+        try
+        {
+            _cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     private void DrainSendQueueFaulted()

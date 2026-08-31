@@ -7,50 +7,76 @@ namespace Communication.Tests;
 
 public class FramingTests
 {
+    private static void FeedFrame(FakeByteChannel channel, ReadOnlySpan<byte> payload)
+    {
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
+        channel.Feed(header);
+        channel.Feed(payload);
+    }
+
     [Fact]
     public async Task FrameRoundTrip_WithOneByteReads()
     {
         var channel = new FakeByteChannel();
         byte[] payload = "hello"u8.ToArray();
+        FeedFrame(channel, payload);
 
-        // little-endian 길이 + payload를 공급
-        byte[] header = new byte[4];
-        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
-        channel.Feed(header);
-        channel.Feed(payload);
-
-        var reader = new LengthPrefixFrameReader(channel);
-        int length = await reader.ReadFrameLengthAsync();
-        Assert.Equal(payload.Length, length);
-
-        byte[] body = new byte[length];
-        await reader.ReadExactAsync(body);
-        Assert.Equal(payload, body);
+        using var reader = new LengthPrefixFrameReader(channel);
+        ReadOnlyMemory<byte> frame = await reader.ReadFrameAsync();
+        Assert.Equal(payload, frame.ToArray());
     }
 
     [Fact]
-    public async Task ReadFrameLength_AtCleanEof_ReturnsZero()
+    public async Task TwoFramesInBuffer_SlicedConsecutively()
+    {
+        var channel = new FakeByteChannel();
+        FeedFrame(channel, "one"u8);
+        FeedFrame(channel, "two"u8);
+        channel.Complete();
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        Assert.Equal("one"u8.ToArray(), (await reader.ReadFrameAsync()).ToArray());
+        Assert.Equal("two"u8.ToArray(), (await reader.ReadFrameAsync()).ToArray());
+        Assert.True((await reader.ReadFrameAsync()).IsEmpty); // 프레임 경계 EOF
+    }
+
+    [Fact]
+    public async Task FrameLargerThanBuffer_GrowsAndRoundTrips()
+    {
+        var channel = new FakeByteChannel();
+        byte[] payload = new byte[64 * 1024 + 100]; // 기본 버퍼(64KB) 초과 → 성장 경로
+        new Random(42).NextBytes(payload);
+        FeedFrame(channel, payload);
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        ReadOnlyMemory<byte> frame = await reader.ReadFrameAsync();
+        Assert.Equal(payload, frame.ToArray());
+    }
+
+    [Fact]
+    public async Task ReadFrame_AtCleanEof_ReturnsEmpty()
     {
         var channel = new FakeByteChannel();
         channel.Complete();
 
-        var reader = new LengthPrefixFrameReader(channel);
-        Assert.Equal(0, await reader.ReadFrameLengthAsync());
+        using var reader = new LengthPrefixFrameReader(channel);
+        Assert.True((await reader.ReadFrameAsync()).IsEmpty);
     }
 
     [Fact]
-    public async Task ReadFrameLength_EofMidHeader_Throws()
+    public async Task EofMidHeader_Throws()
     {
         var channel = new FakeByteChannel();
         channel.Feed(new byte[] { 0x01, 0x00 }); // 헤더 도중 끊김
         channel.Complete();
 
-        var reader = new LengthPrefixFrameReader(channel);
-        await Assert.ThrowsAsync<EndOfStreamException>(() => reader.ReadFrameLengthAsync().AsTask());
+        using var reader = new LengthPrefixFrameReader(channel);
+        await Assert.ThrowsAsync<EndOfStreamException>(() => reader.ReadFrameAsync().AsTask());
     }
 
     [Fact]
-    public async Task ReadExact_EofMidBody_Throws()
+    public async Task EofMidBody_Throws()
     {
         var channel = new FakeByteChannel();
         byte[] header = new byte[4];
@@ -59,9 +85,18 @@ public class FramingTests
         channel.Feed(new byte[] { 0x01, 0x02 }); // 본문 도중 끊김
         channel.Complete();
 
-        var reader = new LengthPrefixFrameReader(channel);
-        int length = await reader.ReadFrameLengthAsync();
-        await Assert.ThrowsAsync<EndOfStreamException>(() => reader.ReadExactAsync(new byte[length]).AsTask());
+        using var reader = new LengthPrefixFrameReader(channel);
+        await Assert.ThrowsAsync<EndOfStreamException>(() => reader.ReadFrameAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task ZeroLengthFrame_Throws()
+    {
+        var channel = new FakeByteChannel();
+        channel.Feed(new byte[] { 0x00, 0x00, 0x00, 0x00 });
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        await Assert.ThrowsAsync<InvalidDataException>(() => reader.ReadFrameAsync().AsTask());
     }
 
     [Fact]
@@ -72,8 +107,20 @@ public class FramingTests
         BinaryPrimitives.WriteInt32LittleEndian(header, -1);
         channel.Feed(header);
 
-        var reader = new LengthPrefixFrameReader(channel);
-        await Assert.ThrowsAsync<InvalidDataException>(() => reader.ReadFrameLengthAsync().AsTask());
+        using var reader = new LengthPrefixFrameReader(channel);
+        await Assert.ThrowsAsync<InvalidDataException>(() => reader.ReadFrameAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task OverLimitLength_Throws()
+    {
+        var channel = new FakeByteChannel();
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, LengthPrefixFramer.MaxFrameLength + 1);
+        channel.Feed(header);
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        await Assert.ThrowsAsync<InvalidDataException>(() => reader.ReadFrameAsync().AsTask());
     }
 
     [Fact]

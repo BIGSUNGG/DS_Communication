@@ -11,21 +11,16 @@ using Communication.Shared.Sessions;
 //   Chat.TCP client [port] [이름]   — 채팅 클라이언트 (기본 32000 / guest)
 
 int port = args.Length > 1 && int.TryParse(args[1], out int parsed) ? parsed : 32000;
-string mode;
+string mode = args.Length > 0 ? args[0].ToLowerInvariant() : "client";
 
-while (true)
+if (mode == "server")
 {
-    mode = Console.ReadLine();
-    
-    if (mode == "s")
-    {
-        await RunServerAsync(port);
-    }
-    else if (mode == "c")
-    {
-        string name = args.Length > 2 ? args[2] : "guest";
-        await RunClientAsync(port, name);
-    }
+    await RunServerAsync(port);
+}
+else
+{
+    string name = args.Length > 2 ? args[2] : "guest";
+    await RunClientAsync(port, name);
 }
 
 return;

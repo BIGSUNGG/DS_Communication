@@ -85,4 +85,19 @@ public class SessionTests
         Assert.Equal(DisconnectReason.Local, reason);
         Assert.False(session.IsConnected());
     }
+
+    [Fact]
+    public void ThrowingDisconnectedSubscriber_DoesNotBlockOthers()
+    {
+        var channel = new FakeByteChannel();
+        using var session = new TestSession(channel, new StringConverter(), new RecordingHandler());
+
+        bool secondCalled = false;
+        session.Disconnected += (_, _) => throw new InvalidOperationException("subscriber exploded");
+        session.Disconnected += (_, _) => secondCalled = true;
+
+        session.Disconnect();
+
+        Assert.True(secondCalled); // 던지는 구독자도 나머지를 건너뛰지 못한다
+    }
 }

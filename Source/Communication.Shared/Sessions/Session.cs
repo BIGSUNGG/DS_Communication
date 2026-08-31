@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Communication.Shared.Channels;
@@ -109,7 +110,30 @@ public abstract class Session : ISession
             // 위와 동일.
         }
 
-        Disconnected?.Invoke(this, new DisconnectedEventArgs(reason, exception));
+        RaiseDisconnected(reason, exception);
+    }
+
+    /// <summary>구독자를 하나씩 호출한다 — 예외를 던지는 구독자도 나머지와 격리된다(Trace).</summary>
+    private void RaiseDisconnected(DisconnectReason reason, Exception? exception)
+    {
+        EventHandler<DisconnectedEventArgs>? subscribers = Disconnected;
+        if (subscribers is null)
+        {
+            return;
+        }
+
+        DisconnectedEventArgs args = new(reason, exception);
+        foreach (Delegate subscriber in subscribers.GetInvocationList())
+        {
+            try
+            {
+                ((EventHandler<DisconnectedEventArgs>)subscriber).Invoke(this, args);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceError($"Disconnected 구독자 예외 — 격리 후 계속: {e}");
+            }
+        }
     }
 
     private MessagePipeline? GetLivePipeline()

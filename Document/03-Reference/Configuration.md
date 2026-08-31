@@ -13,9 +13,10 @@ updated: 2026-08-31
 ## MessageQueueOptions (Shared)
 
 | 옵션 | 설명 | 기본(목표) |
-|------|------|------------|
+| ------ | ------ | ------------ |
 | `MaxPendingMessages` | 송신/Handler 큐 백프레셔 상한; 도달 시 **비동기 대기** | `10_000` |
 | `InlineDispatch` | `true`면 수신 경로 즉시 디스패치(느린 핸들러가 수신 차단) | `false` (내부 큐) |
+| `CoalesceLimitBytes` | 바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트); 상한 도달 시 즉시 전송 — 배치는 상한 후 최대 1프레임 초과 허용 | `65_536` |
 
 ## SocketKeepAliveOptions (TCP / TCP_IOCP)
 

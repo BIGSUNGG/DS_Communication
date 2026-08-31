@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "id": "6fe7d961-0b48-46c7-a6ba-903dd2ca0f95",
+  "title": "Repo: C:/Projects/DS/DS_Communication (Windows, git repo). Review target: commit 8159042 — get th...",
+  "goal": "Repo: C:/Projects/DS/DS_Communication (Windows, git repo). Review target: commit 8159042 — get the diff with `git show 8159042` (or `git diff 8159042~1 8159042`). It is a from-scratch rewrite of a connection-oriented network transport library in C#: Communication.Shared (Session / MessagePipeline / Framing / Threading contracts, netstandard2.1) + Communication.Network.TCP + xUnit tests (Test/Communication.Tests) + Sandbox/Chat.TCP sample. Design contracts the code must honor live in Document/ — read at minimum Document/01-Overview/Feature-Spec.md (spec + runtime-contract decisions), Document/03-Reference/Public-API.md, Document/02-Architecture/Pipeline.md, Document/02-Architecture/Session.md. HARD RULES: you are READ-ONLY — do not edit, create, or delete any file. Work from actual files and commands, not assumptions. Report findings as a ranked list. Each finding: SEVERITY [BLOCKER|MAJOR|MINOR] | file:line | what is wrong (evidence from code) | concrete suggested fix. Only report issues you verified in the code — no speculation, no style nits. Keep the whole report under ~120 lines. If you find nothing in some category, say so explicitly.\n\nYOUR ANGLE: speed — allocations and throughput of hot paths, GC pressure matters (Unity/netstandard2.1 consumers). Focus areas: (1) send hot path — PooledBufferWriter growth strategy, per-batch List reuse, coalesce limit overshoot, semaphore/gate wait churn, whether frames are copied more than necessary; (2) receive hot path — per-frame ArrayPool rent/return, header buffer reuse, deserialize span lifetime, dispatch queue boxing/allocations; (3) message-channel receive callback path (fire-and-forget ValueTask, allocation per message); (4) SignalGate / SemaphoreSlim wait allocation patterns; (5) anything O(n^2) or lock-heavy under many sessions; (6) TCP layer — StreamByteChannel Task/ValueTask wrapping, listener accept cost. Compare against the legacy expectations in Document/ (coalesce ~64KB, ArrayPool use). Rank by impact-per-fix-effort.",
+  "status": "completed",
+  "createdAt": "2026-08-31T10:45:35.560Z",
+  "updatedAt": "2026-08-31T10:58:55.501Z",
+  "runs": [
+    {
+      "runId": "03373fff",
+      "mode": "single",
+      "agent": "reviewer",
+      "status": "completed",
+      "startedAt": "2026-08-31T10:58:55.501Z",
+      "completedAt": "2026-08-31T10:58:55.501Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "C:\\Projects\\DS\\DS_Communication\\.pi-subagents\\artifacts\\03373fff_reviewer_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "C:\\Projects\\DS\\DS_Communication\\.pi-subagents\\artifacts\\03373fff_reviewer_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "C:\\Projects\\DS\\DS_Communication",
+  "ownerSessionId": "C:\\Users\\DAESUNG\\.pi\\agent\\sessions\\--C--Projects-DS-DS_Communication--\\2026-08-31T08-40-19-124Z_01a056f9-fdb4-79f4-8ad2-20fc36068e9f.jsonl",
+  "summary": "## Review — commit 8159042, angle: allocations & throughput of hot paths\n\nRead: `MessagePipeline.cs`, `PooledBufferWriter.cs`, `SignalGate.cs`, framing, TCP layer, plus `Feature-Spec.md`, `Public-API.md`, `Pipeline.md`, `Session.md`, legacy `Data-Flow.md` for parity. Static analysis only; tests not executed (read-only rule — `dotnet test` writes bin/obj).\n\n**Ranked findings (impact-per-fix-effort):**\n\n1. **MAJOR** | `Source/Communication.Shared/Framing/LengthPrefixFrameReader.cs:31,48` + `Messages/MessagePipeline.cs:289-299` | Receive path does ≥2 channel reads per frame: an exact 4-byte header read (`ReadExactOrZeroAsync(_header.AsMemory())`), then a separate body `ReadExactAsync`. The sender deliberately coalesces many small frames into one write, but the receiver pays 2 kernel reads per small message (e.g. a 64KB coalesced batch of ~100B chat messages ≈ 1280 reads vs ~1). No accumulation buffer exists anywhere on the receive path. This matches the legacy flow (`Legacy/Document/02-Architecture/Data-Flow.md` §TCP 수신), so it is an inherited ceiling, not a regression — but it is the single biggest throughput lever for small-message workloads. **Fix:** give the receive loop a persistent sliding buffer (rent one ~16–64KB ArrayPool buffer, `ReadAsync` into free space, slice frames out; fall back to per-frame rent only for frames larger than the buffer).\n\n2. **MINOR** | `Source/Communication.Shared/Messages/MessagePipeline.cs:231-234` and `405-413` | Per-item `_sendSlots.Release()` / `_receiveSlots.Release()` after a batch. `SemaphoreSlim.Release` takes its internal Monitor unconditionally, so a drained batch of N messages costs N lock acquisitions (N can be hundreds per 64KB batch). **Fix:** keep the per-item `Flush?.TrySetResult` loop, but hoist the releases to one `_sendSlots.Release(_batch.Count)` (and a counter for `_receiveSlots.Release(count)`). Trivial diff, removes the only per-message lock on the happy path.\n\n3. **MINOR** | `Source/Communication.Shared/Messa...",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "4 ranked findings (1 MAJOR, 3 MINOR, 2 NOTE) with file:line citations, each backed by inspected code in MessagePipeline.cs, LengthPrefixFrameReader.cs, PooledBufferWriter.cs, StreamByteChannel.cs; categories with no issues stated explicitly."
+        }
+      ],
+      "changedFiles": [],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "git show --stat 8159042",
+          "result": "passed",
+          "summary": "Confirmed commit scope: Communication.Shared + TCP transport + tests + sandbox, 53 files."
+        },
+        {
+          "command": "read/grep over Source/ and Document/ (Feature-Spec, Public-API, Pipeline, Session, legacy Data-Flow)",
+          "result": "passed",
+          "summary": "Verified contracts (coalesce ~64KB, ArrayPool rent/return, IBufferWriter serialize) and located evidence lines for findings."
+        },
+        {
+          "command": "dotnet build/test",
+          "result": "not-run",
+          "summary": "Skipped deliberately: build/test writes bin/obj artifacts, violating the read-only hard rule."
+        }
+      ],
+      "validationOutput": [
+        "Receive path: LengthPrefixFrameReader.cs:31 reads exactly 4 header bytes, MessagePipeline.cs:296-299 rents+reads body separately -> >=2 syscalls/frame.",
+        "Batch releases: MessagePipeline.cs:233 and 412 call SemaphoreSlim.Release() per item; SemaphoreSlim.Release takes its internal lock unconditionally.",
+        "PooledBufferWriter.cs:67 doubles via ArrayPool.Rent with no shrink; ArrayPool.Shared pools only <=1MB.",
+        "Send fast path verified allocation-free: PendingSend struct, reused _batch list, cached-delegate gate lambdas, header patched in place."
+      ],
+      "residualRisks": [
+        "All findings are static analysis; no benchmarking or test execution was performed (read-only constraint), so actual magnitudes are unmeasured.",
+        "Finding 1's receive-flow behavior is documented parity with legacy; treating it as a design ceiling rather than a defect is a judgment call for the maintainer."
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Review-only task; no files modified, created, or deleted.",
+      "reviewFindings": [
+        "major: Framing/LengthPrefixFrameReader.cs:31,48 + Messages/MessagePipeline.cs:289-299 - per-frame 4-byte header read plus body read, no receive accumulation buffer; >=2 kernel reads per small frame against a coalesced write",
+        "minor: Messages/MessagePipeline.cs:231-234,405-413 - per-item SemaphoreSlim.Release (unconditional internal lock); batch to Release(count)",
+        "minor: Messages/MessagePipeline.cs:200-213 - coalesce limit checked after append; batch can overshoot limit by up to one 64MB frame",
+        "minor: Messages/PooledBufferWriter.cs:59-70 - writer buffer never shrinks; >1MB grows allocate un-pooled arrays retained for session lifetime",
+        "no blockers; SignalGate, send-path allocations, TCP accept cost, and cross-session locking checked clean"
+      ],
+      "manualNotes": "Highest leverage-per-effort: batch the semaphore releases (finding 2). Highest absolute throughput impact: receive accumulation buffer (finding 1), but it overlaps the documented legacy flow, so confirm scope before rewriting."
+    }
+  }
+}

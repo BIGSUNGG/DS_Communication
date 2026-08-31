@@ -190,17 +190,17 @@
   },
   "active": "ade90d8e515df968",
   "lastOpenFiles": [
-    "Sandbox/Chat.TCP/obj/Debug/net10.0/Chat.TCP.csproj.BuildWithSkipAnalyzers",
-    "Source/Communication.Network.TCP/obj/Debug/netstandard2.1/Communication.Network.TCP.csproj.BuildWithSkipAnalyzers",
-    "Source/Communication.Shared/obj/Debug/netstandard2.1/Communication.Shared.csproj.BuildWithSkipAnalyzers",
-    "Sandbox/Chat.TCP/Program.cs~",
-    "Sandbox/Chat.TCP/README.md",
-    "Sandbox/Chat.TCP/obj/rider.project.restore.info",
-    "Sandbox/Chat.TCP/obj/rider.project.model.nuget.info",
-    "Sandbox/Chat.TCP/obj/project.packagespec.json",
-    "Sandbox/Chat.TCP/obj/Debug/net10.0/Chat.TCP.csproj.FileListAbsolute.txt",
+    "Test/Communication.Tests/bin/Debug/net10.0/xunit.runner.visualstudio.testadapter.dll",
+    "Test/Communication.Tests/bin/Debug/net10.0/xunit.runner.utility.netcoreapp10.dll",
     "Sandbox/Chat.TCP/bin/Debug/net10.0/Chat.TCP.pdb",
     "Sandbox/Chat.TCP/obj/Debug/net10.0/ref/Chat.TCP.dll",
-    "Sandbox/Chat.TCP/bin/Debug/net10.0/Chat.TCP.dll"
+    "Sandbox/Chat.TCP/bin/Debug/net10.0/Chat.TCP.runtimeconfig.json",
+    "Sandbox/Chat.TCP/obj/Debug/net10.0/Chat.TCP.genruntimeconfig.cache",
+    "Sandbox/Chat.TCP/bin/Debug/net10.0/Chat.TCP.deps.json",
+    "Sandbox/Chat.TCP/bin/Debug/net10.0/Chat.TCP.exe",
+    "Sandbox/Chat.TCP/obj/Debug/net10.0/Chat.TCP.csproj.Up2Date",
+    "Sandbox/Chat.TCP/bin/Debug/net10.0/Communication.Shared.pdb",
+    "Sandbox/Chat.TCP/bin/Debug/net10.0/Communication.Network.TCP.xml",
+    "Sandbox/Chat.TCP/README.md"
   ]
 }

@@ -6,6 +6,4 @@ namespace Communication.Shared.Channels;
 /// </summary>
 public class SendOptions
 {
-    /// <summary>기본 옵션 인스턴스. 옵션 없이 보낼 때 공용으로 재사용한다.</summary>
-    public static SendOptions Default { get; } = new();
 }

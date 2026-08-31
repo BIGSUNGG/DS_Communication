@@ -16,6 +16,7 @@ internal sealed class FakeByteChannel : IByteChannel
     private readonly SemaphoreSlim _readAvailable = new(0);
     private readonly object _writeLock = new();
     private readonly List<byte[]> _writes = new();
+    private readonly TaskCompletionSource<bool> _writeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private TaskCompletionSource<bool>? _writeGate;
     private volatile bool _connected = true;
 
@@ -33,6 +34,9 @@ internal sealed class FakeByteChannel : IByteChannel
     }
 
     public void SetConnected(bool value) => _connected = value;
+
+    /// <summary>첫 쓰기가 채널에 진입하면 완료되는 신호.</summary>
+    public Task WriteEntered => _writeEntered.Task;
 
     /// <summary>읽힐 바이트를 공급한다.</summary>
     public void Feed(ReadOnlySpan<byte> data)
@@ -83,6 +87,8 @@ internal sealed class FakeByteChannel : IByteChannel
 
     public async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        _writeEntered.TrySetResult(true);
+
         TaskCompletionSource<bool>? gate;
         lock (_writeLock)
         {
@@ -91,7 +97,7 @@ internal sealed class FakeByteChannel : IByteChannel
 
         if (gate != null)
         {
-            await gate.Task.ConfigureAwait(false);
+            await gate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         lock (_writeLock)
@@ -113,6 +119,83 @@ internal sealed class StringConverter : IMessageConverter
     }
 
     public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
+}
+
+/// <summary>직렬화에서 항상 예외를 던지는 변환기(송신 실패 경로 검증용).</summary>
+internal sealed class ThrowingConverter : IMessageConverter
+{
+    public void Serialize(object message, IBufferWriter<byte> writer)
+        => throw new InvalidOperationException("serialize exploded");
+
+    public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
+}
+
+/// <summary>아무것도 쓰지 않는 변환기(빈 페이로드 거부 검증용).</summary>
+internal sealed class EmptyConverter : IMessageConverter
+{
+    public void Serialize(object message, IBufferWriter<byte> writer)
+    {
+    }
+
+    public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
+}
+
+/// <summary>송신 옵션 전달 검증용 파생 옵션.</summary>
+internal sealed class TestSendOptions : SendOptions
+{
+}
+
+/// <summary>
+/// 메시지 단위 채널 페이크. 송신 페이로드·옵션을 기록하고, 수신을 테스트에서 발생시킨다.
+/// </summary>
+internal sealed class FakeMessageChannel : IMessageChannel
+{
+    private readonly object _lock = new();
+    private readonly List<(byte[] Payload, SendOptions? Options)> _sent = new();
+    private volatile bool _connected = true;
+    private volatile Exception? _sendFailure;
+
+    public bool IsConnected => _connected;
+
+    public event Action<ReadOnlyMemory<byte>>? MessageReceived;
+
+    /// <summary>기록된 송신 (페이로드 사본, 옵션).</summary>
+    public IReadOnlyList<(byte[] Payload, SendOptions? Options)> Sent
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _sent.ToList();
+            }
+        }
+    }
+
+    public void SetConnected(bool value) => _connected = value;
+
+    /// <summary>이후 송신을 지정한 예외로 실패시킨다.</summary>
+    public void FailSend(Exception failure) => _sendFailure = failure;
+
+    /// <summary>원격 수신처럼 <see cref="MessageReceived"/>를 발생시킨다.</summary>
+    public void RaiseReceived(ReadOnlyMemory<byte> payload) => MessageReceived?.Invoke(payload);
+
+    public ValueTask SendAsync(ReadOnlyMemory<byte> payload, SendOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        Exception? failure = _sendFailure;
+        if (failure != null)
+        {
+            return ValueTask.FromException(failure);
+        }
+
+        lock (_lock)
+        {
+            _sent.Add((payload.ToArray(), options));
+        }
+
+        return default;
+    }
+
+    public void Dispose() => _connected = false;
 }
 
 /// <summary>수신 메시지를 기록하는 핸들러. 지정한 메시지에서는 예외를 던진다.</summary>

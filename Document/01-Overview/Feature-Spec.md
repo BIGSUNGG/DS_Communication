@@ -48,7 +48,7 @@ updated: 2026-08-31
 | F3-5 | 디스패치 모드 | 내부 큐 / `InlineDispatch`(수신 경로 동기 디스패치) 선택 — 기본 **내부 큐**(`InlineDispatch=false`, 레거시 동일) |
 | F3-6 | 수신 버퍼 | 수신 버퍼 풀 렌탈/반환(ArrayPool 등) |
 | F3-7 | 웨이크업 | 연속 신호에도 안전 단일 시그널 게이트(레거시 `SignalGate` 역할) |
-| F3-8 | 정리 순서 | Dispose 시 Cancel → 신호 → 대기 (레거시 `MessageHandler` 정리 방식 유지) |
+| F3-8 | 정리 순서 | Dispose 시 Cancel → 신호; 루프는 자체 스레드에서 Dispose가 호출될 수 있어 조인 없이 취소·채널 닫기로 탈출 보장 (레거시 '대기'는 앱 스레드 Dispose 전용이었음) |
 
 ## F4. 전송별 기능
 
@@ -95,7 +95,7 @@ updated: 2026-08-31
 | F3 메시지 파이프라인 (F3-1~F3-8) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리 |
 | F4-1 TCP keep-alive | 구현 — Windows IOControl / Unix 원시 옵션, 미지원 필드 무시 |
 | F5 플랫폼·패키지 | 구현 — netstandard2.1, 전송당 1 패키지, `IByteChannel` |
-| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 23건 통과, `Sandbox/Chat.TCP` 실행 확인 |
+| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 41건 통과, `Sandbox/Chat.TCP` 실행 확인 |
 | F1-3 (TCP_IOCP), F1-4·F1-5·F4-2~F4-4 (RUDP) | 미착수 — 로드맵 4~5단계 |
 | F4-3 RUDP 수신 분배 등 | 미착수 |
 

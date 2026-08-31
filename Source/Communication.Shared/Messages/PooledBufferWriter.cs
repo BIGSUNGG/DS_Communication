@@ -8,12 +8,17 @@ namespace Communication.Shared.Messages;
 /// </summary>
 internal sealed class PooledBufferWriter : IBufferWriter<byte>, IDisposable
 {
+    // 한 번의 대형 배치로 커진 버퍼를 계속 들고 있지 않는 상한 — 초과 시 Clear에서 기본 크기로 재렌탈.
+    private const int MaxRetainedBytes = 256 * 1024;
+
+    private readonly int _initialCapacity;
     private byte[] _buffer;
     private int _written;
 
     public PooledBufferWriter(int initialCapacity = 4096)
     {
-        _buffer = ArrayPool<byte>.Shared.Rent(Math.Max(initialCapacity, 16));
+        _initialCapacity = Math.Max(initialCapacity, 16);
+        _buffer = ArrayPool<byte>.Shared.Rent(_initialCapacity);
     }
 
     /// <summary>현재까지 쓰인 영역.</summary>
@@ -27,7 +32,16 @@ internal sealed class PooledBufferWriter : IBufferWriter<byte>, IDisposable
 
     public int WrittenCount => _written;
 
-    public void Clear() => _written = 0;
+    public void Clear()
+    {
+        _written = 0;
+
+        if (_buffer.Length > MaxRetainedBytes)
+        {
+            ArrayPool<byte>.Shared.Return(_buffer);
+            _buffer = ArrayPool<byte>.Shared.Rent(_initialCapacity);
+        }
+    }
 
     public void Advance(int count)
     {

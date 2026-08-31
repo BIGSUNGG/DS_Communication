@@ -25,7 +25,10 @@ public sealed class MessageQueueOptions
     /// </summary>
     public bool InlineDispatch { get; set; }
 
-    /// <summary>바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트). 상한에 닿으면 즉시 전송한다.</summary>
+    /// <summary>
+    /// 바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트). 상한에 닿으면 즉시 전송한다.
+    /// 상한 확인은 프레임 추가 후라 배치가 최대 1프레임만큼 상한을 초과할 수 있다.
+    /// </summary>
     public int CoalesceLimitBytes
     {
         get => _coalesceLimitBytes;
