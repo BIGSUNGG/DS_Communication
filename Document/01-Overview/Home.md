@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, moc]
-updated: 2026-07-11
+updated: 2026-08-31
 ---
 
 # Home — DS_Communication
@@ -19,7 +19,7 @@ updated: 2026-07-11
 
 ## 읽기 맵
 
-1. [[Scope]]
+1. [[Scope]] · [[Feature-Spec]]
 2. [[Overview]]
 3. [[Code-Structure]]
 4. [[Data-Flow]]

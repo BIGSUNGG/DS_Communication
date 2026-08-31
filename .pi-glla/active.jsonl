@@ -1,0 +1,4 @@
+{"type":"session_shutdown","value":{"reason":"fork"},"at":"2026-08-31T08:39:48.293Z"}
+{"type":"session_rebound","value":{"reason":"fork"},"at":"2026-08-31T08:39:51.222Z"}
+{"type":"session_rebound","value":{"reason":"startup"},"at":"2026-08-31T08:40:34.263Z"}
+{"type":"session_waiting_for_load","value":{"reason":"startup"},"at":"2026-08-31T08:40:34.289Z"}
