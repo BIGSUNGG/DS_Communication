@@ -7,11 +7,12 @@ namespace Communication.Shared.Messages;
 /// <summary>
 /// 타입 등록 기반 수신 디스패처. <c>RegisterMessageType</c>/<see cref="Register{T}"/>로
 /// 타입별 <see cref="Action{T}"/>을 등록하고 <see cref="HandleMessage"/>가 분배한다.
+/// 등록 테이블은 동시 안전 — 디스패치 중 지연 등록도 경쟁이 없다.
 /// 미등록 타입은 Trace 후 skip, 핸들러 예외는 Trace 후 계속 — 수신 루프를 죽이지 않는다.
 /// </summary>
 public abstract class MessageHandler : IMessageHandler
 {
-    private readonly System.Collections.Generic.Dictionary<Type, Action<object>> _handlers = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Type, Action<object>> _handlers = new();
 
     /// <summary>핸들러가 속한 세션.</summary>
     protected ISession Session { get; }
