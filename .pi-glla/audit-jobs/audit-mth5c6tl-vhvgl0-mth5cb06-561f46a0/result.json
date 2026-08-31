@@ -1,1 +1,0 @@
-{"protocolVersion":1,"attemptId":"audit-mth5c6tl-vhvgl0-mth5cb06-561f46a0","requestHash":"d7bdfd7e92d2ac7d00bd84708cfd742ed3f72e0001b0b3cc08e337a4637d2665","ok":false,"output":"","model":"qwen-token-plan/qwen3.8-max","thinkingLevel":"high","toolCalls":[],"error":"pi launch failed: spawn pi ENOENT"}

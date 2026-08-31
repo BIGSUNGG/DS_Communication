@@ -435,3 +435,11 @@ Document/.obsidian/cache
 
 # Cursor hooks session state
 .cursor/hooks/.session-edits.json
+
+# Agent harness state (goal loop, subagent runs) — 로컬 전용, 코드·문서와 무관
+.pi-glla/
+.pi-subagents/
+
+# Obsidian 개인 워크스페이스 상태 (모든 vault 루트)
+**/.obsidian/workspace.json
+**/.obsidian/workspace-mobile.json
