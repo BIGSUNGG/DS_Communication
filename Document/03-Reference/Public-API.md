@@ -62,8 +62,8 @@ void Disconnect();
 bool IsConnected();
 
 event EventHandler<DisconnectedEventArgs> Disconnected;
-// DisconnectedEventArgs.Reason: DisconnectReason { Local, Remote, Error }
-// DisconnectedEventArgs.Exception? (Error일 때)
+// DisconnectedEventArgs.Reason: DisconnectReason { Local, Remote, Error, Timeout }
+// DisconnectedEventArgs.Exception? (Error·Timeout일 때)
 ```
 
 **재접속 이벤트 없음.** 앱이 `Disconnected` 후 `ConnectAsync` + `new Session`.

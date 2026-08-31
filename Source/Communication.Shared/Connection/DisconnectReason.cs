@@ -11,4 +11,7 @@ public enum DisconnectReason
 
     /// <summary>I/O·프로토콜 오류.</summary>
     Error,
+
+    /// <summary>수신 프레임 완료 마감 초과(읽기 유휴 타임아웃).</summary>
+    Timeout,
 }

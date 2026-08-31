@@ -1,12 +1,13 @@
 namespace Communication.Shared.Messages;
 
 /// <summary>
-/// 송신 큐·수신 디스패치 옵션.
+/// 송신 큐·수신 디스패치·수신 타임아웃 옵션.
 /// </summary>
 public sealed class MessageQueueOptions
 {
     private int _maxPendingMessages = 10_000;
     private int _coalesceLimitBytes = 64 * 1024;
+    private TimeSpan? _frameTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// 송신 큐 백프레셔 상한. 상한 도달 시 송신은 공간이 날 때까지 비동기 대기한다.
@@ -44,6 +45,22 @@ public sealed class MessageQueueOptions
         {
             if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value));
             _coalesceLimitBytes = value;
+        }
+    }
+
+    /// <summary>
+    /// 수신 프레임 완료 마감(슬로로리스 방어). 프레임의 **첫 바이트가 도착한 순간** 시작되어,
+    /// 이 시간 안에 프레임이 완성되지 않으면 세션이 단절된다(<c>DisconnectReason.Timeout</c>).
+    /// 바이트가 전혀 오지 않는 완전 유휴 연결에는 적용되지 않는다(하트비트는 앱 책임).
+    /// <c>null</c> 또는 <see cref="TimeSpan.Zero"/>면 비활성화. 기본 30초.
+    /// </summary>
+    public TimeSpan? FrameTimeout
+    {
+        get => _frameTimeout;
+        set
+        {
+            if (value < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(value));
+            _frameTimeout = value;
         }
     }
 }

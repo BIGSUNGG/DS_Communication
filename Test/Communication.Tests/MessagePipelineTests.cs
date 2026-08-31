@@ -479,4 +479,50 @@ public class MessagePipelineTests
         await WaitUntilAsync(() => handler.Messages.Count == 2);
         Assert.Equal(new object[] { "one", "two" }, handler.Messages);
     }
+
+    [Fact]
+    public async Task DripFeed_SlowBytes_DisconnectsWithTimeoutReason()
+    {
+        // 드립 공급(끊임없이 조금씩 바이트)이라도 프레임이 마감 안에 완성되지 않으면 단절된다.
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        var options = new MessageQueueOptions { FrameTimeout = TimeSpan.FromMilliseconds(200) };
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler, options);
+
+        DisconnectReason? reason = null;
+        Exception? error = null;
+        pipeline.Disconnected += (r, e) =>
+        {
+            reason = r;
+            error = e;
+        };
+        pipeline.Start();
+
+        // 완성되지 않을 프레임 선언 후 50ms마다 1바이트씩 드립.
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 1000);
+        channel.Feed(header);
+
+        CancellationTokenSource dripStop = new();
+        Task drip = Task.Run(async () =>
+        {
+            while (!dripStop.IsCancellationRequested)
+            {
+                channel.Feed(new byte[] { 0x01 });
+                await Task.Delay(50);
+            }
+        });
+
+        try
+        {
+            await WaitUntilAsync(() => reason != null, TimeSpan.FromSeconds(3));
+            Assert.Equal(DisconnectReason.Timeout, reason);
+            Assert.IsType<TimeoutException>(error);
+        }
+        finally
+        {
+            dripStop.Cancel();
+            await drip.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
 }

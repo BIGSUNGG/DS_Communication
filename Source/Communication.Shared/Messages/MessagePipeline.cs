@@ -47,7 +47,7 @@ public sealed class MessagePipeline : IDisposable
         _options = options ?? new MessageQueueOptions();
         _sendSlots = new SemaphoreSlim(_options.MaxPendingMessages, _options.MaxPendingMessages);
         _receiveSlots = new SemaphoreSlim(_options.MaxPendingMessages, _options.MaxPendingMessages);
-        _frameReader = new LengthPrefixFrameReader(channel);
+        _frameReader = new LengthPrefixFrameReader(channel, _options.FrameTimeout);
     }
 
     /// <summary>메시지 단위 채널(프레이밍 없음, 예: RUDP) 파이프라인.</summary>
@@ -391,6 +391,11 @@ public sealed class MessagePipeline : IDisposable
         }
         catch (ObjectDisposedException)
         {
+        }
+        catch (TimeoutException e)
+        {
+            // 프레임 완료 마감 초과 — 슬로로리스 방어. 세션만 단절하고 프로세스는 생존.
+            RequestDisconnect(DisconnectReason.Timeout, e);
         }
         catch (Exception e)
         {

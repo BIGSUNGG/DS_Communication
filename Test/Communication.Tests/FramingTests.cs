@@ -166,6 +166,55 @@ public class FramingTests
     }
 
     [Fact]
+    public async Task PartialFrame_ExceedingFrameTimeout_ThrowsTimeout()
+    {
+        // 슬로로리스 시나리오: 헤더 + 일부 본문만 보내고 멈춘다.
+        var channel = new FakeByteChannel();
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 100);
+        channel.Feed(header);
+        channel.Feed(new byte[] { 0x01, 0x02, 0x03, 0x04 });
+
+        using var reader = new LengthPrefixFrameReader(channel, frameTimeout: TimeSpan.FromMilliseconds(150));
+        await Assert.ThrowsAsync<TimeoutException>(() => reader.ReadFrameAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task IdleConnection_IsNotSubjectToFrameTimeout()
+    {
+        // 바이트가 전혀 없는 완전 유휴 연결은 마감 대상이 아니다 — 타임아웃보다 늦게 와도 프레임이 완성된다.
+        var channel = new FakeByteChannel();
+        using var reader = new LengthPrefixFrameReader(channel, frameTimeout: TimeSpan.FromMilliseconds(150));
+
+        Task<ReadOnlyMemory<byte>> pending = reader.ReadFrameAsync().AsTask();
+        await Task.Delay(300); // 마감 시간을 넘긴 유휴 상태 — 아직 끊기지 않아야 한다.
+        Assert.False(pending.IsCompleted);
+
+        FeedFrame(channel, "hi"u8.ToArray());
+        ReadOnlyMemory<byte> frame = await pending.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("hi"u8.ToArray(), frame.ToArray());
+    }
+
+    [Fact]
+    public async Task FrameTimeoutDisabled_PartialFrame_EndsOnlyOnStreamClose()
+    {
+        // 비활성화(null)면 부분 프레임이 무기한 유지되고, 종료는 스트림 닫힘으로만 일어난다.
+        var channel = new FakeByteChannel();
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 10);
+        channel.Feed(header);
+        channel.Feed(new byte[] { 0x01, 0x02 });
+
+        using var reader = new LengthPrefixFrameReader(channel, frameTimeout: null);
+        Task<ReadOnlyMemory<byte>> pending = reader.ReadFrameAsync().AsTask();
+        await Task.Delay(250);
+        Assert.False(pending.IsCompleted);
+
+        channel.Complete();
+        await Assert.ThrowsAsync<EndOfStreamException>(() => pending);
+    }
+
+    [Fact]
     public void WriteFrame_ProducesLittleEndianLengthPrefix()
     {
         var writer = new System.Buffers.ArrayBufferWriter<byte>();
