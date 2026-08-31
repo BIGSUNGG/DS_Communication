@@ -8,6 +8,7 @@ public sealed class MessageQueueOptions
     private int _maxPendingMessages = 10_000;
     private int _coalesceLimitBytes = 64 * 1024;
     private TimeSpan? _frameTimeout = TimeSpan.FromSeconds(30);
+    private int _maxFrameLength = 4 * 1024 * 1024;
 
     /// <summary>
     /// 송신 큐 백프레셔 상한. 상한 도달 시 송신은 공간이 날 때까지 비동기 대기한다.
@@ -61,6 +62,25 @@ public sealed class MessageQueueOptions
         {
             if (value < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(value));
             _frameTimeout = value;
+        }
+    }
+
+    /// <summary>
+    /// 단일 프레임 길이 상한(바이트). 이보다 큰 프레임은 송신에서 격리되고 수신에서 거부(단절)된다.
+    /// 절대 상한은 <see cref="Communication.Shared.Framing.LengthPrefixFramer.MaxFrameLength"/>(64MB).
+    /// 기본 <c>4MB</c> — 필요 시 앱이 올린다.
+    /// </summary>
+    public int MaxFrameLength
+    {
+        get => _maxFrameLength;
+        set
+        {
+            if (value <= 0 || value > Communication.Shared.Framing.LengthPrefixFramer.MaxFrameLength)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value));
+            }
+
+            _maxFrameLength = value;
         }
     }
 }

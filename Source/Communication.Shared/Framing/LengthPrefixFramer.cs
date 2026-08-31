@@ -13,7 +13,10 @@ public static class LengthPrefixFramer
     /// <summary>헤더(길이 필드) 크기.</summary>
     public const int HeaderSize = 4;
 
-    /// <summary>단일 프레임 길이 상한. 이보다 큰 메시지는 프로토콜 오류로 거부한다.</summary>
+    /// <summary>
+    /// 프레임 길이의 절대 상한. 파이프라인 실효 상한은 <c>MessageQueueOptions.MaxFrameLength</c>(기본 4MB)로
+    /// 이보다 낮게 조정하며, 이 절대 상한을 넘는 값은 허용되지 않는다.
+    /// </summary>
     public const int MaxFrameLength = 64 * 1024 * 1024;
 
     /// <summary><paramref name="destination"/>에 length-prefix + payload를 쓴다.</summary>

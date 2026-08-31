@@ -525,4 +525,65 @@ public class MessagePipelineTests
             await drip.WaitAsync(TimeSpan.FromSeconds(5));
         }
     }
+
+    [Fact]
+    public async Task Receive_OverDefaultMaxFrameLength_Disconnects()
+    {
+        // 옵션 미지정 — 새 기본 상한(4MB)이 파이프라인에 적용된다.
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler);
+
+        DisconnectReason? reason = null;
+        pipeline.Disconnected += (r, e) => reason = r;
+        pipeline.Start();
+
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, (4 * 1024 * 1024) + 1);
+        channel.Feed(header);
+
+        await WaitUntilAsync(() => reason != null);
+        Assert.Equal(DisconnectReason.Error, reason);
+    }
+
+    [Fact]
+    public async Task Receive_OverCustomMaxFrameLength_Disconnects()
+    {
+        // 커스텀 상한 초과 프레임은 거부되고 세션이 단절된다.
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        var options = new MessageQueueOptions { MaxFrameLength = 64 };
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler, options);
+
+        DisconnectReason? reason = null;
+        pipeline.Disconnected += (r, e) => reason = r;
+        pipeline.Start();
+
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 65);
+        channel.Feed(header);
+
+        await WaitUntilAsync(() => reason != null);
+        Assert.Equal(DisconnectReason.Error, reason);
+    }
+
+    [Fact]
+    public async Task Send_OverCustomMaxFrameLength_IsIsolated()
+    {
+        // 커스텀 상한 초과 송신은 해당 항목만 격리 — 세션은 유지되고 다음 메시지는 전달된다.
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        var options = new MessageQueueOptions { MaxFrameLength = 8 };
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler, options);
+        pipeline.Start();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => pipeline.SendAndFlushAsync("0123456789AB")); // 12바이트 > 상한 8
+
+        await pipeline.SendAndFlushAsync("ok").WaitAsync(TimeSpan.FromSeconds(5));
+
+        await WaitUntilAsync(() => channel.Writes.Count >= 1);
+        byte[] written = Assert.Single(channel.Writes); // 격리된 항목은 와이어에 없다.
+        Assert.Equal("ok", Encoding.UTF8.GetString(written, 4, written.Length - 4));
+    }
 }

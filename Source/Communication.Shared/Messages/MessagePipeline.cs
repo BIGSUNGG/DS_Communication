@@ -47,7 +47,7 @@ public sealed class MessagePipeline : IDisposable
         _options = options ?? new MessageQueueOptions();
         _sendSlots = new SemaphoreSlim(_options.MaxPendingMessages, _options.MaxPendingMessages);
         _receiveSlots = new SemaphoreSlim(_options.MaxPendingMessages, _options.MaxPendingMessages);
-        _frameReader = new LengthPrefixFrameReader(channel, _options.FrameTimeout);
+        _frameReader = new LengthPrefixFrameReader(channel, _options.FrameTimeout, _options.MaxFrameLength);
     }
 
     /// <summary>메시지 단위 채널(프레이밍 없음, 예: RUDP) 파이프라인.</summary>
@@ -253,10 +253,10 @@ public sealed class MessagePipeline : IDisposable
 
                 // 빈 payload는 상대편에서 EOF와 구분이 안 되므로 송신을 거부한다.
                 int payloadLength = writer.WrittenCount - frameStart - LengthPrefixFramer.HeaderSize;
-                if (payloadLength <= 0 || payloadLength > LengthPrefixFramer.MaxFrameLength)
+                if (payloadLength <= 0 || payloadLength > _options.MaxFrameLength)
                 {
                     throw new ArgumentException(
-                        $"직렬화 결과 페이로드 길이 {payloadLength}는 0보다 크고 {LengthPrefixFramer.MaxFrameLength} 이하여야 합니다.");
+                        $"직렬화 결과 페이로드 길이 {payloadLength}는 0보다 크고 {_options.MaxFrameLength} 이하여야 합니다.");
                 }
 
                 BinaryPrimitives.WriteInt32LittleEndian(writer.GetWritableSpan().Slice(frameStart), payloadLength);

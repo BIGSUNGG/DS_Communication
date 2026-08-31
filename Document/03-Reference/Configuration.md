@@ -18,6 +18,7 @@ updated: 2026-09-01
 | `InlineDispatch` | `true`면 수신 경로 즉시 디스패치(느린 핸들러가 수신 차단) | `false` (내부 큐) |
 | `CoalesceLimitBytes` | 바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트); 상한 도달 시 즉시 전송 — 배치는 상한 후 최대 1프레임 초과 허용 | `65_536` |
 | `FrameTimeout` | 수신 프레임 완료 마감(슬로로리스 방어). 프레임의 **첫 바이트 도착 순간** 시작, 마감 내 미완성 시 `DisconnectReason.Timeout` 단절. 완전 유휴 연결(바이트 0)은 대상 아님 — 하트비트는 앱 책임. `null`/`TimeSpan.Zero`로 비활성화 | `30초` |
+| `MaxFrameLength` | 단일 프레임 길이 상한(바이트). 초과 프레임은 송신에서 **격리**(해당 항목만 플러시 예외), 수신에서 **거부**(`Error` 단절). 절대 상한 `LengthPrefixFramer.MaxFrameLength`(64MB) — 초과 값은 설정 시 거부. 필요 시 앱이 상향 | `4MB` |
 
 ## NoDelay (TCP)
 

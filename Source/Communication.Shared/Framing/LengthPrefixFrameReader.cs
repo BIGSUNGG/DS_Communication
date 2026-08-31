@@ -20,6 +20,7 @@ public sealed class LengthPrefixFrameReader : IDisposable
 
     private readonly IByteChannel _channel;
     private readonly TimeSpan? _frameTimeout;
+    private readonly int _maxFrameLength;
     private byte[] _buffer;
     private int _offset; // 미처리 데이터 시작 인덱스
     private int _end;    // 누적된 마지막 바이트의 다음 인덱스
@@ -30,10 +31,20 @@ public sealed class LengthPrefixFrameReader : IDisposable
     /// 프레임 완료 마감. 프레임의 첫 바이트가 도착한 순간 시작되어 이 시간 안에 프레임이 완성되지 않으면
     /// <see cref="TimeoutException"/>을 던진다. <c>null</c> 또는 0 이하면 비활성화.
     /// </param>
-    public LengthPrefixFrameReader(IByteChannel channel, TimeSpan? frameTimeout = null)
+    /// <param name="maxFrameLength">
+    /// 허용 프레임 길이 상한. 초과 프레임은 <see cref="System.IO.InvalidDataException"/>으로 거부된다.
+    /// 기본은 절대 상한(<see cref="LengthPrefixFramer.MaxFrameLength"/>) — 파이프라인은 옵션으로 더 낮은 값을 전달한다.
+    /// </param>
+    public LengthPrefixFrameReader(IByteChannel channel, TimeSpan? frameTimeout = null, int maxFrameLength = LengthPrefixFramer.MaxFrameLength)
     {
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
         _frameTimeout = frameTimeout is { } t && t > TimeSpan.Zero ? t : null;
+        if (maxFrameLength <= 0 || maxFrameLength > LengthPrefixFramer.MaxFrameLength)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxFrameLength));
+        }
+
+        _maxFrameLength = maxFrameLength;
         _buffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
     }
 
@@ -80,9 +91,9 @@ public sealed class LengthPrefixFrameReader : IDisposable
                         throw new InvalidDataException($"잘못된 프레임 길이: {length}");
                     }
 
-                    if (length > LengthPrefixFramer.MaxFrameLength)
+                    if (length > _maxFrameLength)
                     {
-                        throw new InvalidDataException($"잘못된 프레임 길이: {length} (상한 {LengthPrefixFramer.MaxFrameLength})");
+                        throw new InvalidDataException($"잘못된 프레임 길이: {length} (상한 {_maxFrameLength})");
                     }
 
                     int frameTotal = LengthPrefixFramer.HeaderSize + length;

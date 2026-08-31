@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.IO;
 using Communication.Shared.Framing;
+using Communication.Shared.Messages;
 using Xunit;
 
 namespace Communication.Tests;
@@ -212,6 +213,43 @@ public class FramingTests
 
         channel.Complete();
         await Assert.ThrowsAsync<EndOfStreamException>(() => pending);
+    }
+
+    [Fact]
+    public async Task CustomMaxFrameLength_OverLimitFrame_IsRejected()
+    {
+        // 커스텀 상한 초과 프레임은 즉시 거부된다.
+        var channel = new FakeByteChannel();
+        byte[] header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 1025);
+        channel.Feed(header);
+
+        using var reader = new LengthPrefixFrameReader(channel, frameTimeout: null, maxFrameLength: 1024);
+        await Assert.ThrowsAsync<InvalidDataException>(() => reader.ReadFrameAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task CustomMaxFrameLength_AtLimitFrame_RoundTrips()
+    {
+        // 상한 경계값 프레임은 정상 통과한다.
+        var channel = new FakeByteChannel();
+        byte[] payload = new byte[1024];
+        new Random(3).NextBytes(payload);
+        FeedFrame(channel, payload);
+
+        using var reader = new LengthPrefixFrameReader(channel, frameTimeout: null, maxFrameLength: 1024);
+        ReadOnlyMemory<byte> frame = await reader.ReadFrameAsync();
+        Assert.Equal(payload, frame.ToArray());
+    }
+
+    [Fact]
+    public void MaxFrameLength_DefaultIs4MB_AndRejectsOutOfRange()
+    {
+        // 옵션 미지정 시 새 기본 상한(4MB)이 적용된다.
+        var options = new MessageQueueOptions();
+        Assert.Equal(4 * 1024 * 1024, options.MaxFrameLength);
+        Assert.Throws<ArgumentOutOfRangeException>(() => { options.MaxFrameLength = 0; });
+        Assert.Throws<ArgumentOutOfRangeException>(() => { options.MaxFrameLength = LengthPrefixFramer.MaxFrameLength + 1; });
     }
 
     [Fact]
