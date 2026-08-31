@@ -43,7 +43,7 @@ updated: 2026-09-01
 | ---- | ------ | ------ |
 | F3-1 | Converter | `Serialize(object, IBufferWriter<byte>)` / `Deserialize(ReadOnlySpan<byte>)` — 송신 힙 할당 제거 (레거시 `byte[]` 계약 폐기) |
 | F3-2 | TCP 프레이밍 | length-prefix(4B LE) + payload 단일 write; 송신 coalesce 배치; 직렬화·프레임 검증 실패는 **해당 항목만 격리**(플러시 예외 완료)하고 송신 계속 — 끊김으로 격상 안 함 |
-| F3-3 | 백프레셔 | 송신/Handler 큐 상한(`MaxPendingMessages`, 기본 `10_000`); 상한 도달 시 **공간 날 때까지 비동기 대기** |
+| F3-3 | 백프레셔 | 송신/Handler 큐 상한(`MaxPendingMessages`, 기본 `10_000`); 상한 도달 시 **공간 날 때까지 비동기 대기**. 한계: 메시지 채널(`IMessageChannel`) 수신은 콜백 차단 방지를 위해 슬롯 대기를 비동기로 넘겨, 핸들러가 밀리면 대기자가 상한 넘어 누적 가능(바이트 채널은 상한 유지) |
 | F3-4 | 핸들러 디스패치 | 타입→핸들러 등록 디스패치; **미등록 타입은 skip**(예외 아님); 핸들러 `Action` 예외는 **Trace 후 수신 루프 계속** |
 | F3-5 | 디스패치 모드 | 내부 큐 / `InlineDispatch`(수신 경로 동기 디스패치) 선택 — 기본 **내부 큐**(`InlineDispatch=false`, 레거시 동일) |
 | F3-6 | 수신 버퍼 | 수신 버퍼 풀 렌탈/반환(ArrayPool 등) |

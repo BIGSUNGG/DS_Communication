@@ -8,7 +8,15 @@ public sealed class MessageQueueOptions
     private int _maxPendingMessages = 10_000;
     private int _coalesceLimitBytes = 64 * 1024;
 
-    /// <summary>송신 큐 백프레셔 상한. 상한 도달 시 송신은 공간이 날 때까지 비동기 대기한다.</summary>
+    /// <summary>
+    /// 송신 큐 백프레셔 상한. 상한 도달 시 송신은 공간이 날 때까지 비동기 대기한다.
+    /// 수신 디스패치 큐에도 동일 상한이 적용된다.
+    /// </summary>
+    /// <remarks>
+    /// 한계: 메시지 단위 채널(<c>IMessageChannel</c>) 경로에서 수진은 채널 콜백으로 들어오는데,
+    /// 콜백 스레드를 막지 않으려 슬롯 대기를 비동기로 넘기므로 핸들러가 밀리면 대기자(메시지 보유)가 이 상한을 넘어 무제한 누적될 수 있다.
+    /// 바이트 채널 경로는 단일 수신 루프가 슬롯 대기로 추가 읽기를 막으므로 상한이 유지된다.
+    /// </remarks>
     public int MaxPendingMessages
     {
         get => _maxPendingMessages;
