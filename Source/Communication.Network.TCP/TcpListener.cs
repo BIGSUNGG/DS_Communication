@@ -41,7 +41,7 @@ public sealed class TcpListener : IDisposable
         listener.Start();
         _listener = listener;
         _cts = new CancellationTokenSource();
-        _ = AcceptLoopAsync(listener, _cts.Token, options, Accepted);
+        _ = AcceptLoopAsync(listener, _cts.Token, options);
     }
 
     public void Stop()
@@ -69,7 +69,7 @@ public sealed class TcpListener : IDisposable
 
     public void Dispose() => Stop();
 
-    private static async Task AcceptLoopAsync(System.Net.Sockets.TcpListener listener, CancellationToken token, TcpTransportOptions? options, Action<IByteChannel>? accepted)
+    private async Task AcceptLoopAsync(System.Net.Sockets.TcpListener listener, CancellationToken token, TcpTransportOptions? options)
     {
         while (!token.IsCancellationRequested)
         {
@@ -103,8 +103,11 @@ public sealed class TcpListener : IDisposable
             }
 
             StreamByteChannel channel = new(client);
+            channel.Socket.NoDelay = options?.NoDelay ?? true;
             KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
 
+            // 수락마다 최신 구독자를 읽는다 — Start 이후 구독자도 채널을 받는다.
+            Action<IByteChannel>? accepted = Accepted;
             if (accepted is null)
             {
                 channel.Dispose(); // 구독자 없음 — 연결이 새지 않도록 정리 후 수락 계속.

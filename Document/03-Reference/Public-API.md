@@ -26,6 +26,8 @@ listener.Accepted += channel => { var session = new TcpSession(channel, ...); };
 listener.Start(...);
 ```
 
+`Accepted`는 수락 루프가 수락마다 최신 구독자를 읽는다 — `Start` 이후 구독자도 채널을 받는다.
+
 ## TCP keep-alive (사용자 설정)
 
 TCP / TCP_IOCP Connector·Listener 생성 시 옵션으로 전달.
@@ -41,6 +43,7 @@ class SocketKeepAliveOptions
 class TcpTransportOptions
 {
     SocketKeepAliveOptions? KeepAlive;  // null = OS 기본, 명시 시 적용
+    bool NoDelay;                       // TCP_NODELAY, 기본 true (라이브러리 coalesce와 중복되는 Nagle 해제)
     // ... 버퍼·타임아웃 등
 }
 ```

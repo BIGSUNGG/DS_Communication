@@ -54,6 +54,7 @@ public sealed class TcpConnector
         }
 
         StreamByteChannel channel = new(client);
+        channel.Socket.NoDelay = options?.NoDelay ?? true;
         KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
         Channel = channel;
         return true;

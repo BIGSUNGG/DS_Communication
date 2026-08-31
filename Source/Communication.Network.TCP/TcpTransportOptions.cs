@@ -5,12 +5,18 @@ using System.Runtime.InteropServices;
 namespace Communication.Network.TCP;
 
 /// <summary>
-/// TCP 전송 옵션. 미설정은 전부 기본(건드리지 않음)이다.
+/// TCP 전송 옵션. 미설정은 전부 기본(건드리지 않음)이다 — <see cref="NoDelay"/>만 제외하고(기본 <c>true</c>).
 /// </summary>
 public sealed class TcpTransportOptions
 {
     /// <summary>OS keep-alive 설정. <c>null</c>이면 keep-alive를 건드리지 않는다(OS 기본).</summary>
     public SocketKeepAliveOptions? KeepAlive { get; set; }
+
+    /// <summary>
+    /// Nagle 해제(TCP_NODELAY) 여부. 기본 <c>true</c> — 라이브러리가 이미 coalesce로 송신을 묶으므로
+    /// Nagle은 중복 지연만 추가한다. <c>false</c>면 OS 설정(Nagle 켜짐)을 유지한다.
+    /// </summary>
+    public bool NoDelay { get; set; } = true;
 }
 
 /// <summary>

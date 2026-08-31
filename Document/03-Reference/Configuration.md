@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, configuration]
-updated: 2026-08-31
+updated: 2026-09-01
 ---
 
 # Configuration
@@ -17,6 +17,14 @@ updated: 2026-08-31
 | `MaxPendingMessages` | 송신/Handler 큐 백프레셔 상한; 도달 시 **비동기 대기** | `10_000` |
 | `InlineDispatch` | `true`면 수신 경로 즉시 디스패치(느린 핸들러가 수신 차단) | `false` (내부 큐) |
 | `CoalesceLimitBytes` | 바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트); 상한 도달 시 즉시 전송 — 배치는 상한 후 최대 1프레임 초과 허용 | `65_536` |
+
+## NoDelay (TCP)
+
+| 옵션 | 설명 | 기본 |
+| ------ | ------ | ------------ |
+| `NoDelay` | TCP_NODELAY(Nagle 해제). 라이브러리가 이미 coalesce로 송신을 묶으므로 Nagle은 중복 지연만 추가 | `true` |
+
+`TcpTransportOptions.NoDelay`에 설정 — `TcpConnector`/`TcpListener`가 연결·수락 소켓에 적용. `false`면 OS 설정을 유지한다.
 
 ## SocketKeepAliveOptions (TCP / TCP_IOCP)
 
@@ -38,7 +46,7 @@ updated: 2026-08-31
 
 ## 재접속
 
-라이브러리 옵션 없음. 앱이 `Disconnected` 후 Connect + 새 Session. [[Getting-Started]] § 재접속.
+라이브러리 옵션 없음. 앱이 `Disconnected` 후 Connect + 새 Session. [[../04-Guides/Getting-Started|Getting-Started]] § 재접속.
 
 ## 관련
 

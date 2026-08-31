@@ -139,6 +139,69 @@ public class TcpLoopbackTests
     }
 
     [Fact]
+    public async Task Connect_NoDelay_DefaultTrue_AndHonorsExplicitFalse()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IByteChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+        // 옵션 미지정 → 기본 NoDelay(true)가 연결·수락 양쪽 소켓에 적용.
+        var connector = new TcpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        await WaitUntilAsync(() => accepted.Count == 1);
+
+        Assert.True(((StreamByteChannel)connector.Channel!).Socket.NoDelay);
+        lock (accepted)
+        {
+            Assert.True(((StreamByteChannel)accepted[0]).Socket.NoDelay);
+        }
+
+        // 명시적 false → Nagle 유지(OS 설정).
+        var nagleConnector = new TcpConnector();
+        Assert.True(await nagleConnector.ConnectAsync("127.0.0.1", port, new TcpTransportOptions { NoDelay = false }));
+        Assert.False(((StreamByteChannel)nagleConnector.Channel!).Socket.NoDelay);
+
+        connector.Channel!.Dispose();
+        nagleConnector.Channel!.Dispose();
+        lock (accepted)
+        {
+            foreach (IByteChannel channel in accepted)
+            {
+                channel.Dispose();
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SubscribeAfterStart_ReceivesAcceptedChannels()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+        // Start 이후 구독 — 최신 구독자를 읽어야 채널을 받는다.
+        IByteChannel? acceptedChannel = null;
+        listener.Accepted += channel => acceptedChannel = channel;
+
+        var connector = new TcpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+
+        await WaitUntilAsync(() => acceptedChannel != null); // 옛 스냅샷 방식이면 여기서 타임아웃.
+
+        connector.Channel!.Dispose();
+        acceptedChannel!.Dispose();
+    }
+
+    [Fact]
     public async Task Connect_ToClosedPort_ReturnsFalse()
     {
         // 임시 포트 하나를 열었다 닫아 "아무도 안 듣는 포트"를 만든다.
