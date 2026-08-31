@@ -26,7 +26,8 @@ updated: 2026-09-01
 5. [[../02-Architecture/Components|Components]]
 6. [[Session]] · [[Pipeline]] · [[Channel]] · [[Handler]]
 7. [[../03-Reference/Public-API|Public-API]] · [[../04-Guides/Getting-Started|Getting-Started]] · [[Implementation-Roadmap]] · [[../03-Reference/Packages|Packages]]
-8. ADR [[0001-transport-channel-abstraction]] … [[0006-session-ownership-and-converter]]
+8. [[../04-Guides/Security|Security & Production Checklist]]
+9. ADR [[0001-transport-channel-abstraction]] … [[0006-session-ownership-and-converter]]
 
 AI·에이전트: [[../00-AI/CONTEXT|CONTEXT]]부터.
 

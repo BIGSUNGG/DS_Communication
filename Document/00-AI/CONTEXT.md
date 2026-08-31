@@ -31,8 +31,9 @@ updated: 2026-09-01
 7. [[../02-Architecture/Components|Components]] — 요약; 상세 [[../02-Architecture/Session|Session]], [[../02-Architecture/Pipeline|Pipeline]], [[../02-Architecture/Channel|Channel]], [[../02-Architecture/Handler|Handler]]
 8. [[../03-Reference/Public-API|Public-API]] · [[../04-Guides/Getting-Started|Getting-Started]] · [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]
 9. [[../03-Reference/Packages|Packages]]
-10. ADR — [[../05-Decisions/0001-transport-channel-abstraction|0001-transport-channel-abstraction]], [[../05-Decisions/0002-tcp-backend-selection|0002-tcp-backend-selection]], [[../05-Decisions/0003-connection-lifecycle-options|0003-connection-lifecycle-options]], [[../05-Decisions/0004-send-options-and-handler-api|0004-send-options-and-handler-api]], [[../05-Decisions/0005-rudp-litenetlib-interim|0005-rudp-litenetlib-interim]], [[../05-Decisions/0006-session-ownership-and-converter|0006-session-ownership-and-converter]]
-11. [[../00-AI/CONVENTIONS|CONVENTIONS]]
+10. [[../04-Guides/Security|Security & Production Checklist]] — 컨버터 안전 제약·프로덕션 하드닝 현황
+11. ADR — [[../05-Decisions/0001-transport-channel-abstraction|0001-transport-channel-abstraction]], [[../05-Decisions/0002-tcp-backend-selection|0002-tcp-backend-selection]], [[../05-Decisions/0003-connection-lifecycle-options|0003-connection-lifecycle-options]], [[../05-Decisions/0004-send-options-and-handler-api|0004-send-options-and-handler-api]], [[../05-Decisions/0005-rudp-litenetlib-interim|0005-rudp-litenetlib-interim]], [[../05-Decisions/0006-session-ownership-and-converter|0006-session-ownership-and-converter]]
+12. [[../00-AI/CONVENTIONS|CONVENTIONS]]
 
 ## 목표 패키지 요약
 
