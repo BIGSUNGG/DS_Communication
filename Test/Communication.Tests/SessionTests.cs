@@ -87,6 +87,22 @@ public class SessionTests
     }
 
     [Fact]
+    public async Task UnattachedSession_Send_FaultsTask_WithoutSynchronousThrow()
+    {
+        var channel = new FakeByteChannel();
+        using var session = new UnattachedTestSession(channel);
+
+        // 호출 자체는 던지지 않고, 예외로 완료된 Task를 돌려준다.
+        Task send = session.SendAsync("x");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => send);
+
+        Task flush = session.SendAndFlushAsync("y");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => flush);
+
+        Assert.False(session.IsConnected());
+    }
+
+    [Fact]
     public void ThrowingDisconnectedSubscriber_DoesNotBlockOthers()
     {
         var channel = new FakeByteChannel();

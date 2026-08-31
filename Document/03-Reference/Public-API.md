@@ -67,7 +67,7 @@ event EventHandler<DisconnectedEventArgs> Disconnected;
 
 ## 런타임 의미 (합의 2026-08-31)
 
-- 끊김·Dispose 후 `SendAsync` / `SendAndFlushAsync`는 **예외로 완료된 Task**를 반환한다 (동기 throw 아님, 무시 아님).
+- 끊김·Dispose·파이프라인 미부착 세션의 `SendAsync` / `SendAndFlushAsync`는 **예외로 완료된 Task**를 반환한다 (동기 throw 아님, 무시 아님).
 - 큐 백프레셔 상한 도달 시 **공간 날 때까지 비동기 대기**한다 (드롭·예외 아님).
 - 핸들러 `Action`이 던진 예외는 **Trace 후 수신 루프 계속** — 세션 끊김으로 격상하지 않는다.
 - 송신 직렬화·프레임 검증 실패는 **해당 항목의 플러시만 예외 완료**하고 송신 루프 계속 — 세션 끊김으로 격상하지 않는다 (수신 격리와 대칭).

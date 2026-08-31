@@ -252,3 +252,12 @@ internal sealed class TestSession : Session
         AttachPipeline(new MessagePipeline(channel, converter, handler, options));
     }
 }
+
+/// <summary>파이프라인을 붙이지 않는 세션(미부착 송신 계약 검증용).</summary>
+internal sealed class UnattachedTestSession : Session
+{
+    public UnattachedTestSession(IByteChannel channel)
+        : base(channel)
+    {
+    }
+}

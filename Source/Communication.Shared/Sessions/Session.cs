@@ -46,7 +46,7 @@ public abstract class Session : ISession
         MessagePipeline? pipeline = GetLivePipeline();
         if (pipeline is null)
         {
-            return Task.FromException(SendAfterDisconnectException());
+            return Task.FromException(NoLivePipelineException());
         }
 
         return pipeline.SendAsync(message, options);
@@ -57,7 +57,7 @@ public abstract class Session : ISession
         MessagePipeline? pipeline = GetLivePipeline();
         if (pipeline is null)
         {
-            return Task.FromException(SendAfterDisconnectException());
+            return Task.FromException(NoLivePipelineException());
         }
 
         return pipeline.SendAndFlushAsync(message, options, cancellationToken);
@@ -137,14 +137,13 @@ public abstract class Session : ISession
     }
 
     private MessagePipeline? GetLivePipeline()
-    {
-        if (Volatile.Read(ref _disconnected) != 0)
-        {
-            return null;
-        }
+        => Volatile.Read(ref _disconnected) != 0 ? null : _pipeline;
 
-        return _pipeline ?? throw new InvalidOperationException("파이프라인이 연결되지 않은 세션입니다.");
-    }
+    /// <summary>송신할 파이프라인이 없을 때 반환할 예외 — 끊김·미부착을 구분한다(동기 throw 아님).</summary>
+    private InvalidOperationException NoLivePipelineException()
+        => Volatile.Read(ref _disconnected) != 0
+            ? SendAfterDisconnectException()
+            : new InvalidOperationException("파이프라인이 연결되지 않은 세션입니다.");
 
     private static InvalidOperationException SendAfterDisconnectException()
         => new("세션이 끊겨 송신할 수 없습니다.");
