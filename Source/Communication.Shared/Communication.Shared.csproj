@@ -4,7 +4,7 @@
     <PackageId>Communication.Shared</PackageId>
     <Version>1.0.2</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>??? ????? ???? ?? (.NET Standard 2.1, Unity ??).</Description>
+    <Description>연결형 통신 전송 계층 공유 계약 — Session·Channel·Framing·Pipeline (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

@@ -3,7 +3,7 @@ project: DS_Communication
 type: adr
 status: draft
 tags: [adr, api, send-options, handler]
-updated: 2026-07-11
+updated: 2026-08-31
 ---
 
 # ADR 0004: Connect / Handler / SendOptions API
@@ -37,7 +37,7 @@ Accepted
 
 ### SendOptions
 
-- Shared에 기반 타입 **`SendOptions`** (참조 또는 작은 클래스/구조 — 구현 시 할당 비용 고려해 확정).
+- Shared에 기반 타입 **`SendOptions`** — 필드 없는 마커 **클래스**로 확정(2026-08-31). 할당은 파생 옵션(`RudpSendOptions` 등) 사용 시에만.
 - `ISession.SendAsync(object message)` / `SendAsync(object message, SendOptions? options)` / `SendAndFlushAsync(..., SendOptions? options, ...)`.
 - 스택별 확장: **상속(또는 스택 패키지 파생 타입)**.
   - 예: `RudpSendOptions : SendOptions` — `ReliableType` 등
@@ -65,7 +65,7 @@ Accepted
 
 ## 관련
 
-- [[Public-API]]
+- [[../03-Reference/Public-API|Public-API]]
 - [[Session]]
 - [[Handler]]
 - [[Pipeline]]

@@ -14,7 +14,7 @@ updated: 2026-08-31
 
 - **설계**: 앱이 Session 생성, Session-only 끊김, Converter IBufferWriter/Span, TCP/RUDP/IOCP, **재접속·하트비트는 앱**, TCP keep-alive 사용자 설정
 - **구현 순서**: Shared → Test → TCP(+Sandbox) → RUDP(+Sandbox) → TCP_IOCP(+Sandbox) — [[Implementation-Roadmap]]
-- **구현**: `Source/Communication.Shared` 골격만. 전송 패키지 미착수
+- **구현**: Shared + TCP 완료 — 테스트 23 통과, `Sandbox/Chat.TCP` 실행 검증. RUDP·TCP_IOCP 미착수
 - **아카이브**: `Legacy/`
 
 ## 읽기 맵

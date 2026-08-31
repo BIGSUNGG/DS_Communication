@@ -12,7 +12,7 @@ updated: 2026-08-31
 
 ## 한 줄 요약
 
-연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 지금은 설계 문서 단계.
+연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 로드맵 1~3단계 완료 — Shared·TCP 구현, 테스트 23 통과, Sandbox/Chat.TCP 검증. 다음은 RUDP.
 
 ## 저장소
 

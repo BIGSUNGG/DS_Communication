@@ -3,12 +3,12 @@ project: DS_Communication
 type: guide
 status: draft
 tags: [guide, usage, examples]
-updated: 2026-07-11
+updated: 2026-08-31
 ---
 
 # Getting Started — 사용 예시
 
-[[Public-API]], [[0006-session-ownership-and-converter]], [[0003-connection-lifecycle-options]].
+[[../03-Reference/Public-API|Public-API]], [[0006-session-ownership-and-converter]], [[0003-connection-lifecycle-options]].
 
 ## 1. Converter · Handler
 
@@ -27,9 +27,10 @@ public sealed class DemoConverter : IMessageConverter
 
 public sealed class ChatHandler : MessageHandler
 {
-    public ChatHandler(ISession session) : base(session) { }
-    protected override void RegisterMessageType() =>
+    public ChatHandler(ISession session) : base(session)
+    {
         Register<ChatMessage>(m => Console.WriteLine($"recv: {m.Text}"));
+    }
 }
 ```
 
@@ -48,10 +49,10 @@ var options = new TcpTransportOptions
     }
 };
 
-var connector = new TcpConnector(options);
-if (!await connector.ConnectAsync("127.0.0.1", 7777)) return;
+var connector = new TcpConnector();
+if (!await connector.ConnectAsync("127.0.0.1", 7777, options)) return;
 
-var session = new TcpSession(connector.Channel, converter, s => new ChatHandler(s));
+var session = new TcpSession(connector.Channel!, converter, s => new ChatHandler(s));
 
 session.Disconnected += (_, e) =>
     Console.WriteLine($"disconnected: {e.Reason}" + (e.Exception is null ? "" : $" {e.Exception.Message}"));
@@ -62,13 +63,13 @@ session.Disconnected += (_, e) =>
 ## 3. TCP 서버
 
 ```csharp
-var listener = new TcpListener(new TcpTransportOptions { KeepAlive = ... });
+var listener = new TcpListener(IPAddress.Any, 7777); // using System.Net
 listener.Accepted += channel =>
 {
     var session = new TcpSession(channel, converter, s => new ChatHandler(s));
     session.Disconnected += (_, e) => Console.WriteLine($"peer left: {e.Reason}");
 };
-listener.Start();
+listener.Start(options);
 ```
 
 ## 4. 앱 재접속 (라이브러리 기능 아님)
@@ -80,14 +81,14 @@ async Task RunClientAsync(CancellationToken ct)
 {
     while (!ct.IsCancellationRequested)
     {
-        var connector = new TcpConnector(options);
-        if (!await connector.ConnectAsync(host, port, ct))
+        var connector = new TcpConnector();
+        if (!await connector.ConnectAsync(host, port, options, ct))
         {
             await Task.Delay(TimeSpan.FromSeconds(2), ct);
             continue;
         }
 
-        var session = new TcpSession(connector.Channel, converter, s => new ChatHandler(s));
+        var session = new TcpSession(connector.Channel!, converter, s => new ChatHandler(s));
         var tcs = new TaskCompletionSource<DisconnectReason>();
 
         session.Disconnected += (_, e) => tcs.TrySetResult(e.Reason);
@@ -121,4 +122,4 @@ await session.SendAsync(msg, new RudpSendOptions { ReliableType = RudpReliableTy
 
 ## 관련
 
-- [[Configuration]] · [[Public-API]] · [[Implementation-Roadmap]]
+- [[../03-Reference/Configuration|Configuration]] · [[../03-Reference/Public-API|Public-API]] · [[Implementation-Roadmap]]
