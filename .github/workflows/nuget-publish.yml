@@ -3,14 +3,34 @@ name: Publish NuGet
 on:
   push:
     tags:
-      - 'v*'
-      - 'tcp/v*'
+      - "v*"
+      - "tcp/v*"
 
 permissions:
   contents: read
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build (Release)
+        run: dotnet build Communication.sln -c Release --verbosity minimal
+
+      - name: Test
+        run: >
+          dotnet test Test/Communication.Tests -c Release
+          --no-build --verbosity minimal
+
   publish-shared:
+    needs: verify
     if: ${{ !startsWith(github.ref_name, 'tcp/') }}
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +40,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.x'
+          dotnet-version: "10.0.x"
 
       - name: Resolve version from tag
         id: ver
@@ -60,6 +80,7 @@ jobs:
             --skip-duplicate
 
   publish-tcp:
+    needs: verify
     if: ${{ startsWith(github.ref_name, 'tcp/') }}
     runs-on: ubuntu-latest
     steps:
@@ -69,7 +90,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.x'
+          dotnet-version: "10.0.x"
 
       - name: Resolve version from tag
         id: ver
