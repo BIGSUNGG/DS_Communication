@@ -3,7 +3,7 @@ project: DS_Communication
 type: context
 status: draft
 tags: [ai, entry]
-updated: 2026-09-01
+updated: 2026-09-04
 ---
 
 # CONTEXT — DS_Communication
@@ -39,8 +39,10 @@ updated: 2026-09-01
 
 | 패키지 | 설명 |
 | -------- | ------ |
-| `Communication.Shared` | Session·Channel·Framing·Pipeline·`SendOptions`·`DisconnectReason` |
-| `Communication.Network.TCP` | TcpClient/NetworkStream 기반 Connector·Listener·Session |
+| `Communication.Shared` | Session·Channel·Framing·Pipeline·`SendOptions`·`DisconnectReason` (2.0.0 배포) |
+| `Communication.Network.TCP.Shared` | TcpSession·StreamByteChannel·TcpTransportOptions (2.0.0 배포) |
+| `Communication.Network.TCP.Server` | TcpListener 수락 루프 (2.0.0 배포) |
+| `Communication.Network.TCP.Client` | TcpConnector 연결 (2.0.0 배포) |
 | `Communication.Network.TCP_IOCP` | SocketAsyncEventArgs 기반 Connector·Listener·Session |
 | `Communication.Network.RUDP` | LiteNetLib 기반 (인터림); 이후 자체 RUDP는 별 프로젝트 |
 | `Communication.IPC.Stream` | Named Pipe / UDS → `IByteChannel` (후속) |

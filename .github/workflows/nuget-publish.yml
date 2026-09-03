@@ -4,12 +4,14 @@ on:
   push:
     tags:
       - 'v*'
+      - 'tcp/v*'
 
 permissions:
   contents: read
 
 jobs:
-  publish:
+  publish-shared:
+    if: ${{ !startsWith(github.ref_name, 'tcp/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,6 +39,57 @@ jobs:
             Source/Communication.Shared/Communication.Shared.csproj
           do
             dotnet pack "$proj" \
+              -c Release \
+              -o "$OUT" \
+              -p:Version="$VER" \
+              -p:PackageVersion="$VER" \
+              --verbosity minimal
+          done
+
+      - name: Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "NUGET_API_KEY secret is not set."
+            exit 1
+          fi
+          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+  publish-tcp:
+    if: ${{ startsWith(github.ref_name, 'tcp/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.x'
+
+      - name: Resolve version from tag
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#tcp/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: $VERSION (tag: $TAG)"
+
+      - name: Pack (TCP libraries only)
+        run: |
+          OUT="${{ github.workspace }}/artifacts"
+          mkdir -p "$OUT"
+          VER="${{ steps.ver.outputs.version }}"
+          PROJS="Source/Communication.Network.TCP.Shared"
+          PROJS="$PROJS Source/Communication.Network.TCP.Server"
+          PROJS="$PROJS Source/Communication.Network.TCP.Client"
+          for dir in $PROJS
+          do
+            dotnet pack "$dir/${dir##*/}.csproj" \
               -c Release \
               -o "$OUT" \
               -p:Version="$VER" \

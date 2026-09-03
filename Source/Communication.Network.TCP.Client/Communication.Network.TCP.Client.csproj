@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Communication.Network.TCP.Client</PackageId>
+    <Version>2.0.0</Version>
+    <Authors>BIGSUNGG</Authors>
+    <Description>연결형 통신 전송 계층 TCP 클라이언트 — TcpConnector 연결 (.NET Standard 2.1, Unity 호환).</Description>
+    <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, structure]
-updated: 2026-08-31
+updated: 2026-09-04
 ---
 
 # Code Structure
@@ -19,7 +19,9 @@ DS_Communication/
 ├── Source/
 │   ├── Directory.Build.props          # IsPackable, TFM, XML docs
 │   ├── Communication.Shared/
-│   ├── Communication.Network.TCP/
+│   ├── Communication.Network.TCP.Shared/
+│   ├── Communication.Network.TCP.Server/
+│   ├── Communication.Network.TCP.Client/
 │   ├── Communication.Network.TCP_IOCP/
 │   ├── Communication.Network.RUDP/
 │   ├── Communication.IPC.Stream/      # 후속
@@ -32,20 +34,22 @@ DS_Communication/
 └── Legacy/                            # 아카이브 (수정·확장 대상 아님)
 ```
 
-현재 활성: Shared + TCP 구현 완료, Test·Sandbox 운영 중. RUDP·TCP_IOCP 미착수.
+현재 활성: Shared + TCP(Shared/Server/Client 3분할) 구현 완료, Test·Sandbox 운영 중. RUDP·TCP_IOCP 미착수.
 
 ## 패키지 ↔ 폴더
 
 | 프로젝트 | 네임스페이스 루트 | 포함 |
 | ---------- | ------------------- | ------ |
 | `Communication.Shared` | `Communication.Shared` | Sessions, Messages, Channels, Framing, DisconnectReason, Threading |
-| `Communication.Network.TCP` | `Communication.Network.TCP` | Connector, Listener, Session, Stream ByteChannel |
+| `Communication.Network.TCP.Shared` | `Communication.Network.TCP` | TcpSession, StreamByteChannel, TcpTransportOptions |
+| `Communication.Network.TCP.Server` | `Communication.Network.TCP` | TcpListener |
+| `Communication.Network.TCP.Client` | `Communication.Network.TCP` | TcpConnector |
 | `Communication.Network.TCP_IOCP` | `Communication.Network.TCP_IOCP` | Connector, Listener, Session, IOCP ByteChannel |
 | `Communication.Network.RUDP` | `Communication.Network.RUDP` | Connector, Listener, Session, MessageChannel |
 | `Communication.IPC.Stream` | `Communication.IPC.Stream` | Pipe/UDS Connector·Listener·ByteChannel |
 | `Communication.IPC.SharedMemory` | `Communication.IPC.SharedMemory` | SharedMemory channel 어댑터 |
 
-의존: 모든 전송 패키지 → `Communication.Shared`만. 전송 패키지끼리 참조하지 않는다.
+의존: 모든 전송 패키지 → `Communication.Shared`만. 전송 패키지끼리 참조하지 않는다 (같은 스택의 `.Shared` 참조만 예외).
 
 ## Shared 내부 (실제)
 
@@ -80,13 +84,19 @@ Communication.Shared/
 ## TCP 내부 (실제)
 
 ```
-Communication.Network.TCP/
-├── TcpConnector.cs
-├── TcpListener.cs
+Communication.Network.TCP.Shared/
 ├── TcpSession.cs
 ├── TcpTransportOptions.cs          # SocketKeepAliveOptions + 내부 KeepAliveApplicator
 └── StreamByteChannel.cs            # TcpClient/NetworkStream → IByteChannel
+
+Communication.Network.TCP.Server/
+└── TcpListener.cs
+
+Communication.Network.TCP.Client/
+└── TcpConnector.cs
 ```
+
+네임스페이스는 셋 다 `Communication.Network.TCP` 유지. Server·Client는 TCP.Shared의 `InternalsVisibleTo`로 내부 생성자·`KeepAliveApplicator` 사용.
 
 ## TCP_IOCP 내부 (목표)
 
@@ -99,7 +109,7 @@ Communication.Network.TCP_IOCP/
 └── IocpByteChannel.cs              # SocketAsyncEventArgs → IByteChannel
 ```
 
-스택(전송)당 프로젝트를 나누고, Client/Server는 나누지 않는다.
+TCP는 2.0.0부터 Shared/Server/Client 3프로젝트로 분할(서버·클라이언트 독립 설치). 나머지 스택은 필요 시까지 1 프로젝트 유지.
 
 ## RUDP 내부 (목표)
 
@@ -116,7 +126,7 @@ Communication.Network.RUDP/
 
 | Legacy | 재작성 |
 | -------- | -------- |
-| `TCP.Client` + `TCP.Server` + `TCP.Shared` | `Network.TCP` 하나 |
+| `TCP.Client` + `TCP.Server` + `TCP.Shared` | `Network.TCP.Shared` + `.Server` + `.Client` (2.0.0부터 재분할) |
 | `TCP_IOCP.Client` + `Server` + `Shared` | `Network.TCP_IOCP` 하나 |
 | `RUDP.Client` + `Server` + `Shared` | `Network.RUDP` 하나 |
 | Shared에 Channel 없음 | Shared `Channels/*` 도입 |

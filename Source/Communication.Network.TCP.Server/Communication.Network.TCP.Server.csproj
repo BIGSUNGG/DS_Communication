@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageId>Communication.Network.TCP</PackageId>
+    <PackageId>Communication.Network.TCP.Server</PackageId>
     <Version>2.0.0</Version>
     <Authors>BIGSUNGG</Authors>
-    <Description>연결형 통신 전송 계층 TCP 스택 — TcpClient/NetworkStream 기반 Connector·Listener·Session (.NET Standard 2.1, Unity 호환).</Description>
+    <Description>연결형 통신 전송 계층 TCP 서버 — TcpListener 수락 루프 (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj" />
+    <ProjectReference Include="..\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
   </ItemGroup>
 
 </Project>
