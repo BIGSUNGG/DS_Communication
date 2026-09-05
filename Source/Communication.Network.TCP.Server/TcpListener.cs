@@ -59,6 +59,19 @@ public sealed class TcpListener : IDisposable
         {
         }
 
+        // 취소된 CTS를 정리한다 — Cancel은 토큰 상태를 고정시키므로 수락 루프의 모든 탈출 경로가
+        // 취소 토큰으로 끝난다(취소 후 새 등록 경로 없음). dispose·null로 중지 후에도
+        // 리스너가 CTS를 계속 보유하지 않게 한다(재시작 시 새 CTS, 기존 재시작 핀 테스트로 보호).
+        try
+        {
+            _cts?.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        _cts = null;
+
         try
         {
             _listener?.Stop();
