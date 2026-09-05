@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 13)
+
+- **Chat.TCP `--selftest` 신설 + CI에 샌드박스 스모크 연결** — RUDP 샘플에만 있던 스크립트형 자가 검증(프로세스 내 루프백 서버+클라이언트 왕복, exit 0/1)을 TCP 샘플에도 추가(왕복 3회, 서버 측 수신 검증 — RUDP와 동일 패턴). 12차에 신설한 `.github/workflows/ci.yml`에 **샌드박스 셀프테스트 단계 추가** — `Chat.TCP`·`Chat.RUDP` 순서로 실행, 한쪽이라도 exit≠0이면 CI 실패. 로컬에서 양쪽 셀프테스트 exit 0 확인(전송 스택의 실제 왕복이 CI에 묶임 — 「샘플 실행 검증」이 수동 절차에서 자동 게이트로). 샘플 주석도 `--selftest` 사용법 갱신
+
 ## 2026-09-05 (후반 12)
 
 - **CI 워크플로 신설 — 모든 브랜치 push·PR에서 빌드+테스트** — 기존에 검증이 실행되는 곳은 릴리스 태그 push(`nuget-publish.yml`의 `verify` 잡)뿐이라, 일반 push·PR은 **자동 검증 없이** 지나갔다(회귀가 릴리스 시점에만 드러남). `.github/workflows/ci.yml` 신설: push(전 브랜치) + pull_request 트리거, `verify` 잡과 동일한 단계(동일 SHA 핀 액션, dotnet 10.0.x, Release 빌드 + `--no-build` 테스트). 비밀 정보 없음 — secrets 미접촉. 로컬에서 동일 명령으로 Release 빌드·테스트 85건 통과 확인

@@ -29,3 +29,8 @@ jobs:
         run: >
           dotnet test Test/Communication.Tests -c Release
           --no-build --verbosity minimal
+
+      - name: Sandbox selftests
+        run: |
+          dotnet run --project Sandbox/Chat.TCP -c Release -- --selftest
+          dotnet run --project Sandbox/Chat.RUDP -c Release -- --selftest
