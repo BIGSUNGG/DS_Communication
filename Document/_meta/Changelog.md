@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반)
+
+- **RUDP `MaxConnections` 고갈 공격 회귀 테스트 2건 추가** (`Test/Communication.Tests/RudpLoopbackTests.cs`) — ① `HostileStalledHandshake_ReturnsSlotAfterTimeout`: LiteNetLib 2.1.4 **와이어 형식을 직접 구성한 접속 요청 패킷**(프로토콜 ID 13, ConnectRequest=6, IPv4 SocketAddress + 키 문자열)으로 검증 키 수락 후 **침묵하는 공격자**가 슬롯을 잡아도 상한 초과 거부가 유지되고 `DisconnectTimeout` 후 슬롯이 반환되며 정상 클라이언트가 재수락되는지 4단계로 검증. ② `WrongKeyFlood_LeavesNoSlotResidue`: 틀린 키 접속 폭주(전파 거절)가 `ActiveConnectionCount`에 파편을 남기지 않고 이후 올바른 키 수락이 가능한지 검증. **테스트 71 → 73건 통과** → [[../04-Guides/Security|Security]]
+
 ## 2026-09-05
 
 - **로드맵 4단계 RUDP 구현 완료** — `Communication.Network.RUDP.Shared`(RudpSession·RudpMessageChannel·RudpSendOptions/RudpDeliveryMethod·RudpTransportOptions·내부 RudpNetHost)·`.Server`(RudpListener)·`.Client`(RudpConnector) 신설. 네임스페이스는 셋 다 `Communication.Network.RUDP`, Server·Client는 RUDP.Shared의 `InternalsVisibleTo`로 내부 `RudpNetHost` 공유. **LiteNetLib 2.1.4** 고정, `PackageReference`는 RUDP.Shared에만 — LiteNetLib 타입은 `RudpNetHost`·`RudpMessageChannel` 두 파일에만 등장하고 공개 API에는 노출되지 않는다. 버전 1.0.0, **NuGet 배포 트리거는 이번 범위 밖** → [[../02-Architecture/Code-Structure|Code-Structure]]·[[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]]

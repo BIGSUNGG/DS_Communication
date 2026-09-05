@@ -1,5 +1,8 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using Communication.Network.RUDP;
 using Communication.Shared.Channels;
 using Communication.Shared.Connection;
@@ -371,5 +374,137 @@ public class RudpLoopbackTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 검증 키로 접속 요청만 보내고 침묵하는 공격자(핸드셰이크 미완성)도 슬롯을 영구 점유하지 않는다 —
+    /// DisconnectTimeout 후 슬롯이 회수되고 정상 클라이언트는 계속 수락된다.
+    /// 접속 요청 패킷은 LiteNetLib 2.1.4 와이어 형식을 직접 구성한다(프로토콜 ID 13, ConnectRequest=6).
+    /// </summary>
+    [Fact]
+    public async Task HostileStalledHandshake_ReturnsSlotAfterTimeout()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IMessageChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+        listener.Start(new RudpTransportOptions { MaxConnections = 1, DisconnectTimeout = 1000 });
+        int port = listener.LocalPort;
+
+        // 검증 키로 접속 요청만 보내고 응답하지 않는다 — 핸드셰이크를 완성하지 않는 고갈 공격 시나리오.
+        using var attacker = new UdpClient();
+        attacker.Connect(IPAddress.Loopback, port); // 기본 원격 지정 — 바인드·SendAsync가 여기서 결정된다.
+        IPEndPoint attackerEndpoint = (IPEndPoint)attacker.Client.LocalEndPoint!;
+
+        byte[] request = BuildConnectRequest(RudpTransportOptions.DefaultConnectionKey, attackerEndpoint);
+        await attacker.SendAsync(request, request.Length);
+
+        // 1단계: 공격자의 수락 예약이 슬롯을 잡는다.
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 1);
+
+        // 2단계: 슬롯이 잡힌 동안 정상 클라이언트는 상한 초과로 거부된다(고갈 방어가 살아 있다).
+        var blocked = new RudpConnector();
+        Assert.False(await blocked.ConnectAsync("127.0.0.1", port).WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(1, listener.ActiveConnectionCount);
+
+        // 3단계: 공격자가 침묵하면 DisconnectTimeout 후 슬롯이 돌아온다.
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 0, timeoutMs: 10000);
+
+        // 4단계: 슬롯이 진짜로 비었는지 — 정상 클라이언트가 접속하고 왕복할 수 있어야 한다.
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        using var session = new RudpSession(connector.Channel!, new StringConverter(), s => new CollectHandler(s));
+        Assert.True(session.IsConnected());
+
+        // 공격자 연결이 Accepted로 전달됐다면 세션 미생성 상태로 남는다 — 정리하고 수락 경로에 남기지 않는다.
+        lock (accepted)
+        {
+            foreach (IMessageChannel channel in accepted)
+            {
+                channel.Dispose();
+            }
+
+            accepted.Clear();
+        }
+    }
+
+    /// <summary>
+    /// 잘못된 키 접속 폭주(거절 재시도 포함)도 슬롯 파편을 남기지 않는다 —
+    /// ActiveConnectionCount는 항상 0으로 복귀하고, 이후 정상 수락이 가능해야 한다.
+    /// </summary>
+    [Fact]
+    public async Task WrongKeyFlood_LeavesNoSlotResidue()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IMessageChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+        listener.Start(new RudpTransportOptions { MaxConnections = 1, ConnectionKey = "secret" });
+        int port = listener.LocalPort;
+
+        // 틀린 키로 여러 번 접속 시도 — 전부 거절되어야 하고 슬롯에 파편을 남기지 않아야 한다.
+        for (int i = 0; i < 4; i++)
+        {
+            var bad = new RudpConnector();
+            Assert.False(await bad.ConnectAsync("127.0.0.1", port, new RudpTransportOptions
+            {
+                ConnectionKey = $"wrong-key-{i}",
+            }).WaitAsync(TimeSpan.FromSeconds(10)));
+        }
+
+        // 거절된 시도가 슬롯에 흔적을 남겼다면 여기서 걸린다.
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
+
+        // 올바른 키로는 여전히 접속된다.
+        var good = new RudpConnector();
+        Assert.True(await good.ConnectAsync("127.0.0.1", port, new RudpTransportOptions { ConnectionKey = "secret" }));
+        using var session = new RudpSession(good.Channel!, new StringConverter(), s => new CollectHandler(s));
+        Assert.True(session.IsConnected());
+
+        await WaitUntilAsync(() =>
+        {
+            lock (accepted) return accepted.Count == 1;
+        });
+        Assert.Equal(1, listener.ActiveConnectionCount);
+        lock (accepted) Assert.Single(accepted);
+    }
+
+    /// <summary>
+    /// LiteNetLib 2.1.4 접속 요청 패킷 구성: [0]=ConnectRequest(6)·connectNum 0,
+    /// [1..4]=프로토콜 ID 13, [5..12]=connectTime, [13..16]=peerId,
+    /// [17]=주소 크기, [18..]=IPv4 SocketAddress, 뒤에 키 문자열(ushort 길이+1, UTF-8).
+    /// </summary>
+    private static byte[] BuildConnectRequest(string key, IPEndPoint attackerEndpoint)
+    {
+        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+        SocketAddress address = new IPEndPoint(IPAddress.Loopback, attackerEndpoint.Port).Serialize();
+
+        int dataOffset = 18 + address.Size;
+        byte[] packet = new byte[dataOffset + 2 + keyBytes.Length];
+        packet[0] = 0x06; // PacketProperty.ConnectRequest, 연결 번호 0
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(1, 4), 13); // NetConstants.ProtocolId
+        BinaryPrimitives.WriteInt64LittleEndian(packet.AsSpan(5, 8), DateTime.UtcNow.Ticks);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(13, 4), 0x12345678); // 자기 peer id
+        packet[17] = (byte)address.Size;
+        for (int i = 0; i < address.Size; i++)
+        {
+            packet[18 + i] = address[i];
+        }
+
+        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(dataOffset, 2), (ushort)(keyBytes.Length + 1));
+        Buffer.BlockCopy(keyBytes, 0, packet, dataOffset + 2, keyBytes.Length);
+        return packet;
     }
 }
