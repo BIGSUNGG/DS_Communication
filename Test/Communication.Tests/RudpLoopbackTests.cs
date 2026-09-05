@@ -510,6 +510,64 @@ public class RudpLoopbackTests
         }
     }
 
+    /// <summary>
+    /// 메시지 단위 채널(RUDP)도 `MaxFrameLength`가 적용된다 — LiteNetLib은 재조립에 자체 상한이
+    /// 없으므로(MaxFragmentsCount ≒ 90MB) 상한 초과 payload는 역직렬화 전에 거부하고
+    /// 세션을 Error로 단절한다(바이트 경로 프레이머와 동일한 계약, 실패 폐쇄).
+    /// </summary>
+    [Fact]
+    public async Task OversizeMessage_OnMessageChannel_DisconnectsFailClosed()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        DisconnectReason? serverReason = null;
+        Exception? serverError = null;
+        CollectHandler? serverHandler = null;
+        var serverSessions = new List<RudpSession>();
+        listener.Accepted += channel =>
+        {
+            RudpSession session = new(
+                channel, new StringConverter(),
+                s => serverHandler = new CollectHandler(s),
+                new MessageQueueOptions { MaxFrameLength = 256 });
+            session.Disconnected += (_, e) =>
+            {
+                serverReason = e.Reason;
+                serverError = e.Exception;
+            };
+            lock (serverSessions)
+            {
+                serverSessions.Add(session);
+            }
+        };
+        listener.Start();
+        int port = listener.LocalPort;
+
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        IMessageChannel channel = connector.Channel!;
+        await WaitUntilAsync(() =>
+        {
+            lock (serverSessions) return serverSessions.Count == 1;
+        });
+
+        // 상한(256)을 넘는 payload — 분할(ReliableOrdered)로 전달돼도 도달 시점에 거부된다.
+        await channel.SendAsync(new byte[1024], default, CancellationToken.None)
+            .AsTask()
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        await WaitUntilAsync(() => serverReason != null, timeoutMs: 10000);
+        Assert.Equal(DisconnectReason.Error, serverReason);
+        Assert.NotNull(serverError);
+        Assert.Contains("상한", serverError!.Message);
+        Assert.Equal(0, serverHandler?.ReceivedCount ?? 0); // 거부된 payload는 핸들러에 도달하지 않는다.
+
+        lock (serverSessions)
+        {
+            serverSessions[0].Dispose();
+        }
+    }
+
     /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
     private sealed class SlowHandler : MessageHandler
     {

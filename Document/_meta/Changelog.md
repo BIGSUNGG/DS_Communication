@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 4)
+
+- **메시지 단위 채널(RUDP) 수신에도 `MaxFrameLength` 강제 — 수신 메모리 증폭 방어 완성** — 기존엔 상한이 바이트 경로(TCP 프레이머)에만 적용됐고, RUDP는 LiteNetLib 재조립이 자체 상한을 갖지 않아(MaxFragmentsCount 65535 × MTU ≒ **90MB**) 사실상 무제한 재조립·역직렬화가 가능했다(보안 가이드의 「수신 메모리 증폭 방어」가 RUDP에선 성립하지 않음). `MessagePipeline.OnMessageChannelReceived`가 역직렬화 전 상한 검사를 추가해 초과 payload를 `InvalidDataException` → `Error` 단절로 실패 폐쇄한다. 재조립 자체는 LiteNetLib 내부 풀에서 순간적으로 일어나므로 전달 지점에서의 상한으로 충분하다. 회귀 테스트 `OversizeMessage_OnMessageChannel_DisconnectsFailClosed` — 상한 256 설정에 1KB payload 분할 전송 → 단절 + 핸들러 미도달 검증(픽스 없이는 단절 없음 — 10초 타임아웃). **테스트 75 → 76건 통과** → [[../03-Reference/Configuration|Configuration]]·[[../04-Guides/Security|Security]]
+
 ## 2026-09-05 (후반 3)
 
 - **메시지 단위 채널(RUDP) 수신 백프레셔 공백 해소 — 흐름 제어 단절** — `MaxPendingMessages` 상한을 **슬롯 대기(메시지 보유)까지 포함**해 강제한다(`MessagePipeline.EnqueueForDispatchAsync`의 `_pendingReceives` 카운터). 기존엔 핸들러가 밀리면 대기자가 상한을 넘어 **무제한 누적**(문서화된 한계)되어 느린 핸들러 + 빠른 peer 조합이 메모리 압박 경로였다. UDP는 상대방을 늦출 수 없으므로 초과 시 `DisconnectReason.Error`(메시지에 「흐름 제어」 기재)로 실패 폐쇄한다. 바이트 채널(TCP) 경로는 수신 루프의 순차 대기(동시 대기 ≤ 1)라 기존 백프레셔(추가 읽기 중단)가 그대로 유지된다. 이전 단계(InlineDispatch 강제 무시)와 합쳐져 수신 누적이 선언된 상한 안에 완전히 묶인다. 회귀 테스트 `ReceiveOverflow_OnMessageChannel_DisconnectsFailClosed` — 원시 채널 200건 폭주 + 메시지당 100ms 핸들러로 상한 8을 초과시켜 단절을 검증(픽스 없이는 단절 없음 — 10초 타임아웃). **테스트 74 → 75건 통과** → [[../03-Reference/Configuration|Configuration]]

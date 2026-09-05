@@ -18,7 +18,7 @@ updated: 2026-09-05
 | `InlineDispatch` | `true`면 수신 경로 즉시 디스패치(느린 핸들러가 수신 차단) — **단, 메시지 단위 채널(RUDP) 경로에서는 무시**된다(수신 콜백이 세션 간 공유 폴링 스레드에서 실행되므로 항상 큐 디스패치 강제) | `false` (내부 큐) |
 | `CoalesceLimitBytes` | 바이트 채널 송신 시 한 번의 write로 묶는 배치 상한(바이트); 상한 도달 시 즉시 전송 — 배치는 상한 후 최대 1프레임 초과 허용 | `65_536` |
 | `FrameTimeout` | 수신 프레임 완료 마감(슬로로리스 방어). 프레임의 **첫 바이트 도착 순간** 시작, 마감 내 미완성 시 `DisconnectReason.Timeout` 단절. 완전 유휴 연결(바이트 0)은 대상 아님 — 하트비트는 앱 책임. `null`/`TimeSpan.Zero`로 비활성화 | `30초` |
-| `MaxFrameLength` | 단일 프레임 길이 상한(바이트). 초과 프레임은 송신에서 **격리**(해당 항목만 플러시 예외), 수신에서 **거부**(`Error` 단절). 절대 상한 `LengthPrefixFramer.MaxFrameLength`(64MB) — 초과 값은 설정 시 거부. 필요 시 앱이 상향 | `4MB` |
+| `MaxFrameLength` | 단일 프레임 길이 상한(바이트). 초과 프레임은 송신에서 **격리**(해당 항목만 플러시 예외), 수신에서 **거부**(`Error` 단절) — **메시지 단위 채널(RUDP) 수신에도 동일 적용**(LiteNetLib 재조립 자체 상한 ≒90MB라 역직렬화 전 거부). 절대 상한 `LengthPrefixFramer.MaxFrameLength`(64MB) — 초과 값은 설정 시 거부. 필요 시 앱이 상향 | `4MB` |
 
 ## NoDelay (TCP)
 

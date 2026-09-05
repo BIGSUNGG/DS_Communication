@@ -417,6 +417,15 @@ public sealed class MessagePipeline : IDisposable
         object message;
         try
         {
+            // 메시지 단위 채널도 바이트 경로와 동일한 프레임 상한을 적용한다 — LiteNetLib 재조립은
+            // 자체 상한이 없어(MaxFragmentsCount ≒ 90MB) 4MB 기본 상한을 여기서 강제해야
+            // 수신 메모리 증폭 방어가 RUDP에도 성립한다. 초과는 역직렬화 전 거부(실패 폐쇄).
+            if (payload.Length > _options.MaxFrameLength)
+            {
+                throw new InvalidDataException(
+                    $"메시지 길이 {payload.Length}가 상한 {_options.MaxFrameLength}를 초과합니다.");
+            }
+
             message = _converter.Deserialize(payload.Span);
         }
         catch (Exception e)
