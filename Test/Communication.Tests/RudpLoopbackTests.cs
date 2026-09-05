@@ -1,8 +1,10 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using Communication.Network.RUDP;
 using Communication.Shared.Channels;
 using Communication.Shared.Connection;
@@ -373,6 +375,98 @@ public class RudpLoopbackTests
                     channel.Dispose();
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// <c>InlineDispatch=true</c>를 요청해도 메시지 단위 채널(RUDP)은 큐 디스패치를 강제한다 —
+    /// 폴링 스레드는 세션 간 공유라 느린 핸들러 하나가 세션 A의 디스패치를 점유해도
+    /// 세션 B의 왕복이 막히면 안 된다.
+    /// </summary>
+    [Fact]
+    public async Task InlineDispatchOnRUDP_ForcesQueuedDispatch_OtherSessionsUnstalled()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        var serverSessions = new List<RudpSession>();
+        BlockingHandler? stalling = null;
+        CollectHandler? collecting = null;
+        listener.Accepted += channel =>
+        {
+            lock (serverSessions)
+            {
+                var queueOptions = new MessageQueueOptions { InlineDispatch = true };
+                if (serverSessions.Count == 0)
+                {
+                    serverSessions.Add(new RudpSession(channel, new StringConverter(),
+                        s => stalling = new BlockingHandler(s), queueOptions));
+                }
+                else
+                {
+                    serverSessions.Add(new RudpSession(channel, new StringConverter(),
+                        s => collecting = new CollectHandler(s), queueOptions));
+                }
+            }
+        };
+        listener.Start();
+        int port = listener.LocalPort;
+
+        var connectorA = new RudpConnector();
+        Assert.True(await connectorA.ConnectAsync("127.0.0.1", port));
+        using var clientA = new RudpSession(connectorA.Channel!, new StringConverter(), s => new CollectHandler(s));
+
+        var connectorB = new RudpConnector();
+        Assert.True(await connectorB.ConnectAsync("127.0.0.1", port));
+        using var clientB = new RudpSession(connectorB.Channel!, new StringConverter(), s => new CollectHandler(s));
+
+        await WaitUntilAsync(() =>
+        {
+            lock (serverSessions) return serverSessions.Count == 2;
+        });
+        Assert.NotNull(stalling);
+        Assert.NotNull(collecting);
+
+        // A 핸들러를 3초 점유시킨다.
+        await clientA.SendAndFlushAsync("block");
+        await WaitUntilAsync(() => stalling!.Entered);
+
+        // B 왕복은 점유와 무관해야 한다(큐 강제).
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        await clientB.SendAndFlushAsync("ping");
+        await WaitUntilAsync(() => collecting!.ReceivedCount == 1);
+        stopwatch.Stop();
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(1500),
+            $"B 수신이 {stopwatch.Elapsed} 걸림 — 공유 폴링 스레드가 점유됨");
+
+        // A의 블로킹 메시지도 결국 처리된다.
+        await WaitUntilAsync(() => stalling!.Completed == 1);
+    }
+
+    private sealed class BlockingHandler : MessageHandler
+    {
+        private int _entered;
+        private int _completed;
+
+        public BlockingHandler(ISession session)
+            : base(session)
+        {
+            Register<string>(OnBlockingMessage);
+        }
+
+        public bool Entered => Volatile.Read(ref _entered) != 0;
+
+        public int Completed => Volatile.Read(ref _completed);
+
+        private void OnBlockingMessage(string message)
+        {
+            if (message != "block")
+            {
+                return;
+            }
+
+            Volatile.Write(ref _entered, 1);
+            Thread.Sleep(3000); // 디스패치 점유 — 공유 폴링 스레드였다면 다른 세션이 막힌다.
+            Volatile.Write(ref _completed, 1);
         }
     }
 

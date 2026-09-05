@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 2)
+
+- **메시지 단위 채널(RUDP) 경로에서 `InlineDispatch` 강제 무시** — `MessageQueueOptions.InlineDispatch=true`를 요청해도 `IMessageChannel` 경로는 항상 큐 디스패치를 강제한다(`MessagePipeline.Start`의 디스패치 루프 기동 조건도 함께 변경). 수신 콜백이 **세션 간 공유 폴링 스레드**에서 실행되므로, 핸들러를 그 자리에서 돌리면 느린 핸들러 하나가 다른 세션의 수신·수락·`MaxConnections` 상한 강제까지 막는 구조적 취약점이었다(호스트의 설계 계약 「앱 핸들러는 폴링 스레드에서 실행되지 않는다」를 공개 옵션으로 우회 가능). 바이트 채널(TCP) 경로는 기존 인라인 동작 유지. 회귀 테스트 `InlineDispatchOnRUDP_ForcesQueuedDispatch_OtherSessionsUnstalled` — 세션 A 핸들러 3초 점유 중 세션 B 왕복이 1.5초 안에 완료되는지 검증(픽스 없이는 실패 확인). **테스트 73 → 74건 통과** → [[../03-Reference/Configuration|Configuration]]
+
 ## 2026-09-05 (후반)
 
 - **RUDP `MaxConnections` 고갈 공격 회귀 테스트 2건 추가** (`Test/Communication.Tests/RudpLoopbackTests.cs`) — ① `HostileStalledHandshake_ReturnsSlotAfterTimeout`: LiteNetLib 2.1.4 **와이어 형식을 직접 구성한 접속 요청 패킷**(프로토콜 ID 13, ConnectRequest=6, IPv4 SocketAddress + 키 문자열)으로 검증 키 수락 후 **침묵하는 공격자**가 슬롯을 잡아도 상한 초과 거부가 유지되고 `DisconnectTimeout` 후 슬롯이 반환되며 정상 클라이언트가 재수락되는지 4단계로 검증. ② `WrongKeyFlood_LeavesNoSlotResidue`: 틀린 키 접속 폭주(전파 거절)가 `ActiveConnectionCount`에 파편을 남기지 않고 이후 올바른 키 수락이 가능한지 검증. **테스트 71 → 73건 통과** → [[../04-Guides/Security|Security]]

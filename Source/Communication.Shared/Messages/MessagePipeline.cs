@@ -87,7 +87,10 @@ public sealed class MessagePipeline : IDisposable
             _messageChannel!.MessageReceived += OnMessageChannelReceived;
         }
 
-        if (!_options.InlineDispatch)
+        // 메시지 단위 채널 경로는 InlineDispatch를 무시하고 항상 큐 디스패치 루프를 돌린다 —
+        // 수신 콜백이 전송 계층 스레드(여러 세션이 공유하는 RUDP 폴링 스레드 등)에서 실행되므로
+        // 핸들러를 그 자리에서 돌리면 느린 핸들러 하나가 다른 세션의 수신·수락·상한 강제까지 막는다.
+        if (!_options.InlineDispatch || _messageChannel != null)
         {
             _ = Task.Run(DispatchLoopAsync);
         }
@@ -421,15 +424,9 @@ public sealed class MessagePipeline : IDisposable
             return;
         }
 
-        if (_options.InlineDispatch)
-        {
-            DispatchInline(message);
-        }
-        else
-        {
-            // 수신 콜백 스레드를 막지 않게 백프레셔 대기는 비동기로 넘긴다.
-            _ = EnqueueForDispatchAsync(message);
-        }
+        // 메시지 단위 채널은 InlineDispatch를 무시하고 항상 큐로 넘긴다(Start 참고) —
+        // 수신 콜백은 세션 간 공유될 수 있는 전송 계층 스레드라 그 자리에서 핸들러를 돌리지 않는다.
+        _ = EnqueueForDispatchAsync(message);
     }
 
     private ValueTask DispatchReceivedAsync(object message)

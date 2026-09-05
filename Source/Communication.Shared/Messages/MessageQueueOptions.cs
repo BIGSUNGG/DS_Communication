@@ -33,6 +33,11 @@ public sealed class MessageQueueOptions
     /// <c>true</c>면 수신 경로에서 핸들러를 즉시 호출한다(큐 없음). 느린 핸들러가 수신을 막으므로 핫패스 전용.
     /// 기본 <c>false</c> — 내부 큐 + 별도 디스패치 루프.
     /// </summary>
+    /// <remarks>
+    /// 메시지 단위 채널(<c>IMessageChannel</c>, 예: RUDP) 경로에서는 <b>무시</b>된다 — 수신 콜백이
+    /// 여러 세션이 공유하는 전송 계층 스레드(폴링 스레드)에서 실행되므로, 핸들러를 그 자리에서 돌리면
+    /// 느린 핸들러 하나가 다른 세션의 수신·수락을 막는다. 이 경로는 항상 큐 디스패치를 강제한다.
+    /// </remarks>
     public bool InlineDispatch { get; set; }
 
     /// <summary>
