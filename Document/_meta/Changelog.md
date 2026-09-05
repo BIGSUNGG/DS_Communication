@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 21)
+
+- **Implementation-Roadmap 테스트 수 동기화** — 「현재 상황」 줄이 **71**에서 멈춰 있었다(16차 이전 기준에서 갱신 누락, 실제 107). 단계 목록(1~4 ✅·5 TCP_IOCP)은 정확했고 행의 수치만 스위트 규모와 모순 — 폐기된 구성 내역(「Shared 66 + RUDP loopback 5」)은 제거하고 현행 수로 갱신. 이로써 vault 전체에서 코드와 모순되는 수치·주장이 남지 않았다
+
 ## 2026-09-05 (후반 20)
 
 - **옵션 검증 계약 회귀 테스트 17건 신설** (`OptionsValidationTests.cs`) — 공개 설정 표면(`TcpTransportOptions`·`RudpTransportOptions`·`MessageQueueOptions`)의 검증 가드(≤0·빈 키·상한 초과 거부)가 단 한 건도 직접 검증돼 있지 않았다. 이론 10종으로 전 가드 고정 — 전부 통과(누락된 검증이 있었다면 실패했을 것). 커버리지 스윕도 함께 완료: `Session.md`·`Channel.md`·`Overview.md`·`Code-Structure.md`·`GLOSSARY.md` 전부 드리프트 없음 확인. **테스트 90 → 107건 통과**
