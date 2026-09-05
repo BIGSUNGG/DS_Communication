@@ -302,6 +302,34 @@ public class MessagePipelineTests
     }
 
     [Fact]
+    public async Task MessageChannel_SendChannelFailure_FaultsFlush_AndDisconnects()
+    {
+        var channel = new FakeMessageChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new StringConverter(), handler);
+
+        DisconnectReason? reason = null;
+        Exception? error = null;
+        pipeline.Disconnected += (r, e) =>
+        {
+            reason = r;
+            error = e;
+        };
+        pipeline.Start();
+
+        // 채널 오류(와이어 실패)는 직렬화 실패와 달리 항목 격리 대상이 아니다 —
+        // flush는 원래 예외로 끝나고 세션은 Error로 단절된다(ADR 0007 잔존 계약).
+        var failure = new IOException("wire exploded");
+        channel.FailSend(failure);
+
+        await Assert.ThrowsAsync<IOException>(() => pipeline.SendAndFlushAsync("boom"));
+
+        await WaitUntilAsync(() => reason != null);
+        Assert.Equal(DisconnectReason.Error, reason);
+        Assert.Same(failure, error); // 원래 예외가 보존된다.
+    }
+
+    [Fact]
     public async Task Send_EmptyPayload_FaultsFlushOnly_PipelineStaysConnected()
     {
         var channel = new FakeByteChannel();
