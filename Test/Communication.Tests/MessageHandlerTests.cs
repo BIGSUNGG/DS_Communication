@@ -69,6 +69,100 @@ public class MessageHandlerTests
     {
     }
 
+    // ---- 상속 기반 폴백 검증용 타입 계층 ----
+
+    private abstract class AnimalBase
+    {
+    }
+
+    private class Mammal : AnimalBase
+    {
+    }
+
+    private sealed class Cat : Mammal
+    {
+    }
+
+    /// <summary>등록한 핸들러에 이름표를 달아 어느 핸들러가 돌았는지 관찰한다.</summary>
+    private sealed class MarkingHandler : MessageHandler
+    {
+        private readonly List<string> _marks = new();
+
+        public MarkingHandler(ISession session)
+            : base(session)
+        {
+        }
+
+        public IReadOnlyList<string> Marks
+        {
+            get
+            {
+                lock (_marks)
+                {
+                    return _marks.ToList();
+                }
+            }
+        }
+
+        public void RegisterMarked<T>(string mark) => Register<T>(_ =>
+        {
+            lock (_marks)
+            {
+                _marks.Add(mark);
+            }
+        });
+    }
+
+    [Fact]
+    public void DerivedMessage_FallsBackToRegisteredBase()
+    {
+        using var session = new UnattachedTestSession(new FakeByteChannel());
+        var handler = new MarkingHandler(session);
+        handler.RegisterMarked<AnimalBase>("animal");
+
+        handler.HandleMessage(new Cat()); // 정확 타입 미등록 — 등록된 베이스로 분배.
+
+        Assert.Equal(new[] { "animal" }, handler.Marks);
+    }
+
+    [Fact]
+    public void MostDerivedRegisteredBase_Wins()
+    {
+        using var session = new UnattachedTestSession(new FakeByteChannel());
+        var handler = new MarkingHandler(session);
+        handler.RegisterMarked<AnimalBase>("animal");
+        handler.RegisterMarked<Mammal>("mammal");
+
+        handler.HandleMessage(new Cat()); // 둘 다 대입 가능 — 더 구체적인 Mammal이 분배되어야 한다.
+
+        Assert.Equal(new[] { "mammal" }, handler.Marks);
+    }
+
+    [Fact]
+    public void ExactRegisteredType_BeatsBaseFallback()
+    {
+        using var session = new UnattachedTestSession(new FakeByteChannel());
+        var handler = new MarkingHandler(session);
+        handler.RegisterMarked<Cat>("cat");
+        handler.RegisterMarked<AnimalBase>("animal");
+
+        handler.HandleMessage(new Cat()); // 정확 타입 등록이 폴백보다 우선.
+
+        Assert.Equal(new[] { "cat" }, handler.Marks);
+    }
+
+    [Fact]
+    public void UnrelatedType_StillSkips_WhenOnlyBasesRegistered()
+    {
+        using var session = new UnattachedTestSession(new FakeByteChannel());
+        var handler = new MarkingHandler(session);
+        handler.RegisterMarked<AnimalBase>("animal");
+
+        handler.HandleMessage(42); // 상속 관계 없음 — 폴백 없이 skip, 예외 없음.
+
+        Assert.Empty(handler.Marks);
+    }
+
     /// <summary>등록을 공개하는 테스트용 핸들러.</summary>
     private sealed class TestableMessageHandler : MessageHandler
     {
