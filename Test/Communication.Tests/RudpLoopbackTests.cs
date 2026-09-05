@@ -698,7 +698,7 @@ public class RudpLoopbackTests
 
         // 2) A의 peer가 침묵으로 타임아웃 → 서버 회수, peer id가 풀로 반환된다.
         await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
-        lock (accepted) Assert.Equal(1, accepted.Count);
+        lock (accepted) Assert.Single(accepted);
 
         // 3) B 접속 — 동시 연결이 1개뿐이라 풀에서 A의 peer id를 그대로 물려받는다(결정적).
         var connectorB = new RudpConnector();

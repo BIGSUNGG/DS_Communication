@@ -35,6 +35,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     private bool _isServer;
     private int _connectionCount; // 수락 예약 후 미회수 slot — MaxConnections 강제 기준
     private int _disposed;
+    private long _lastPollErrorTick; // 반복 폴링 오류 로그 플러드 방지(초당 1회 기록)
 
     internal RudpNetHost(RudpTransportOptions? options)
     {
@@ -196,7 +197,13 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
             catch (Exception e)
             {
                 // 폴링 예외가 스레드를 죽이면 모든 접속의 수신이 멈춘다 — 격리 후 계속.
-                Trace.TraceError($"RUDP 폴링 예외 — 격리 후 계속: {e}");
+                // 반복 실패(1ms 재시도)가 로그를 도배하지 않도록 동일 오류는 초당 1회만 기록한다.
+                long now = DateTime.UtcNow.Ticks;
+                long last = Interlocked.Read(ref _lastPollErrorTick);
+                if (now - last >= TimeSpan.TicksPerSecond && Interlocked.CompareExchange(ref _lastPollErrorTick, now, last) == last)
+                {
+                    Trace.TraceError($"RUDP 폴링 예외 — 격리 후 계속: {e}");
+                }
             }
 
             try

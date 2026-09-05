@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 25)
+
+- **RUDP 폴링 루프 예외 로그 플러드 방지(스로틀)** — 1ms 재시도 루프가 예외마다 Trace를 남겨, 지속 폴링 실패 시 **초당 ~1000줄** 로그를 쏟는 구조였다(23차의 TCP 수락 루프 진단 추가와 대칭 — 쪽은 50ms 백오프가 있어 20줄/초 상한, 이쪽은 무방비). `_lastPollErrorTick` + `Interlocked`로 **초당 1회** 기록으로 제한(동일 오류 플러드 방지, 격리·계속 동작 불변). netstandard2.1 호환(`DateTime.UtcNow.Ticks` — `Environment.TickCount64`는 미존재). **xUnit2013 경고 1건 정리** — `LateDispose` 테스트의 `Assert.Equal(1, accepted.Count)` → `Assert.Single`
+
 ## 2026-09-05 (후반 24)
 
 - **Chat.RUDP 참조 서버 세션 목록 메모리 누수 수정** — `RunServerAsync`의 `sessions` 리스트가 접속마다 `Add`만 하고 끊김 시 제거하지 않아, 장기 구동 서버가 **종료된 세션(+채널·호스트 그래프)을 무제한 보유**했다(샘플을 복사한 앱이 같은 누수를 배우는 결함). `Disconnected` 구독에서 `sessions.Remove(session)` 추가 — 리스트는 살아있는 세션 추적용으로만 유지. 빌드·셀프테스트 exit 0·스위트 107/107 확인
