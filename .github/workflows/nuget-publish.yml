@@ -5,6 +5,7 @@ on:
     tags:
       - "v*"
       - "tcp/v*"
+      - "rudp/v*"
 
 permissions:
   contents: read
@@ -14,10 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        # actions/checkout v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        # actions/setup-dotnet v5.4.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
         with:
           dotnet-version: "10.0.x"
 
@@ -31,14 +34,16 @@ jobs:
 
   publish-shared:
     needs: verify
-    if: ${{ !startsWith(github.ref_name, 'tcp/') }}
+    if: ${{ !contains(github.ref_name, '/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        # actions/checkout v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        # actions/setup-dotnet v5.4.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
         with:
           dotnet-version: "10.0.x"
 
@@ -85,10 +90,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        # actions/checkout v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        # actions/setup-dotnet v5.4.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
         with:
           dotnet-version: "10.0.x"
 
@@ -108,6 +115,60 @@ jobs:
           PROJS="Source/Communication.Network.TCP.Shared"
           PROJS="$PROJS Source/Communication.Network.TCP.Server"
           PROJS="$PROJS Source/Communication.Network.TCP.Client"
+          for dir in $PROJS
+          do
+            dotnet pack "$dir/${dir##*/}.csproj" \
+              -c Release \
+              -o "$OUT" \
+              -p:Version="$VER" \
+              -p:PackageVersion="$VER" \
+              --verbosity minimal
+          done
+
+      - name: Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "NUGET_API_KEY secret is not set."
+            exit 1
+          fi
+          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+  publish-rudp:
+    needs: verify
+    if: ${{ startsWith(github.ref_name, 'rudp/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # actions/checkout v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Setup .NET
+        # actions/setup-dotnet v5.4.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Resolve version from tag
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#rudp/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: $VERSION (tag: $TAG)"
+
+      - name: Pack (RUDP libraries only)
+        run: |
+          OUT="${{ github.workspace }}/artifacts"
+          mkdir -p "$OUT"
+          VER="${{ steps.ver.outputs.version }}"
+          PROJS="Source/Communication.Network.RUDP.Shared"
+          PROJS="$PROJS Source/Communication.Network.RUDP.Server"
+          PROJS="$PROJS Source/Communication.Network.RUDP.Client"
           for dir in $PROJS
           do
             dotnet pack "$dir/${dir##*/}.csproj" \

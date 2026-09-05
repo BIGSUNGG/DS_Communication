@@ -14,9 +14,9 @@ updated: 2026-09-05
 | `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.0.0 배포 |
 | `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.0.0 배포 |
 | `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.0.0 배포 |
-| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** | 구현 완료 — 테스트 포함 |
-| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 |
-| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 |
+| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** | 구현 완료 — 테스트 포함, 2.0.0 배포 |
+| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.0.0 배포 |
+| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.0.0 배포 |
 | `Communication.Network.TCP_IOCP` | netstandard2.1 | Shared | 미착수 |
 | `Communication.IPC.Stream` | netstandard2.1 | Shared | 후속 |
 | `Communication.IPC.SharedMemory` | netstandard2.1 | Shared | 후속 |
@@ -45,7 +45,7 @@ updated: 2026-09-05
 - 전송 패키지 상호 참조 없음 (같은 스택의 .Shared 제외)
 - LiteNetLib `PackageReference`는 **RUDP.Shared에만** — Server·Client는 전이 참조, LiteNetLib 타입은 공개 API에 노출 금지 ([[0007-rudp-three-way-split-and-polling]])
 - 자체 RUDP는 이후 **별 프로젝트**
-- 배포: GitHub Actions `nuget-publish.yml` — `v*` 태그 → Communication.Shared, `tcp/v*` 태그 → TCP 3종. **RUDP 3종은 아직 배포 트리거 없음**(버전 1.0.0, 이번 범위 밖)
+- 배포: GitHub Actions `nuget-publish.yml` — `v*` 태그 → Communication.Shared, `tcp/v*` 태그 → TCP 3종, `rudp/v*` 태그 → RUDP 3종 (2.0.0 배포 완료)
 
 ## 관련
 

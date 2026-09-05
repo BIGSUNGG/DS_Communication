@@ -21,6 +21,7 @@ Document vault 변경 기록 (코드 릴리스 노트 아님).
 - **`RudpTransportOptions` 신규** — `MaxConnections`(기본 무제한)·`DisconnectTimeout`(기본 5000ms, UDP half-open 감지의 유일한 신호)·`ConnectionKey`(기본 `"DS_Communication.RUDP"`)·`IPv6`(기본 false) 네 항목만 노출. poll 간격·`UnsyncedEvents`는 의도적으로 비노출 → [[../03-Reference/Configuration|Configuration]]
 - **「스택당 1 패키지·3분할 금지」 규칙 폐기** — TCP(2.0.0)에 이어 RUDP도 3분할. 남은 스택(TCP_IOCP·IPC)만 1 패키지 → [[../00-AI/CONVENTIONS|CONVENTIONS]]·[[../03-Reference/Packages|Packages]]·[[../02-Architecture/Overview|Overview]]
 - 기존 노트 동기화 — [[../01-Overview/Feature-Spec|Feature-Spec]](F1-4·F1-5·F4-2~F4-5 구현, F4-5 MTU 가드 신규, F5-2 패키지 구성, 구현 상태 2026-09-05), [[../02-Architecture/Components|Components]](`Network.RUDP` 실제 타입 표 + 내부 `RudpNetHost`), [[../01-Overview/Home|Home]](테스트 53 → 71, RUDP 완료), `DisconnectReason` 표에 누락됐던 `Timeout` 보강(Components·Data-Flow), vault 내 모호한 `[[WikiLink]]`(Legacy 동명 파일과 충돌) 12곳을 상대 경로 링크로 수정
+- **RUDP 3종 NuGet 2.0.0 배포** — `nuget-publish.yml`에 `rudp/v*` 태그 잡(`publish-rudp`) 추가: `rudp/v2.0.0` → RUDP 3종 팩·푸시. `publish-shared`의 실행 조건을 `${{ !contains(github.ref_name, '/') }}`로 단순화해 `tcp/`·`rudp/` 태그에서 Shared 재배포 시도를 원천 차단(기존엔 `--skip-duplicate`로 회피). 액션 버전 주석(`# v5.4.0` 등)을 80자 린트 때문에 `uses:` 위 줄로 이동, RUDP 3종 csproj `Version` 1.0.0 → **2.0.0**(Shared·TCP 2.0.0 통합 릴리스 정렬) → [[../03-Reference/Packages|Packages]]·`README.md`
 
 ## 2026-09-04
 

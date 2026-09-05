@@ -53,12 +53,13 @@ if (await connector.ConnectAsync("127.0.0.1", 32000))
 
 | 경로 | 설명 |
 | ------ | ------ |
-| `Source/` | 라이브러리 4 패키지 |
+| `Source/` | 라이브러리 7 패키지 |
 | `Test/Communication.Tests` | xUnit 테스트 (`dotnet test`) |
 | `Sandbox/Chat.TCP` | TCP 수동 검증 채팅 샘플 |
+| `Sandbox/Chat.RUDP` | RUDP 수동 검증 채팅 샘플 (`--selftest`) |
 | `Document/` | Obsidian 문서 vault — 입구 [`Document/01-Overview/Home.md`](Document/01-Overview/Home.md) |
 | `Legacy/` | 이전 스택·문서 아카이브 (유지보수 대상 아님) |
 
 ## 배포
 
-`v*` 태그 → `Communication.Shared`, `tcp/v*` 태그 → TCP 3종 (GitHub Actions `nuget-publish.yml`).
+`v*` 태그 → `Communication.Shared`, `tcp/v*` 태그 → TCP 3종, `rudp/v*` 태그 → RUDP 3종 (GitHub Actions `nuget-publish.yml`).
