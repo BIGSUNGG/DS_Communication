@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 27)
+
+- **`KeepAliveApplicator` 직접 커버리지 신설 (마지막 무테스트 소스 단위)** — 소스 전체에서 직접 테스트가 없던 유일한 단위였다. 계약 3건 고정: ①`null`·`Enabled=false`는 소켓을 건드리지 않음, ②`Enabled=true`+값 지정은 keep-alive 플래그를 세우고 예외 없음, ③값 0(기본)은 '켜기만' — 플랫폼별 세부 값(IOCTL·raw option)은 CI 영향 없이 계약만 검증(크로스 플랫폼 안전). **테스트 107 → 110건 통과**
+
 ## 2026-09-05 (후반 26)
 
 - **Public-API.md 마지막 드리프트 2건 정리** — ①`DisconnectReason` 목록에 `FlowControl`(10차 추가) 누락 → `{ Local, Remote, Error, Timeout, FlowControl }` + 예외 보존 표기도 갱신, ②백프레셔 절의 「메시지 채널 수신은 무제한 누적 가능」 한계 문구(3차 이전 기준, MessageQueueOptions·F3-3·Configuration에서는 이미 수정됐지만 Public-API만 남아 있던 마지막 잔재) → 슬롯 대기 포함 상한 + `FlowControl` 실패 폐쇄 계약으로 교체. 이로써 **vault 전체에서 3차 이전의 구(舊) 한계 문구가 소멸**
