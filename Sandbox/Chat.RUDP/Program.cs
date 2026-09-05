@@ -124,6 +124,13 @@ static async Task<int> RunServerAsync(int port)
         session.Disconnected += (_, e) =>
         {
             ChatHandler.Leave(session);
+            lock (sessions)
+            {
+                // 리스트는 살아있는 세션 추적용 — 끊긴 세션을 제거하지 않으면
+                // 장기 구동 서버가 종료 접속 세션(+호스트 그래프)을 무제한 보유한다.
+                sessions.Remove(session);
+            }
+
             Console.WriteLine($"client left ({e.Reason}) — total {ChatHandler.RoomCount}");
         };
 
