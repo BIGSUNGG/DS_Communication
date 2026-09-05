@@ -481,7 +481,7 @@ public sealed class MessagePipeline : IDisposable
         if (waiting > _options.MaxPendingMessages)
         {
             Interlocked.Decrement(ref _pendingReceives);
-            RequestDisconnect(DisconnectReason.Error,
+            RequestDisconnect(DisconnectReason.FlowControl,
                 new InvalidOperationException(
                     $"수신 미처리 {waiting}건이 상한 {_options.MaxPendingMessages}건을 넘어 연결을 끊습니다(흐름 제어)."));
             return;

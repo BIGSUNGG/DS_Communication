@@ -444,7 +444,7 @@ public class RudpLoopbackTests
 
     /// <summary>
     /// 핸들러가 밀리면 메시지 단위 채널(RUDP)은 상대방을 늦출 수 없다 — `MaxPendingMessages`를
-    /// 슬롯 대기(메시지 보유)까지 포함해 강제하고, 초과 시 흐름 제어 단절(Error)로 실패 폐쇄한다.
+    /// 슬롯 대기(메시지 보유)까지 포함해 강제하고, 초과 시 흐름 제어 단절(FlowControl)로 실패 폐쇄한다.
     /// 바로 전의 InlineDispatch 강제(큐 디스패치)와 합쳐져 수신 메모리 누적이 상한 안에 묶인다.
     /// </summary>
     [Fact]
@@ -498,9 +498,9 @@ public class RudpLoopbackTests
             // 단절 이후의 송신 실패는 검증 대상이 아니다.
         }
 
-        // 흐름 제어 단절 — 무제한 누적 대신 선언된 상한 안에서 Error로 끝나야 한다.
+        // 흐름 제어 단절 — 무제한 누적 대신 선언된 상한 안에서 FlowControl로 끝나야 한다.
         await WaitUntilAsync(() => serverReason != null, timeoutMs: 10000);
-        Assert.Equal(DisconnectReason.Error, serverReason);
+        Assert.Equal(DisconnectReason.FlowControl, serverReason);
         Assert.NotNull(serverError);
         Assert.Contains("흐름 제어", serverError!.Message);
 

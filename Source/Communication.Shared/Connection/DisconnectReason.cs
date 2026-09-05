@@ -14,4 +14,7 @@ public enum DisconnectReason
 
     /// <summary>수신 프레임 완료 마감 초과(읽기 유휴 타임아웃).</summary>
     Timeout,
+
+    /// <summary>흐름 제어 — 수신 처리가 밀려 선언된 백프레셔 상한을 초과(실패 폐쇄 단절).</summary>
+    FlowControl,
 }

@@ -15,8 +15,10 @@ public sealed class MessageQueueOptions
     /// 수신 디스패치 큐에도 동일 상한이 적용된다.
     /// </summary>
     /// <remarks>
-    /// 한계: 메시지 단위 채널(<c>IMessageChannel</c>) 경로에서 수신은 채널 콜백으로 들어오는데,
-    /// 콜백 스레드를 막지 않으려 슬롯 대기를 비동기로 넘기므로 핸들러가 밀리면 대기자(메시지 보유)가 이 상한을 넘어 무제한 누적될 수 있다.
+    /// 메시지 단위 채널(<c>IMessageChannel</c>, 예: RUDP) 경로는 UDP 특성상 상대방을 늦출 수 없어
+    /// 슬롯 대기(메시지 보유)까지 동일 상한으로 강제하고, 초과 시 **흐름 제어 단절**
+    /// (<see cref="Communication.Shared.Connection.DisconnectReason.FlowControl"/>)로 실패 폐쇄한다 —
+    /// 메모리 무제한 누적이 아니라 선언된 상한 안에서 동작한다.
     /// 바이트 채널 경로는 단일 수신 루프가 슬롯 대기로 추가 읽기를 막으므로 상한이 유지된다.
     /// </remarks>
     public int MaxPendingMessages

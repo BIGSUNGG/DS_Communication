@@ -20,7 +20,7 @@ updated: 2026-09-05
 | `IListener` | Accept 시 Channel 콜백. Session은 앱이 생성. |
 | `ISession` | Send / Disconnect / IsConnected / `Disconnected(DisconnectReason)`. |
 | `Session` | 앱이 `new`. Pipeline 소유. |
-| `DisconnectReason` | `Local` \| `Remote` \| `Error` \| `Timeout`. |
+| `DisconnectReason` | `Local` \| `Remote` \| `Error` \| `Timeout` \| `FlowControl`. |
 | `IMessageConverter` | `Serialize(..., IBufferWriter<byte>)` / `Deserialize(ReadOnlySpan<byte>)`. |
 | `IMessageHandler` / `MessageHandler` | `void HandleMessage`만. 끊김 콜백 없음. |
 | `SendOptions` | 송신 부가 옵션 기반 타입. |

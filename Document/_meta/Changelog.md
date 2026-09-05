@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 10)
+
+- **`DisconnectReason.FlowControl` 신설 — 흐름 제어 단절을 일급 원인으로** — 3차 때 만든 수신 백프레셔 단절(선언된 `MaxPendingMessages` 상한 초과)이 `Error` + 예외 메시지 파싱으로만 구분 가능했다. 이제 열거형 멤버로 노출되어 앱이 메시지 파싱 없이 흐름 제어 단절을 감지할 수 있다. 파이프라인의 나머지 오류 경로(송신 루프·수신 역직렬화)는 `Error` 유지. 회귀 테스트 단언을 `FlowControl`로 갱신(콜백이 `Error`로 돌아가면 실패 — 확인). **닥트 드리프트 복구**: 3차 검증 과정의 `git checkout`이 되돌린 `MessageQueueOptions.MaxPendingMessages` 리마크(「무제한 누적」 한계 문구)를 실제 구현(상한 강제 + 흐름 제어 단절)과 일치하도록 복원 — 배포된 코드와 문서가 모순되던 상태 수정. Components의 `DisconnectReason` 표·Configuration의 `MaxPendingMessages` 행 동기화
+
 ## 2026-09-05 (후반 9)
 
 - **TCP `ConnectTimeout` 옵션 신설 — 반개방 호스트 연결 실패 상한** — 호스트가 응답하지 않으면 OS SYN 재시도가 수십 초(Windows ≈21초)까지 끌었다(조정 수단 없음, RUDP의 5초 고정보다 더 악화된 UX). `TcpTransportOptions.ConnectTimeout`(ms, 기본 `null`=OS 기본)을 `TcpConnector.ConnectAsync`에 연결 — `Task.WhenAny` 경쟁으로 상한이 먼저 걸리면 `false`를 확정하고 진행 중 연결의 최종 예외는 관찰만 한다(미관찰 방지). 사용자 취소는 기존대로 `OperationCanceledException`. 회귀 테스트 2건 — ①TEST-NET-1(192.0.2.1) 블랙홀: 상한 1000ms 설정 시 2.5초 이내 false 확정(배선 제거 시 OS 기본 수십 초 — 실패 확인), ②상한을 설정해도 빠른 로컬 연결은 영향 없음. **Public-API 문서 동기화**: `TcpTransportOptions` 스니펫에 `MaxConnections`·`ConnectTimeout` 보강, 누락돼 있던 RUDP 옵션 표(`RudpTransportOptions` 5항목, 직전 단계 `ConnectTimeout` 포함) 신설(8차에서 만든 문서 드리프트 수정). **테스트 83 → 85건 통과** → [[../03-Reference/Configuration|Configuration]]·[[../03-Reference/Public-API|Public-API]]
