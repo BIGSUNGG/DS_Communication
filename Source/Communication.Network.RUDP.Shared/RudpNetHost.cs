@@ -45,6 +45,14 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
             DisconnectTimeout = options?.DisconnectTimeout ?? RudpTransportOptions.DefaultDisconnectTimeoutMs,
             IPv6Enabled = options?.IPv6 ?? false,
         };
+
+        // 연결 시도 상한: 침묵 호스트(블랙홀)에 대한 실패를 설정된 시간 이내로 끌어당긴다.
+        // LiteNetLib 기본은 500ms × 10회 ≈ 5초 고정 — 재전송 간격 100ms로 환산해 횟수 상한을 건다.
+        if (options?.ConnectTimeout is { } connectTimeoutMs)
+        {
+            _manager.ReconnectDelay = 100;
+            _manager.MaxConnectAttempts = Math.Max(1, connectTimeoutMs / 100);
+        }
     }
 
     /// <summary>바인딩된 실제 포트. 포트 0(임시 포트) 수락·연결 시 테스트·등록에 사용한다.</summary>

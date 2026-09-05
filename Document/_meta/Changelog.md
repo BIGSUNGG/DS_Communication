@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 6)
+
+- **RUDP `ConnectTimeout` 옵션 신설 — 침묵 호스트 연결 실패 상한** — 호스트가 응답하지 않으면(패킷 유실·블랙홀) 연결 실패는 LiteNetLib 재전송 소진으로만 결정되는데 기본값이 약 5초(500ms × 10회) 고정이라 조정 수단이 없었다. `RudpTransportOptions.ConnectTimeout`(ms, 기본 `null`=LiteNetLib 기본 유지)을 설정하면 재전송 간격 100ms × 시도 횟수 상한으로 환산해 그 이내에 연결 실패를 확정한다(`RudpNetHost` ctor). 회귀 테스트 `ConnectTimeout_SilentHost_FailsFastWithinBound` — **로컬 UDP 블랙홀**(수신 즉시 폐기, 응답 없음) 대상 연결이 상한 400ms 설정 시 2.5초 이내 false로 끝나는지 검증(배선 제거 시 기본 ≈5초로 실패 — 확인). **테스트 77 → 78건 통과** → [[../03-Reference/Configuration|Configuration]]
+
 ## 2026-09-05 (후반 5)
 
 - **메시지 채널(RUDP) 송신에도 `MaxFrameLength` 사전 검사 — 송신 실패 항목 격리 계약 완성** — 직전 단계(수신 거부)와 대칭: 수신 측이 동일 상한으로 세션을 끊으므로 초과 메시지를 와이어에 내보내면 상대방 세션을 죽이는 결과가 됐다(로컬 과실이 원격 단절로). `SendLoopMessageAsync`가 직렬화 직후 상한 검사를 추가해 초과 항목은 flush `ArgumentException`으로 격리하고 세션은 유지한다 — 바이트 경로의 기존 계약(「송신 격리·수신 거부」)이 양 경로에서 동일하게 성립. 회귀 테스트 `OversizeSend_OnMessageChannel_Isolated_SessionStaysConnected` — 상한 256에 1KB 송신 → flush 예외 + 세션 생존 + 서버 미수신 + 이후 정상 왕복 검증(픽스 없으면 예외 없이 나가 서버 단절 — 실패 확인). **테스트 76 → 77건 통과** → [[../03-Reference/Configuration|Configuration]]

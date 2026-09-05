@@ -626,6 +626,46 @@ public class RudpLoopbackTests
         }
     }
 
+    /// <summary>
+    /// `ConnectTimeout` 상한 — 응답 없는(블랙홀) 호스트에 대한 연결 실패를 설정 시간 이내로 확정한다.
+    /// LiteNetLib 기본은 재전송 소진까지 약 5초(500ms × 10회) 고정이므로, 로컬 드롭 소켓 대상
+    /// 연결이 상한(400ms) 이내에 false로 끝나는지 검증한다.
+    /// </summary>
+    [Fact]
+    public async Task ConnectTimeout_SilentHost_FailsFastWithinBound()
+    {
+        // 블랙홀 — 요청을 받아 조용히 버리는 로컬 UDP 소켓. 응답이 없으므로 연결 시도는
+        // 재전송 소진으로만 끝난다.
+        using var blackhole = new UdpClient();
+        blackhole.Client.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+        int port = ((IPEndPoint)blackhole.Client.LocalEndPoint!).Port;
+
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                try
+                {
+                    await blackhole.ReceiveAsync(); // 수신 즉시 폐기 — 응답 없음 유지.
+                }
+                catch
+                {
+                    return; // 소켓 닫힘 — 테스트 종료.
+                }
+            }
+        });
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        bool ok = await new RudpConnector()
+            .ConnectAsync("127.0.0.1", port, new RudpTransportOptions { ConnectTimeout = 400 })
+            .WaitAsync(TimeSpan.FromSeconds(4));
+        stopwatch.Stop();
+
+        Assert.False(ok); // 블랙홀에는 절대 연결되지 않는다.
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2.5),
+            $"연결 실패 확정이 {stopwatch.Elapsed} 걸림 — ConnectTimeout이 적용되지 않음(기본 ≈5초)");
+    }
+
     /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
     private sealed class SlowHandler : MessageHandler
     {

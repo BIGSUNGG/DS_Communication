@@ -62,7 +62,24 @@ public sealed class RudpTransportOptions
     /// <summary>IPv6 소켓도 함께 바인딩할지 여부. 기본 <c>false</c>(IPv4만).</summary>
     public bool IPv6 { get; set; }
 
+    /// <summary>
+    /// 클라이언트 연결 시도 상한(ms). 호스트가 침묵(패킷 유실·블랙홀)하면 연결 실패는
+    /// LiteNetLib의 재전송 소진으로만 결정되는데, 기본값은 약 5초(500ms × 10회)로 고정되어 있다.
+    /// 이 값을 설정하면 그 이내에 연결 실패를 확정한다(재전송 간격 100ms 기준 시도 횟수 환산).
+    /// <c>null</c>이면 LiteNetLib 기본값을 유지한다. 서버에는 영향을 주지 않는다.
+    /// </summary>
+    public int? ConnectTimeout
+    {
+        get => _connectTimeout;
+        set
+        {
+            if (value is { } v && v <= 0) throw new ArgumentOutOfRangeException(nameof(value));
+            _connectTimeout = value;
+        }
+    }
+
     private int? _maxConnections;
     private int _disconnectTimeout = DefaultDisconnectTimeoutMs;
     private string _connectionKey = DefaultConnectionKey;
+    private int? _connectTimeout;
 }

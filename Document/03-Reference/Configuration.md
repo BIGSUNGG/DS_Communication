@@ -57,6 +57,7 @@ updated: 2026-09-05
 | ------ | ------ | ------ |
 | `MaxConnections` | 동시 수락 접속 수 상한. 도달 시 접속 요청을 **수락 전에 예약한 슬롯** 기준으로 즉시 `Reject()`하고 수락은 계속(거부 접속은 `Accepted` 통지 없음). peer 끊김·채널 Dispose 시 슬롯 회수. `null`이면 무제한. 서버 쪽에서만 의미 | `null` |
 | `DisconnectTimeout` | 끊김 판정 시간(ms). UDP는 스트림 끝이 없어 이 값이 **half-open 감지의 유일한 신호**다. 0 이하 거부 | `5000` |
+| `ConnectTimeout` | 클라이언트 연결 시도 상한(ms). 침묵 호스트(블랙홀)에 대한 연결 실패를 이 시간 이내에 확정 — LiteNetLib 기본은 약 5초(500ms × 10회) 고정. `null`이면 기본 유지 | `null` |
 | `ConnectionKey` | 접속 요청 검증 키. 서버는 이 키와 일치하는 요청만 수락(`AcceptIfKey`), 클라이언트는 이 키로 접속. `null`·빈 문자열 거부 | `"DS_Communication.RUDP"` |
 | `IPv6` | IPv6 소켓도 함께 바인딩 | `false` |
 
