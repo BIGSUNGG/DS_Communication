@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 7)
+
+- **RUDP 채널 등록부 소유자 확인 회수 — peer id 재사용 교차 제거 버그 수정** — LiteNetLib은 peer id를 회수 후 풀에서 재사용한다. 기존 `ReleaseChannel`은 id만으로 `TryRemove`해서, **끊긴 세션의 늦은 Dispose**(앱이 정리를 미룬 경우)가 같은 id를 물려받은 새 세션의 등록부 항목을 잘못 걷어낼 수 있었다 — 새 세션의 슬롯이 조기 반환돼 `MaxConnections` 상한 강제가 무너지고(초과 수락), 채널이 고아화돼 이후 끊김 통지가 끊긴다. `TryGetValue` + `ReferenceEquals`로 현재 소유자가 이 채널일 때만 회수하도록 수정. 회귀 테스트 `LateDispose_AfterPeerIdReuse_DoesNotCorruptNewSession` — A 타임아웃 → id 풀 반환 → B가 같은 id 수락 → A의 늦은 Dispose(서버 쪽 채널) → B가 슬롯을 계속 점유하므로 (MaxConnections=1) C는 거부되어야 한다(픽스 없으면 C 수락 — 실패 확인). 테스트 작성 중 리스너 `DisconnectTimeout`이 B까지 죽이는 타이밍 함정(B 키핑얼라이브)과 슬롯 예약 vs Accepted 통지의 폴링 간격 경쟁도 함께 해소. **테스트 78 → 79건 통과**
+
 ## 2026-09-05 (후반 6)
 
 - **RUDP `ConnectTimeout` 옵션 신설 — 침묵 호스트 연결 실패 상한** — 호스트가 응답하지 않으면(패킷 유실·블랙홀) 연결 실패는 LiteNetLib 재전송 소진으로만 결정되는데 기본값이 약 5초(500ms × 10회) 고정이라 조정 수단이 없었다. `RudpTransportOptions.ConnectTimeout`(ms, 기본 `null`=LiteNetLib 기본 유지)을 설정하면 재전송 간격 100ms × 시도 횟수 상한으로 환산해 그 이내에 연결 실패를 확정한다(`RudpNetHost` ctor). 회귀 테스트 `ConnectTimeout_SilentHost_FailsFastWithinBound` — **로컬 UDP 블랙홀**(수신 즉시 폐기, 응답 없음) 대상 연결이 상한 400ms 설정 시 2.5초 이내 false로 끝나는지 검증(배선 제거 시 기본 ≈5초로 실패 — 확인). **테스트 77 → 78건 통과** → [[../03-Reference/Configuration|Configuration]]

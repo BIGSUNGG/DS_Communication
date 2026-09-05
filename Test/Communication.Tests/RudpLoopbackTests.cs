@@ -666,6 +666,96 @@ public class RudpLoopbackTests
             $"연결 실패 확정이 {stopwatch.Elapsed} 걸림 — ConnectTimeout이 적용되지 않음(기본 ≈5초)");
     }
 
+    /// <summary>
+    /// peer id는 회수 후 재사용된다(LiteNetLib id 풀). 끊긴 세션의 **늦은** Dispose가
+    /// 같은 id를 물려받은 새 세션의 등록부 항목을 잘못 걷어내면 슬롯이 조기 반환돼
+    /// MaxConnections 상한 강제가 무너진다 — 소유자 확인 회수가 이를 막는지 검증한다.
+    /// </summary>
+    [Fact]
+    public async Task LateDispose_AfterPeerIdReuse_DoesNotCorruptNewSession()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IMessageChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+        listener.Start(new RudpTransportOptions { MaxConnections = 1, DisconnectTimeout = 300 });
+        int port = listener.LocalPort;
+
+        // 1) A 접속 — 채널 정리는 나중으로 미룬다(늦은 정리 시나리오).
+        var connectorA = new RudpConnector();
+        Assert.True(await connectorA.ConnectAsync("127.0.0.1", port, new RudpTransportOptions { DisconnectTimeout = 300 }));
+        IMessageChannel channelA = connectorA.Channel!;
+        await WaitUntilAsync(() =>
+        {
+            lock (accepted) return accepted.Count == 1;
+        });
+
+        // 2) A의 peer가 침묵으로 타임아웃 → 서버 회수, peer id가 풀로 반환된다.
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
+        lock (accepted) Assert.Equal(1, accepted.Count);
+
+        // 3) B 접속 — 동시 연결이 1개뿐이라 풀에서 A의 peer id를 그대로 물려받는다(결정적).
+        var connectorB = new RudpConnector();
+        Assert.True(await connectorB.ConnectAsync("127.0.0.1", port));
+        IMessageChannel channelB = connectorB.Channel!;
+        // 슬롯 예약(OnConnectionRequest)과 Accepted 통지(OnPeerConnected)는 다른 폴링 순간이라
+        // 카운트만으로 기다리면 통지 도착 전에 검증이 달릴 수 있다 — 둘 다 기다린다.
+        await WaitUntilAsync(() =>
+        {
+            lock (accepted) return accepted.Count == 2;
+        });
+        Assert.Equal(1, listener.ActiveConnectionCount);
+
+        // B를 살려 둔다 — 리스너의 DisconnectTimeout(300ms)은 B에도 적용되므로, 침묵하면
+        // B도 타임아웃돼 시나리오가 성립하지 않는다(슬롯은 B가 점유한 채여야 한다).
+        using var keepaliveCts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    await channelB.SendAsync(Array.Empty<byte>(), default, keepaliveCts.Token);
+                    await Task.Delay(100, keepaliveCts.Token);
+                }
+            }
+            catch
+            {
+                // 테스트 종료·단절 — 무시.
+            }
+        });
+
+        // 4) A의 늦은 Dispose — 서버 쪽 A 채널(accepted 목록의 첫 항목)이다. 같은 id를 물려받은
+        //    B의 등록부 항목을 건드리면 안 된다. (클라이언트 쪽 채널의 Dispose는 서버 등록부와 무관하다.)
+        IMessageChannel serverChannelA;
+        lock (accepted)
+        {
+            serverChannelA = accepted[0];
+        }
+        serverChannelA.Dispose();
+        await Task.Delay(300); // (버그로) 회수 경로가 동작했다면 반영될 시간.
+
+        // 5) 결정적 판별: 상한(1)은 B가 계속 점유하므로 C는 거부되어야 한다.
+        //    (버그 상태에서는 A의 Dispose가 B의 슬롯까지 반환해 C가 수락된다.)
+        var connectorC = new RudpConnector();
+        Assert.False(await connectorC.ConnectAsync("127.0.0.1", port).WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(1, listener.ActiveConnectionCount);
+
+        lock (accepted)
+        {
+            foreach (IMessageChannel ch in accepted)
+            {
+                ch.Dispose();
+            }
+        }
+    }
+
     /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
     private sealed class SlowHandler : MessageHandler
     {

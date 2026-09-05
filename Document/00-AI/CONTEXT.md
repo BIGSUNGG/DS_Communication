@@ -12,7 +12,7 @@ updated: 2026-09-05
 
 ## 한 줄 요약
 
-연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 로드맵 1~4단계 완료 — Shared·TCP·RUDP 구현, 테스트 78 통과, Sandbox/Chat.TCP·Chat.RUDP 검증. 송신 직렬화 실패는 항목 격리(끊김 아님). RUDP는 TCP처럼 **Shared/Server/Client 3분할**, LiteNetLib 2.1.4를 **RUDP.Shared에만** 참조해 타입을 공개면에서 은닉, **호스트당 전용 폴링 스레드 1개**(접속 수와 무관) + 세션별 디스패치 큐, 메시지별 `RudpSendOptions`/`RudpDeliveryMethod` — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]. 다음은 TCP_IOCP.
+연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 로드맵 1~4단계 완료 — Shared·TCP·RUDP 구현, 테스트 79 통과, Sandbox/Chat.TCP·Chat.RUDP 검증. 송신 직렬화 실패는 항목 격리(끊김 아님). RUDP는 TCP처럼 **Shared/Server/Client 3분할**, LiteNetLib 2.1.4를 **RUDP.Shared에만** 참조해 타입을 공개면에서 은닉, **호스트당 전용 폴링 스레드 1개**(접속 수와 무관) + 세션별 디스패치 큐, 메시지별 `RudpSendOptions`/`RudpDeliveryMethod` — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]. 다음은 TCP_IOCP.
 
 ## 저장소
 

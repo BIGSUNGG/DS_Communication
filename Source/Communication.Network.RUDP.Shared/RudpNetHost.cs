@@ -151,9 +151,18 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     /// </summary>
     internal void ReleaseChannel(RudpMessageChannel channel, SharedDisconnectReason reason)
     {
-        if (!_channels.TryRemove(channel.PeerId, out _))
+        // peer id는 회수 후 재사용된다(GetNextPeerId 풀). 소유자 확인 없이 id로만 지우면
+        // 늦게 도착한 이전 채널의 Dispose가 새 세션의 등록부 항목을 잘못 걷어낸다 —
+        // 슬롯 카운트 조기 반환(상한 강제 무너짐)과 새 채널의 고아화가 동시에 일어난다.
+        // 현재 소유자가 이 채널일 때만 회수한다.
+        if (!_channels.TryGetValue(channel.PeerId, out RudpMessageChannel? current) || !ReferenceEquals(current, channel))
         {
             return;
+        }
+
+        if (!_channels.TryRemove(channel.PeerId, out _))
+        {
+            return; // 사이에 다른 스레드가 회수 — 카운트·통지는 그쪽이 담당.
         }
 
         if (_isServer)
