@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 20)
+
+- **옵션 검증 계약 회귀 테스트 17건 신설** (`OptionsValidationTests.cs`) — 공개 설정 표면(`TcpTransportOptions`·`RudpTransportOptions`·`MessageQueueOptions`)의 검증 가드(≤0·빈 키·상한 초과 거부)가 단 한 건도 직접 검증돼 있지 않았다. 이론 10종으로 전 가드 고정 — 전부 통과(누락된 검증이 있었다면 실패했을 것). 커버리지 스윕도 함께 완료: `Session.md`·`Channel.md`·`Overview.md`·`Code-Structure.md`·`GLOSSARY.md` 전부 드리프트 없음 확인. **테스트 90 → 107건 통과**
+
 ## 2026-09-05 (후반 19)
 
 - **메시지 채널 송신 오류 → flush 원예외 + `Error` 단절 계약 회귀 테스트** — ADR 0007의 잔존 계약(채널 오류는 직렬화 실패와 달리 항목 격리 대상이 아님)이 미검증이었다. `FakeMessageChannel.FailSend`로 와이어 실패를 주입해 flush가 **원래 예외**로 끝나고, 파이프라인이 `DisconnectReason.Error`로 단절하며 예외 객체가 보존되는지 검증. 단절 호출을 제거하면 테스트가 실패하는 것 확인(판별 검증). **테스트 89 → 90건 통과**
