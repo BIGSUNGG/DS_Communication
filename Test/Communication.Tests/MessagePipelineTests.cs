@@ -159,6 +159,49 @@ public class MessagePipelineTests
         Assert.NotNull(error);
     }
 
+    [Fact]
+    public async Task Receive_DeserializeFailure_RaisesErrorDisconnect()
+    {
+        var channel = new FakeByteChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingDeserializer("bad"), handler);
+
+        DisconnectReason? reason = null;
+        Exception? error = null;
+        pipeline.Disconnected += (r, e) =>
+        {
+            reason = r;
+            error = e;
+        };
+        pipeline.Start();
+
+        // 역직렬화 실패는 격리 대상이 아니라 단절 대상 — 실패 폐쇄 계약(손상 세션 유지 금지).
+        FeedFrame(channel, "bad");
+
+        await WaitUntilAsync(() => reason != null);
+        Assert.Equal(DisconnectReason.Error, reason);
+        Assert.NotNull(error);
+        Assert.Empty(handler.Messages); // 실패한 프레임의 메시지는 핸들러에 도달하지 않는다.
+    }
+
+    [Fact]
+    public async Task MessageChannel_Receive_DeserializeFailure_RaisesErrorDisconnect()
+    {
+        var channel = new FakeMessageChannel();
+        var handler = new RecordingHandler();
+        using var pipeline = new MessagePipeline(channel, new SelectiveThrowingDeserializer("bad"), handler);
+
+        DisconnectReason? reason = null;
+        pipeline.Disconnected += (r, e) => reason = r;
+        pipeline.Start();
+
+        channel.RaiseReceived(Encoding.UTF8.GetBytes("bad"));
+
+        await WaitUntilAsync(() => reason != null);
+        Assert.Equal(DisconnectReason.Error, reason);
+        Assert.Empty(handler.Messages);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

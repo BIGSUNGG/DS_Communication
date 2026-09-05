@@ -146,6 +146,28 @@ internal sealed class SelectiveThrowingConverter : IMessageConverter
     public object Deserialize(ReadOnlySpan<byte> message) => Encoding.UTF8.GetString(message);
 }
 
+/// <summary>지정한 본문에서만 역직렬화 예외를 던지는 변환기(수신 단절 경로 검증용).</summary>
+internal sealed class SelectiveThrowingDeserializer : IMessageConverter
+{
+    private readonly string _throwOn;
+
+    public SelectiveThrowingDeserializer(string throwOn) => _throwOn = throwOn;
+
+    public void Serialize(object message, IBufferWriter<byte> writer)
+        => writer.Write(Encoding.UTF8.GetBytes((string)message));
+
+    public object Deserialize(ReadOnlySpan<byte> message)
+    {
+        string text = Encoding.UTF8.GetString(message);
+        if (text == _throwOn)
+        {
+            throw new InvalidOperationException("deserialize exploded");
+        }
+
+        return text;
+    }
+}
+
 /// <summary>아무것도 쓰지 않는 변환기(빈 페이로드 거부 검증용).</summary>
 internal sealed class EmptyConverter : IMessageConverter
 {
