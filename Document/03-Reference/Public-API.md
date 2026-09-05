@@ -46,7 +46,8 @@ class TcpTransportOptions
 {
     SocketKeepAliveOptions? KeepAlive;  // null = OS 기본, 명시 시 적용
     bool NoDelay;                       // TCP_NODELAY, 기본 true (라이브러리 coalesce와 중복되는 Nagle 해제)
-    // ... 버퍼·타임아웃 등
+    int? MaxConnections;                // 동시 수락 상한, null = 무제한
+    int? ConnectTimeout;                // 연결 시도 상한(ms), null = OS 기본(SYN 재시도 수십 초)
 }
 ```
 
@@ -134,6 +135,15 @@ sealed class RudpConnector
     Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null,
                             CancellationToken cancellationToken = default);
     IMessageChannel? Channel { get; }         // 성공 후; 실패 시 null
+}
+
+class RudpTransportOptions
+{
+    int? MaxConnections;            // 동시 수락 상한, null = 무제한
+    int DisconnectTimeout;          // 끊김 판정(ms), 기본 5000 — UDP half-open 감지의 유일한 신호
+    string ConnectionKey;           // 접속 검증 키, 기본 "DS_Communication.RUDP"
+    bool IPv6;                      // 기본 false (IPv4만)
+    int? ConnectTimeout;            // 연결 시도 상한(ms), null = LiteNetLib 기본(≈5초)
 }
 
 class RudpSession : Session

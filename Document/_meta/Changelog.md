@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 9)
+
+- **TCP `ConnectTimeout` 옵션 신설 — 반개방 호스트 연결 실패 상한** — 호스트가 응답하지 않으면 OS SYN 재시도가 수십 초(Windows ≈21초)까지 끌었다(조정 수단 없음, RUDP의 5초 고정보다 더 악화된 UX). `TcpTransportOptions.ConnectTimeout`(ms, 기본 `null`=OS 기본)을 `TcpConnector.ConnectAsync`에 연결 — `Task.WhenAny` 경쟁으로 상한이 먼저 걸리면 `false`를 확정하고 진행 중 연결의 최종 예외는 관찰만 한다(미관찰 방지). 사용자 취소는 기존대로 `OperationCanceledException`. 회귀 테스트 2건 — ①TEST-NET-1(192.0.2.1) 블랙홀: 상한 1000ms 설정 시 2.5초 이내 false 확정(배선 제거 시 OS 기본 수십 초 — 실패 확인), ②상한을 설정해도 빠른 로컬 연결은 영향 없음. **Public-API 문서 동기화**: `TcpTransportOptions` 스니펫에 `MaxConnections`·`ConnectTimeout` 보강, 누락돼 있던 RUDP 옵션 표(`RudpTransportOptions` 5항목, 직전 단계 `ConnectTimeout` 포함) 신설(8차에서 만든 문서 드리프트 수정). **테스트 83 → 85건 통과** → [[../03-Reference/Configuration|Configuration]]·[[../03-Reference/Public-API|Public-API]]
+
 ## 2026-09-05 (후반 8)
 
 - **`MessageHandler` 상속 기반 디스패치 폴백** — 정확 타입 미등록 메시지를 조용히 skip하던 동작이 조용한 메시지 유실의 근원이었다(컨버터가 다형 직렬화를 쓰면 파생 타입이 도착하는데 베이스만 등록한 앱은 도착을 못 본다). 이제 정확 타입이 없으면 **등록된 베이스 타입(상속·인터페이스) 중 가장 구체적인 것**으로 분배하고, 맞는 핸들러가 전혀 없을 때만 Trace 후 skip한다(기존 경고 계약 유지). 동률 후보(인터페이스·클래스 교차)는 먼저 발견된 쪽 — 등록 수가 작다고 보고 miss마다 선형 스캔. 회귀 테스트 4건 — 파생→베이스 폴백, 가장 구체적 베이스 우선, 정확 타입이 폴백보다 우선, 상속 관계 없는 타입은 여전히 skip(픽스 없이 폴백 2건 실패 — 확인). **테스트 79 → 83건 통과**

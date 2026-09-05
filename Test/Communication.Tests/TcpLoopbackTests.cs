@@ -286,4 +286,39 @@ public class TcpLoopbackTests
             }
         }
     }
+
+    /// <summary>
+    /// `ConnectTimeout` 상한 — 응답 없는(블랙홀) 호스트에 대한 연결 실패를 OS SYN 재시도 기본
+    /// (Windows 약 21초) 대신 설정 시간 이내로 확정한다. TEST-NET-1(192.0.2.1)은 라우팅이
+    /// 보장되지 않는 문서용 주소라 침묵이 보장된다.
+    /// </summary>
+    [Fact]
+    public async Task ConnectTimeout_SilentHost_FailsFastWithinBound()
+    {
+        var connector = new TcpConnector();
+
+        DateTime started = DateTime.UtcNow;
+        bool ok = await connector.ConnectAsync("192.0.2.1", 9, new TcpTransportOptions { ConnectTimeout = 1000 })
+            .WaitAsync(TimeSpan.FromSeconds(4));
+        DateTime finished = DateTime.UtcNow;
+
+        Assert.False(ok); // 침묵 호스트에는 절대 연결되지 않는다.
+        Assert.Null(connector.Channel);
+        Assert.True(finished - started < TimeSpan.FromSeconds(2.5),
+            $"연결 실패 확정이 {finished - started} 걸림 — ConnectTimeout 미적용(OS 기본 수십 초)");
+    }
+
+    /// <summary>상한을 설정해도 정상 경로(빠른 로컬 연결)는 영향받지 않는다.</summary>
+    [Fact]
+    public async Task ConnectTimeout_Set_DoesNotBreakFastLocalConnect()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+        var connector = new TcpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port, new TcpTransportOptions { ConnectTimeout = 5000 }));
+        Assert.NotNull(connector.Channel);
+        connector.Channel!.Dispose();
+    }
 }

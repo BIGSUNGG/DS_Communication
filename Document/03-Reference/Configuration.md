@@ -36,6 +36,14 @@ updated: 2026-09-05
 
 `TcpTransportOptions.MaxConnections`에 설정 — `TcpListener`가 수락 루프에서 강제하고 `ActiveConnectionCount`로 현황을 노출한다.
 
+## ConnectTimeout (TCP)
+
+| 옵션 | 설명 | 기본 |
+| ------ | ------ | ------------ |
+| `ConnectTimeout` | 연결 시도 상한(ms). 호스트가 응답하지 않으면(반개방 경로) OS SYN 재시도가 기본 수십 초(Windows ≈21초)까지 끄는 것을 상한 안으로 끌어당긴다. 초과 시 연결 실패(`false`) — 취소(`OperationCanceledException`)와는 독립. `0`·음수 거부 | `null`(OS 기본) |
+
+`TcpTransportOptions.ConnectTimeout`에 설정 — `TcpConnector`가 연결 경로에서 적용.
+
 ## SocketKeepAliveOptions (TCP / TCP_IOCP)
 
 | 옵션 | 설명 |

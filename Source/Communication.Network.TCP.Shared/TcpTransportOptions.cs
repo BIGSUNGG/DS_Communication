@@ -32,7 +32,23 @@ public sealed class TcpTransportOptions
         }
     }
 
+    /// <summary>
+    /// 연결 시도 상한(ms). 호스트가 응답하지 않으면(반개방 경로) OS SYN 재시도가 수십 초까지 끈다 —
+    /// 이 값을 설정하면 그 이내에 연결 실패(<c>false</c>)를 확정한다. <c>null</c>이면 OS 기본.
+    /// 취소(<see cref="CancellationToken"/>)와는 독립 — 취소는 여전히 <see cref="OperationCanceledException"/>.
+    /// </summary>
+    public int? ConnectTimeout
+    {
+        get => _connectTimeout;
+        set
+        {
+            if (value is { } v && v <= 0) throw new ArgumentOutOfRangeException(nameof(value));
+            _connectTimeout = value;
+        }
+    }
+
     private int? _maxConnections;
+    private int? _connectTimeout;
 }
 
 /// <summary>
