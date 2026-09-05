@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 26)
+
+- **Public-API.md 마지막 드리프트 2건 정리** — ①`DisconnectReason` 목록에 `FlowControl`(10차 추가) 누락 → `{ Local, Remote, Error, Timeout, FlowControl }` + 예외 보존 표기도 갱신, ②백프레셔 절의 「메시지 채널 수신은 무제한 누적 가능」 한계 문구(3차 이전 기준, MessageQueueOptions·F3-3·Configuration에서는 이미 수정됐지만 Public-API만 남아 있던 마지막 잔재) → 슬롯 대기 포함 상한 + `FlowControl` 실패 폐쇄 계약으로 교체. 이로써 **vault 전체에서 3차 이전의 구(舊) 한계 문구가 소멸**
+
 ## 2026-09-05 (후반 25)
 
 - **RUDP 폴링 루프 예외 로그 플러드 방지(스로틀)** — 1ms 재시도 루프가 예외마다 Trace를 남겨, 지속 폴링 실패 시 **초당 ~1000줄** 로그를 쏟는 구조였다(23차의 TCP 수락 루프 진단 추가와 대칭 — 쪽은 50ms 백오프가 있어 20줄/초 상한, 이쪽은 무방비). `_lastPollErrorTick` + `Interlocked`로 **초당 1회** 기록으로 제한(동일 오류 플러드 방지, 격리·계속 동작 불변). netstandard2.1 호환(`DateTime.UtcNow.Ticks` — `Environment.TickCount64`는 미존재). **xUnit2013 경고 1건 정리** — `LateDispose` 테스트의 `Assert.Equal(1, accepted.Count)` → `Assert.Single`
