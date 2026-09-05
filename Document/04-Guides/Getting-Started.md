@@ -3,7 +3,7 @@ project: DS_Communication
 type: guide
 status: draft
 tags: [guide, usage, examples]
-updated: 2026-08-31
+updated: 2026-09-05
 ---
 
 # Getting Started — 사용 예시
@@ -112,9 +112,36 @@ async Task RunClientAsync(CancellationToken ct)
 ## 5. RUDP
 
 ```csharp
-var session = new RudpSession(connector.Channel, converter, s => new ChatHandler(s));
-await session.SendAsync(msg, new RudpSendOptions { ReliableType = RudpReliableType.ReliableOrdered });
+using System.Net;
+using Communication.Network.RUDP;
+using Communication.Shared.Sessions;
+
+// 서버 — 수락된 채널 위에 앱이 세션을 생성한다 (TCP와 동일 원칙)
+using var listener = new RudpListener(IPAddress.Any, 32000);
+listener.Accepted += channel =>
+{
+    var session = new RudpSession(channel, converter, s => new ChatHandler(s));
+    session.Disconnected += (_, e) => Console.WriteLine($"client left: {e.Reason}");
+};
+listener.Start(new RudpTransportOptions { MaxConnections = 100 });
+Console.WriteLine($"listening on {listener.LocalPort}");
+
+// 클라이언트
+var connector = new RudpConnector();
+if (!await connector.ConnectAsync("127.0.0.1", 32000)) return;
+var session = new RudpSession(connector.Channel!, converter, s => new ChatHandler(s));
+
+// 메시지별로 전송 방식을 다르게 — RudpSendOptions
+await session.SendAsync(chat,     RudpSendOptions.ReliableOrdered);   // 공용 인스턴스 — 할당 0
+await session.SendAsync(position, RudpSendOptions.Unreliable);        // 빈도 높은 상태 동기화
+await session.SendAndFlushAsync(important, new RudpSendOptions(RudpDeliveryMethod.ReliableSequenced));
 ```
+
+- 옵션을 넘기지 않으면 **`ReliableOrdered`**로 간다.
+- 분할 불가 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)으로 MTU 초과 payload를 보내면 `ArgumentException`이 나고 **세션이 `Disconnected(Error)`로 끊긴다** — 큰 메시지는 `ReliableOrdered`/`ReliableUnordered`로.
+- 클라이언트는 세션(또는 채널)만 Dispose하면 내부 폴링 스레드·NetManager까지 정리된다. 서버는 `listener.Stop()`이 접속 중 peer에 끊김 메시지를 보낸다.
+- 접속 수와 무관하게 호스트당 폴링 스레드 1개 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
+- 실행 검증: `dotnet run --project Sandbox/Chat.RUDP -- --selftest` (5개 전송 방식 왕복 후 exit 0), 채팅은 `server [port]` / `client [port] [이름]` — `'!'` 접두 줄은 Unreliable로 전송.
 
 ## 6. 앱 하트비트
 

@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, roadmap]
-updated: 2026-07-11
+updated: 2026-09-05
 ---
 
 # Implementation Roadmap
@@ -13,22 +13,25 @@ updated: 2026-07-11
 ## 순서
 
 ```text
-1. Communication.Shared
-2. Test (Shared 단위 — Pipeline 계약·큐·Framing·DisconnectReason 등)
-3. Communication.Network.TCP
-   → Test (TCP) + Sandbox/Chat.TCP (간단 채팅)
-4. Communication.Network.RUDP  (LiteNetLib — [[0005-rudp-litenetlib-interim]])
-   → Test (RUDP) + Sandbox/Chat.RUDP
+1. Communication.Shared                                        ✅
+2. Test (Shared 단위 — Pipeline 계약·큐·Framing·DisconnectReason 등)  ✅
+3. Communication.Network.TCP  (Shared/Server/Client 3분할)      ✅
+   → Test (TCP) + Sandbox/Chat.TCP (간단 채팅)                  ✅
+4. Communication.Network.RUDP  (LiteNetLib — [[0005-rudp-litenetlib-interim]],
+   Shared/Server/Client 3분할·폴링 스레드 1개 — [[0007-rudp-three-way-split-and-polling]])  ✅
+   → Test (RUDP) + Sandbox/Chat.RUDP                           ✅
 5. Communication.Network.TCP_IOCP
    → Test (TCP_IOCP) + Sandbox/Chat.TCP_IOCP
 ```
+
+현재: **1~4단계 완료** (테스트 71 통과 — Shared 66 + RUDP loopback 5). 다음은 5단계 TCP_IOCP.
 
 IPC·자체 RUDP 교체는 이 로드맵 **이후**.
 
 ## 단계별 완료 기준
 
 | 단계 | 완료 조건 |
-|------|-----------|
+| ------ | ----------- |
 | Shared | 계약·Pipeline·Session·`DisconnectReason` 컴파일; Document와 타입명 정합 |
 | Shared Test | Framing·큐 백프레셔·Disconnect 플래그 등 순수 로직 테스트 통과 |
 | 각 전송 | Connector/Listener/Session/Channel 동작; loopback 또는 로컬 통합 테스트 |
@@ -48,7 +51,8 @@ IPC·자체 RUDP 교체는 이 로드맵 **이후**.
 
 ## 관련
 
-- [[Scope]]
-- [[Packages]]
+- [[../01-Overview/Scope|Scope]]
+- [[../03-Reference/Packages|Packages]]
 - [[0005-rudp-litenetlib-interim]]
-- [[Public-API]]
+- [[0007-rudp-three-way-split-and-polling]]
+- [[../03-Reference/Public-API|Public-API]]

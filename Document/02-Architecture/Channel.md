@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, channel]
-updated: 2026-07-11
+updated: 2026-09-05
 ---
 
 # Channel
@@ -25,7 +25,7 @@ Channel = “이 연결에 데이터를 넣고 빼는 구멍”. [[Pipeline]]이
 ### `IByteChannel` (스트림)
 
 | 항목 | 내용 |
-|------|------|
+| ------ | ------ |
 | 사용 | TCP, TCP_IOCP, 후속 IPC.Stream |
 | 연산 | `ReadAsync(Memory<byte>)`, `WriteAsync(ReadOnlyMemory<byte>)`, 연결 상태 |
 | 메시지 경계 | **없음** — [[Pipeline]] + `LengthPrefixFramer`가 담당 |
@@ -36,9 +36,9 @@ Channel = “이 연결에 데이터를 넣고 빼는 구멍”. [[Pipeline]]이
 | 항목 | 내용 |
 |------|------|
 | 사용 | RUDP |
-| 연산 | payload `Send` + 수신 콜백/펌프, `SendOptions`(신뢰성·순서) |
+| 연산 | payload `Send` + 수신 콜백, `SendOptions`(신뢰성·순서) |
 | 메시지 경계 | 전송 계층이 제공 → **Framer 불필요** |
-| 구현 예 | `RudpMessageChannel` |
+| 구현 예 | `RudpMessageChannel` — 호스트당 **전용 폴링 스레드 1개**가 `MessageReceived`를 발생시키고, payload는 콜백 안에서만 유효하다(파이프라인이 그 안에서 역직렬화) |
 
 ### `ISharedMemoryChannel` (후속)
 
@@ -51,7 +51,7 @@ Channel = “이 연결에 데이터를 넣고 빼는 구멍”. [[Pipeline]]이
 ## 책임
 
 | 한다 | 하지 않는다 |
-|------|-------------|
+| ------ | ------------- |
 | OS/라이브러리 소켓·피어에 바이트/메시지 전달 | `Serialize` / `Deserialize` |
 | 읽기 0·오류 등 끊김 신호를 상위에 노출 | 송신 큐·coalesce·flush TCS |
 | (가능하면) 취소·Dispose로 대기 중 I/O 정리 | 타입별 Handler 호출 |
@@ -73,7 +73,7 @@ Channel은 “이미 준비된 버퍼/페이로드”만 다룬다. length-prefi
 ## 패키지 배치
 
 - **계약**: `Communication.Shared` (`Channels/`)
-- **구현**: 각 스택 패키지 (`Network.TCP`, `Network.TCP_IOCP`, `Network.RUDP`, …)
+- **구현**: 각 스택 패키지 (`Network.TCP.Shared`, `Network.RUDP.Shared`, `Network.TCP_IOCP`, …) — 3분할 스택은 채널 구현을 `.Shared`에 둔다
 - 전송 패키지끼리 Channel을 참조하지 않는다.
 
 ## Legacy와의 차이

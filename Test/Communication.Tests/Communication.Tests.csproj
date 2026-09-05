@@ -19,6 +19,9 @@
     <ProjectReference Include="..\..\Source\Communication.Network.TCP.Shared\Communication.Network.TCP.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Communication.Network.TCP.Server\Communication.Network.TCP.Server.csproj" />
     <ProjectReference Include="..\..\Source\Communication.Network.TCP.Client\Communication.Network.TCP.Client.csproj" />
+    <ProjectReference Include="..\..\Source\Communication.Network.RUDP.Shared\Communication.Network.RUDP.Shared.csproj" />
+    <ProjectReference Include="..\..\Source\Communication.Network.RUDP.Server\Communication.Network.RUDP.Server.csproj" />
+    <ProjectReference Include="..\..\Source\Communication.Network.RUDP.Client\Communication.Network.RUDP.Client.csproj" />
   </ItemGroup>
 
 </Project>

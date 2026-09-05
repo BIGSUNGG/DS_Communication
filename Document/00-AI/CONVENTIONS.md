@@ -3,7 +3,7 @@ project: DS_Communication
 type: context
 status: stable
 tags: [ai, conventions]
-updated: 2026-07-11
+updated: 2026-09-05
 ---
 
 # Conventions
@@ -13,7 +13,7 @@ updated: 2026-07-11
 ## Vault 구조
 
 | 폴더 | 역할 |
-|------|------|
+| ------ | ------ |
 | `00-AI/` | AI·에이전트 진입점 |
 | `01-Overview/` | 사람용 Home / 범위 |
 | `02-Architecture/` | 구조·컴포넌트·데이터 흐름·코드 구조 |
@@ -44,13 +44,13 @@ updated: YYYY-MM-DD
 ## 패키지·네임스페이스 명명
 
 | 영역 | 규칙 | 예 |
-|------|------|-----|
-| NuGet / 프로젝트 | `Communication.{영역}.{전송}` | `Communication.Network.TCP` |
+| ------ | ------ | ----- |
+| NuGet / 프로젝트 | `Communication.{영역}.{전송}[.{역할}]` | `Communication.Network.RUDP.Server` |
 | Shared 계약 | `Communication.Shared.*` | `Communication.Shared.Sessions` |
-| 전송 구현 | `Communication.Network.{전송}` / `Communication.IPC.{종류}` | `Communication.Network.RUDP` |
-| 전송당 패키지 수 | **1개** (Client/Server/Shared 3분할 금지) | TCP / TCP_IOCP / RUDP 각각 Connector+Listener |
+| 전송 구현 | 네임스페이스는 **스택당 하나** — 3분할해도 `.Shared`/`.Server`/`.Client`가 같은 네임스페이스를 쓴다 | `Communication.Network.RUDP` |
+| 전송당 패키지 수 | **서버·클라이언트가 갈리는 스택은 Shared/Server/Client 3분할**(서버·클라이언트 독립 설치), 나머지는 1개 | TCP·RUDP = 3분할 / TCP_IOCP·IPC = 1개 |
 
-레거시 `Communication.Network.TCP.Client` 형태는 재작성 목표에서 폐기한다. 호환이 필요하면 Legacy만 참고.
+「스택당 1 패키지」·「3분할 금지」 초기 규칙은 **폐기**됐다 (TCP 2.0.0, RUDP 1.0.0). 레거시 `Communication.Network.TCP.Client` 형태와 같은 3분할로 돌아왔지만, 레거시와 달리 **네임스페이스는 스택당 하나로 유지**하고 `.Shared`의 `InternalsVisibleTo`로 내부 API를 공유한다 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]], [[../03-Reference/Packages|Packages]].
 
 ## ADR
 

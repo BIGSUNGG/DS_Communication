@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, feature-spec]
-updated: 2026-09-01
+updated: 2026-09-05
 ---
 
 # Feature Spec — 레거시에서 이어받을 기능 명세
@@ -20,8 +20,8 @@ updated: 2026-09-01
 | F1-1 | TCP 연결 | `TCPConnector`로 host/port 연결. Connector는 **Channel만 열고** Session 생성은 앱 책임 (ADR 0006, [[../05-Decisions/0006-session-ownership-and-converter]]) |
 | F1-2 | TCP 수락 | `TCPListener`가 Accept → `IByteChannel` 전달(`Accepted`). 세션 생성은 앱 |
 | F1-3 | TCP_IOCP 연결·수락 | SocketAsyncEventArgs 기반 Connect/Accept. 동작은 F1-1·F1-2와 동일 |
-| F1-4 | RUDP 연결 | LiteNetLib 연결 + poll. **연결 키** 불일치 시 연결 거부(서버 `AcceptIfKey`) |
-| F1-5 | RUDP 수락 | `RUDPListener` peer 수락; 수신은 단일 구독 디스패처로 분배 (F4-3) |
+| F1-4 | RUDP 연결 | `RudpConnector`가 LiteNetLib 연결 + 전용 폴링 루프. **연결 키** 불일치 시 서버가 `AcceptIfKey`로 거부. 실패(거부·호스트 해석 불가·재시도 소진)는 `false` |
+| F1-5 | RUDP 수락 | `RudpListener`가 peer 수락 → `Accepted(IMessageChannel)`; 수신은 호스트의 peer 등록부가 채널로 분배 (F4-3) |
 | F1-6 | 연결 취소 | `ConnectAsync`의 `CancellationToken` 지원 |
 
 ## F2. 세션 수명·송신
@@ -56,16 +56,17 @@ updated: 2026-09-01
 | ID | 기능 | 스펙 |
 | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | F4-1 | TCP keep-alive | `SocketKeepAliveOptions { Enabled, IdleTime, Interval }` — 사용자 설정, 미설정은 OS 기본 ([[../03-Reference/Configuration]]) |
-| F4-2 | RUDP 신뢰성 선택 | 메시지별 DeliveryMethod 선택(레거시 `MessageSendContext`/`ReliableType`, 기본 신뢰 순서 전송); `RudpSendOptions`로 전달 ([[../03-Reference/Public-API]]) |
-| F4-3 | RUDP 수신 분배 | peer → Receiver 단일 구독 분배(레거시 `RUDPNetworkReceiveDispatcher` 역할) |
-| F4-4 | RUDP poll | poll 간격 옵션(레거시 기본 1ms, `Task.Delay` 폴링) |
+| F4-2 | RUDP 신뢰성 선택 | 메시지별 전송 방식 선택 — `RudpSendOptions`(불변) + `RudpDeliveryMethod` 5값(레거시 `MessageSendContext`/`ReliableType` 대응). 기본 `ReliableOrdered`, 전송 방식별 공용 인스턴스로 송신 할당 0 ([[../03-Reference/Public-API]]) |
+| F4-3 | RUDP 수신 분배 | peer → 채널 등록부(`RudpNetHost`)가 `MessageReceived`로 분배(레거시 `RUDPNetworkReceiveDispatcher` 역할) |
+| F4-4 | RUDP poll | 호스트당 **전용 폴링 스레드 1개**, 간격 고정 1ms(옵션 아님). 스레드 수는 접속 수와 무관 — [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
+| F4-5 | RUDP MTU 가드 | 분할 불가 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)으로 MTU 초과 payload 송신 시 `ArgumentException` — 조용한 유실 대신 즉시 실패 (**신규**, 레거시 없음) |
 
 ## F5. 플랫폼·패키지
 
 | ID | 기능 | 스펙 |
 | ---- | -------- | ---------------------------------------------------------------------------------------------------------- |
 | F5-1 | 대상 프레임워크 | `netstandard2.1` (Unity 호환), nullable·XML 문서 |
-| F5-2 | 패키지 구성 | 전송당 **1 패키지** (레거시 Client/Server/Shared 3분할 폐기) |
+| F5-2 | 패키지 구성 | TCP·RUDP는 **Shared/Server/Client 3분할**(서버·클라이언트 독립 설치), TCP_IOCP·IPC는 1 패키지. 초기 「전송당 1 패키지」 규칙은 폐기 |
 | F5-3 | 채널 추상 | `IByteChannel`로 전송 추상; 세션·파이프라인은 전송 비의존 (ADR 0001, [[../05-Decisions/0001-transport-channel-abstraction]]) |
 
 ## F6. 검증
@@ -83,22 +84,24 @@ updated: 2026-09-01
 | 레거시 | 새 프로젝트 | 근거 |
 | -------- | ------------- | ------ |
 | `byte[] Serialize(object)` | `IBufferWriter`/`Span` | Known-Issues §3.1 · ADR 0006 |
-| Client/Server/Shared 3분할 패키지·레거시 네임스페이스 별칭 | 전송당 1 패키지, canonical 네임스페이스만 | [[../00-AI/CONVENTIONS]] |
+| 레거시 네임스페이스 별칭(`RUDP.Client` 등 프로젝트별) | 3분할은 유지하되 **네임스페이스는 스택당 하나**(`Communication.Network.RUDP`) + `InternalsVisibleTo` | [[../00-AI/CONVENTIONS]] · [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 | 라이브러리 재접속·하트비트 | 없음 — 앱 책임 | ADR 0003 · [[../01-Overview/Scope]] |
-| 생성자 노출 `pollIntervalMs` | `RudpTransportOptions`(구현 시 확정) | [[../03-Reference/Configuration]] |
+| 생성자 노출 `pollIntervalMs` | 옵션 아님 — 고정 1ms 전용 폴링 스레드 | [[../03-Reference/Configuration]] |
+| 레거시 `ReliableType`(byte enum) | `RudpDeliveryMethod` — LiteNetLib `DeliveryMethod`와 같은 이름·값, 공개면은 자체 enum | [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 
-## 구현 상태 (2026-08-31)
+## 구현 상태 (2026-09-05)
 
 | 영역 | 상태 |
 | ---- | ---- |
 | F1-1·F1-2·F1-6 TCP 연결·수락·취소 | 구현 — `TcpConnector`·`TcpListener`, loopback 테스트 통과 |
-| F2 세션 수명·송신 (F2-1~F2-6) | 구현 — 끊김 후 송신 faulted Task 포함 |
-| F3 메시지 파이프라인 (F3-1~F3-8) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리 |
+| F1-4·F1-5 RUDP 연결·수락 | 구현 — `RudpConnector`·`RudpListener`(연결 키·`MaxConnections` 슬롯 예약), loopback 테스트 통과 |
+| F2 세션 수명·송신 (F2-1~F2-6) | 구현 — 끊김 후 송신 faulted Task 포함. RUDP는 `RudpSession`이 peer 끊김 통지를 `Disconnected`로 이어 붙임 |
+| F3 메시지 파이프라인 (F3-1~F3-9) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리. `IMessageChannel` 경로(F3-2 프레이밍 제외) RUDP에서 사용 |
 | F4-1 TCP keep-alive | 구현 — Windows IOControl / Unix 원시 옵션, 미지원 필드 무시 |
-| F5 플랫폼·패키지 | 구현 — netstandard2.1, 전송당 1 패키지, `IByteChannel` |
-| F6 검증 (Shared·TCP 범위) | 충족 — `Test/Communication.Tests` 53건 통과, `Sandbox/Chat.TCP` 실행 확인 |
-| F1-3 (TCP_IOCP), F1-4·F1-5·F4-2~F4-4 (RUDP) | 미착수 — 로드맵 4~5단계 |
-| F4-3 RUDP 수신 분배 등 | 미착수 |
+| F4-2~F4-5 RUDP 전송 옵션·분배·poll·MTU 가드 | 구현 — `RudpSendOptions`/`RudpDeliveryMethod` 5방식 왕복 테스트, 폴링 스레드 1개, 분할 불가 방식 MTU 초과 `ArgumentException` 테스트 |
+| F5 플랫폼·패키지 | 구현 — netstandard2.1, TCP·RUDP 3분할, `IByteChannel`+`IMessageChannel` |
+| F6 검증 (Shared·TCP·RUDP 범위) | 충족 — `Test/Communication.Tests` **71건 통과**(Shared·TCP 66 + RUDP loopback 5), `Sandbox/Chat.TCP`·`Sandbox/Chat.RUDP`(`--selftest` 5/5 왕복, exit 0) 실행 확인 |
+| F1-3 (TCP_IOCP), F4-1의 IOCP keep-alive | 미착수 — 로드맵 5단계 |
 
 ## 관련
 

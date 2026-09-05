@@ -3,12 +3,12 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, components]
-updated: 2026-07-11
+updated: 2026-09-05
 ---
 
 # Components
 
-핵심 타입의 책임 요약. 시그니처는 [[Public-API]].
+핵심 타입의 책임 요약. 시그니처는 [[../03-Reference/Public-API|Public-API]].
 
 **핵심 개념 상세:** [[Session]] · [[Pipeline]] · [[Channel]] · [[Handler]]
 
@@ -20,7 +20,7 @@ updated: 2026-07-11
 | `IListener` | Accept 시 Channel 콜백. Session은 앱이 생성. |
 | `ISession` | Send / Disconnect / IsConnected / `Disconnected(DisconnectReason)`. |
 | `Session` | 앱이 `new`. Pipeline 소유. |
-| `DisconnectReason` | `Local` \| `Remote` \| `Error`. |
+| `DisconnectReason` | `Local` \| `Remote` \| `Error` \| `Timeout`. |
 | `IMessageConverter` | `Serialize(..., IBufferWriter<byte>)` / `Deserialize(ReadOnlySpan<byte>)`. |
 | `IMessageHandler` / `MessageHandler` | `void HandleMessage`만. 끊김 콜백 없음. |
 | `SendOptions` | 송신 부가 옵션 기반 타입. |
@@ -39,7 +39,7 @@ updated: 2026-07-11
 | 타입 | 책임 |
 | ------ | ------ |
 | `IByteChannel` | Read/Write. TCP·TCP_IOCP·IPC.Stream. |
-| `IMessageChannel` | 메시지 Send + 수신. RUDP. |
+| `IMessageChannel` | 메시지 Send + 수신 콜백. RUDP (`RudpMessageChannel`). |
 | `ISharedMemoryChannel` | Claim/Commit·Consume. 후속. |
 | `LengthPrefixFramer` | 4B LE length-prefix. |
 
@@ -53,7 +53,7 @@ updated: 2026-07-11
 
 - **앱**이 Session을 `new`하고 Dispose/Disconnect를 통제한다.
 - Session → Pipeline → Channel(세션 소유분).
-- RUDP NetManager는 Connector/Listener 소유 가능.
+- RUDP는 내부 `RudpNetHost`가 LiteNetLib `NetManager` + **전용 폴링 스레드 1개**를 소유. 클라이언트는 peer가 하나뿐이라 **채널이 호스트까지 소유**, 서버는 리스너가 소유한다 — [[0007-rudp-three-way-split-and-polling]].
 - **하트비트·재접속**은 앱.
 
 ## Network.TCP
@@ -79,10 +79,13 @@ updated: 2026-07-11
 
 | 타입 | 책임 |
 | ------ | ------ |
-| `RudpConnector` / `RudpListener` | LiteNetLib 연결·수락·펌프. |
-| `RudpSession` | `IMessageChannel` + Pipeline. |
-| `RudpMessageChannel` | peer 매핑. |
-| `RudpSendOptions` | `SendOptions` 파생 — 신뢰성/Delivery 힌트. |
+| `RudpListener` (`.Server`) | 수락. `Accepted(IMessageChannel)`, `LocalPort`, `ActiveConnectionCount`. `MaxConnections`는 접속 요청 시점에 슬롯 예약으로 강제 — 초과·키 불일치는 `Reject()`, `Accepted` 통지 없음. |
+| `RudpConnector` (`.Client`) | 연결 → `IMessageChannel Channel`. 실패(거부·호스트 해석 불가·재시도 소진) 시 `false`. 들어오는 접속 요청은 거부. |
+| `RudpSession` (`.Shared`) | `IMessageChannel` + Pipeline. 채널의 peer 끊김 통지를 `Session.Disconnected`로 이어 붙인다(메시지 채널에는 수신 루프가 없어 원격 끊김을 스스로 못 본다). |
+| `RudpMessageChannel` (`.Shared`) | LiteNetLib `NetPeer` → `IMessageChannel`. 메시지별 `RudpDeliveryMethod` 매핑, **분할 불가 방식의 MTU 초과 사전 검사**(`ArgumentException`). |
+| `RudpSendOptions` · `RudpDeliveryMethod` (`.Shared`) | `SendOptions` 파생(불변) + 5값 enum. 전송 방식별 공용 인스턴스 5개로 송신 할당 0. 기본 `ReliableOrdered`. |
+| `RudpTransportOptions` (`.Shared`) | `MaxConnections`·`DisconnectTimeout`(5000ms)·`ConnectionKey`·`IPv6`. |
+| `RudpNetHost` (`.Shared`, **내부**) | `NetManager` 소유, 폴링 스레드 1개, peer ↔ 채널 등록부, 수락 정책, 수신 `Recycle()`, LiteNetLib → Shared `DisconnectReason` 매핑. LiteNetLib 타입은 이 타입과 `RudpMessageChannel`에만 등장. |
 
 ## IPC (후속)
 
@@ -93,16 +96,17 @@ updated: 2026-07-11
 
 ## 관련
 
-- [[Overview]]
-- [[Data-Flow]]
+- [[../02-Architecture/Overview|Overview]]
+- [[../02-Architecture/Data-Flow|Data-Flow]]
 - [[Code-Structure]]
 - [[Session]]
 - [[Pipeline]]
 - [[Channel]]
 - [[Handler]]
-- [[Public-API]]
-- [[Configuration]]
+- [[../03-Reference/Public-API|Public-API]]
+- [[../03-Reference/Configuration|Configuration]]
 - [[0003-connection-lifecycle-options]]
 - [[0004-send-options-and-handler-api]]
 - [[0006-session-ownership-and-converter]]
-- [[Packages]]
+- [[0007-rudp-three-way-split-and-polling]]
+- [[../03-Reference/Packages|Packages]]

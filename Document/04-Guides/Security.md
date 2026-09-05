@@ -3,7 +3,7 @@ project: DS_Communication
 type: guide
 status: stable
 tags: [guide, security, production]
-updated: 2026-09-01
+updated: 2026-09-05
 ---
 
 # Security & Production Checklist
@@ -43,15 +43,20 @@ updated: 2026-09-01
 
 | 상태 | 항목 |
 | ------ | ------ |
-| ❌ 미제공 | **암호화·인증 없음** — 평문 TCP. 신뢰 네트워크 내부 전용이며, 공개망 투입 시 반드시 별도 암호화 레이어(SslStream 등)를 겹쳐야 한다(로드맵 항목) |
+| ❌ 미제공 | **암호화·인증 없음** — 평문 TCP / 평문 UDP(RUDP). 신뢰 네트워크 내부 전용이며, 공개망 투입 시 반드시 별도 암호화 레이어(SslStream 등)를 겹쳐야 한다(로드맵 항목). RUDP는 LiteNetLib `PacketLayerBase`(XorEncryptLayer·Crc32cLayer) 자리가 있지만 **현재 `null`** — 미사용 |
 | ✅ 옵션 | `FrameTimeout`(기본 30초) — 슬로로리스(부분 프레임 끌어안기) 방어 |
 | ✅ 옵션 | `MaxFrameLength`(기본 4MB, 절대 상한 64MB) — 수신 메모리 증폭 방어 |
-| ✅ 옵션 | `MaxConnections` — 연결 고갈 방어 |
+| ✅ 옵션 | `MaxConnections` — 연결 고갈 방어. TCP는 수락 후 즉시 닫음, **RUDP는 접속 요청 시점에 슬롯을 예약**해 같은 폴링 배치의 다수 요청이 상한을 함께 넘지 못하게 하고 `Reject()` |
+| ✅ 옵션 | RUDP `DisconnectTimeout`(기본 5000ms) — UDP는 스트림 끝이 없어 **half-open 감지의 유일한 신호**. 앱 하트비트와 별개 |
+| ⚠️ 기본값 주의 | RUDP `ConnectionKey` 기본값(`"DS_Communication.RUDP"`)은 **공개 상수**다 — 그대로 두면 키 검증이 사실상 방어 역할을 못 하므로 공개망에서는 앱별 값으로 교체해야 한다(인증 대체는 아님) |
+| ✅ 구조 | RUDP 분할 불가 전송 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)의 MTU 초과 송신은 와이어에 나가기 전에 `ArgumentException`으로 거부 — 조용한 유실 없음. 단 이 예외는 **세션을 `Disconnected(Error)`로 끊는다**(자기 자신에 대한 서비스 거부 가능성이 있으므로 메시지 크기 상한은 앱이 관리) |
 | ✅ 구조 | 수신 버퍼는 누적 데이터 기준 성장(선언 길이 선할당 없음) |
 | ✅ 구조 | 변형 프레임(길이 0·음수·상한 초과) 수신 시 `InvalidDataException` → 단절(fail-closed) |
+| ✅ 구조 | RUDP 클라이언트 호스트는 **들어오는 접속 요청을 무조건 거부** — 임시 로컬 포트로의 역방향 접속 차단 |
 | ⚠️ 앱 책임 | 하트비트·재접속, 인증·세션 관리, 메시지 레벨 속도 제한(방송 증폭), 로그 수집 시 예외 메시지 새니타이즈(공격자 제어 콘텐츠가 Trace에 남을 수 있음) |
 
 ## 관련
 
 - [[../02-Architecture/Pipeline|Pipeline]](수신·송신 검증) · [[../03-Reference/Configuration|Configuration]](타임아웃·상한 옵션)
 - [[../05-Decisions/0006-session-ownership-and-converter|ADR 0006]] — Converter는 앱 주입
+- [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]] — RUDP 수락 정책·MTU 가드·접속 수 예약

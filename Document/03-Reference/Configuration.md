@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, configuration]
-updated: 2026-09-01
+updated: 2026-09-05
 ---
 
 # Configuration
@@ -51,8 +51,19 @@ updated: 2026-09-01
 
 ## RUDP (LiteNetLib)
 
-- 연결 키, poll 간격 등은 `RudpTransportOptions` (구현 시).
-- LiteNetLib 자체 ping/timeout과 앱 ping은 앱이 조율.
+`RudpTransportOptions` — `RudpListener.Start(options)` · `RudpConnector.ConnectAsync(..., options)`에 전달. 미설정 시 전부 기본값이며 LiteNetLib의 나머지 튜닝 값은 건드리지 않는다.
+
+| 옵션 | 설명 | 기본 |
+| ------ | ------ | ------ |
+| `MaxConnections` | 동시 수락 접속 수 상한. 도달 시 접속 요청을 **수락 전에 예약한 슬롯** 기준으로 즉시 `Reject()`하고 수락은 계속(거부 접속은 `Accepted` 통지 없음). peer 끊김·채널 Dispose 시 슬롯 회수. `null`이면 무제한. 서버 쪽에서만 의미 | `null` |
+| `DisconnectTimeout` | 끊김 판정 시간(ms). UDP는 스트림 끝이 없어 이 값이 **half-open 감지의 유일한 신호**다. 0 이하 거부 | `5000` |
+| `ConnectionKey` | 접속 요청 검증 키. 서버는 이 키와 일치하는 요청만 수락(`AcceptIfKey`), 클라이언트는 이 키로 접속. `null`·빈 문자열 거부 | `"DS_Communication.RUDP"` |
+| `IPv6` | IPv6 소켓도 함께 바인딩 | `false` |
+
+- **poll 간격은 옵션이 아니다** — 호스트당 전용 폴링 스레드 1개가 고정 1ms 간격으로 `PollEvents()`를 드레인한다. 스레드 수는 접속 수와 무관하게 고정 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
+- `UnsyncedEvents`는 노출하지 않는다(기본 `false` 유지) — `true`면 수신 콜백이 소켓 스레드에서 실행되어 앱 코드가 한 번만 블럭해도 전체 접속의 수신이 멈춘다.
+- LiteNetLib 자체 keep-alive(`DisconnectTimeout`)와 앱 하트비트(ping 메시지)는 별개 — 앱이 조율. 라이브러리 하트비트 없음 ([[0003-connection-lifecycle-options]]).
+- 분할 불가 전송 방식의 MTU 초과 송신은 `ArgumentException`이며 **세션이 `Disconnected(Error)`로 끊긴다** — [[../03-Reference/Public-API|Public-API]] § RUDP 런타임 의미.
 
 ## 재접속
 
@@ -62,4 +73,5 @@ updated: 2026-09-01
 
 - [[../03-Reference/Public-API|Public-API]]
 - [[0003-connection-lifecycle-options]]
+- [[../05-Decisions/0007-rudp-three-way-split-and-polling|0007-rudp-three-way-split-and-polling]]
 - [[../03-Reference/Packages|Packages]]

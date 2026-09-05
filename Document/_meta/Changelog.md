@@ -3,12 +3,24 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-05
+
+- **로드맵 4단계 RUDP 구현 완료** — `Communication.Network.RUDP.Shared`(RudpSession·RudpMessageChannel·RudpSendOptions/RudpDeliveryMethod·RudpTransportOptions·내부 RudpNetHost)·`.Server`(RudpListener)·`.Client`(RudpConnector) 신설. 네임스페이스는 셋 다 `Communication.Network.RUDP`, Server·Client는 RUDP.Shared의 `InternalsVisibleTo`로 내부 `RudpNetHost` 공유. **LiteNetLib 2.1.4** 고정, `PackageReference`는 RUDP.Shared에만 — LiteNetLib 타입은 `RudpNetHost`·`RudpMessageChannel` 두 파일에만 등장하고 공개 API에는 노출되지 않는다. 버전 1.0.0, **NuGet 배포 트리거는 이번 범위 밖** → [[../02-Architecture/Code-Structure|Code-Structure]]·[[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]]
+- ADR [[0007-rudp-three-way-split-and-polling]] 신규 — RUDP 3분할, **호스트당 전용 폴링 스레드 1개**(접속 수와 무관한 스레드 수 + 세션별 디스패치 큐로 멀티클라이언트 병목 차단), `RudpDeliveryMethod` 5값(LiteNetLib `DeliveryMethod`와 같은 이름·값) + `RudpSendOptions` 불변·공용 인스턴스 5개, 분할 불가 방식 MTU 초과 `ArgumentException`, 수락 전 슬롯 예약 `MaxConnections`, 클라이언트 채널의 호스트 소유, `NetManager.Stop(true)` graceful 정지, `AutoRecycle=false` → 수신마다 `Recycle()`. 대안 기각: `UnsyncedEvents=true`·peer당 스레드·1 패키지·`DeliveryMethod` 직접 노출
+- **메시지 채널 경로 끊김 관측 해결** — `IMessageChannel`에는 수신 루프가 없어 원격 끊김을 스스로 감지하지 못한다. `RudpMessageChannel`의 internal `TransportDisconnected`를 `RudpSession`이 구독해 `Session.MarkDisconnected`로 이어 붙여 **`Communication.Shared` 무수정**으로 `Disconnected(Remote)` 계약을 지킴. LiteNetLib → Shared `DisconnectReason` 매핑(Timeout→Timeout, RemoteConnectionClose→Remote, DisconnectPeerCalled→Local, 나머지→Error) → [[../03-Reference/Public-API|Public-API]]·[[../02-Architecture/Data-Flow|Data-Flow]]·[[../02-Architecture/Channel|Channel]]
+- **알려진 한계 기록**: 분할 불가 방식의 MTU 초과 `ArgumentException`은 `MessagePipeline`이 채널 오류로 취급해 해당 항목 flush 예외 완료 + **세션 `Disconnected(Error)`**로 끊는다(예외는 `DisconnectedEventArgs.Exception` 보존). 「송신 실패 항목 격리」는 직렬화 실패에만 적용 — 항목 격리로 내리려면 Shared 수정이 필요해 범위 밖으로 둠 → [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]·[[../03-Reference/Public-API|Public-API]]
+- **RUDP 테스트 5건 추가** (`Test/Communication.Tests/RudpLoopbackTests.cs`) — 양방향 왕복·끊김 원인(Local/Remote), 리스너 1대에 동시 클라이언트 4개 + 접속 수 회수, 전송 방식 5종 메시지별 왕복, 분할 불가 방식 3종 MTU 초과 `ArgumentException` + `ReliableOrdered` 8KB 분할·재조립, `MaxConnections` 초과 거부·슬롯 회수 후 재수락. **테스트 66 → 71건 통과**
+- **`Sandbox/Chat.RUDP` 신설** — Chat.TCP와 동일한 server/client 채팅 샘플에 `--selftest` 모드 추가(프로세스 내 서버+클라이언트로 전송 방식 5종 1회씩 왕복 후 exit 0). 대화형 모드에서 `'!'` 접두 줄은 Unreliable로 전송해 메시지별 옵션을 수동 검증할 수 있다 → [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]·[[../04-Guides/Getting-Started|Getting-Started]]
+- **`RudpTransportOptions` 신규** — `MaxConnections`(기본 무제한)·`DisconnectTimeout`(기본 5000ms, UDP half-open 감지의 유일한 신호)·`ConnectionKey`(기본 `"DS_Communication.RUDP"`)·`IPv6`(기본 false) 네 항목만 노출. poll 간격·`UnsyncedEvents`는 의도적으로 비노출 → [[../03-Reference/Configuration|Configuration]]
+- **「스택당 1 패키지·3분할 금지」 규칙 폐기** — TCP(2.0.0)에 이어 RUDP도 3분할. 남은 스택(TCP_IOCP·IPC)만 1 패키지 → [[../00-AI/CONVENTIONS|CONVENTIONS]]·[[../03-Reference/Packages|Packages]]·[[../02-Architecture/Overview|Overview]]
+- 기존 노트 동기화 — [[../01-Overview/Feature-Spec|Feature-Spec]](F1-4·F1-5·F4-2~F4-5 구현, F4-5 MTU 가드 신규, F5-2 패키지 구성, 구현 상태 2026-09-05), [[../02-Architecture/Components|Components]](`Network.RUDP` 실제 타입 표 + 내부 `RudpNetHost`), [[../01-Overview/Home|Home]](테스트 53 → 71, RUDP 완료), `DisconnectReason` 표에 누락됐던 `Timeout` 보강(Components·Data-Flow), vault 내 모호한 `[[WikiLink]]`(Legacy 동명 파일과 충돌) 12곳을 상대 경로 링크로 수정
 
 ## 2026-09-04
 
