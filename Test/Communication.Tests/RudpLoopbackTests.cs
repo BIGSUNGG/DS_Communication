@@ -756,6 +756,64 @@ public class RudpLoopbackTests
         }
     }
 
+    /// <summary>Stop 후 재시작하면 새 바인딩으로 수락을 재개한다(리스너 재구성 생명주기).</summary>
+    [Fact]
+    public async Task Restart_AfterStop_AcceptsOnNewPort()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IMessageChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+
+        try
+        {
+            listener.Start();
+            int firstPort = listener.LocalPort;
+            Assert.True(firstPort > 0);
+
+            var connector1 = new RudpConnector();
+            Assert.True(await connector1.ConnectAsync("127.0.0.1", firstPort));
+            await WaitUntilAsync(() =>
+            {
+                lock (accepted) return accepted.Count == 1;
+            });
+            lock (accepted) accepted[0].Dispose();
+            connector1.Channel!.Dispose();
+
+            listener.Stop();
+            listener.Start(); // 재시작 — 새 호스트·바인딩.
+
+            int secondPort = listener.LocalPort;
+            Assert.True(secondPort > 0);
+
+            var connector2 = new RudpConnector();
+            Assert.True(await connector2.ConnectAsync("127.0.0.1", secondPort));
+            await WaitUntilAsync(() =>
+            {
+                lock (accepted) return accepted.Count == 2;
+            });
+            Assert.Equal(1, listener.ActiveConnectionCount);
+        }
+        finally
+        {
+            lock (accepted)
+            {
+                foreach (IMessageChannel ch in accepted)
+                {
+                    ch.Dispose();
+                }
+            }
+
+            listener.Stop();
+        }
+    }
+
     /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
     private sealed class SlowHandler : MessageHandler
     {

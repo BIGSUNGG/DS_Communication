@@ -321,4 +321,61 @@ public class TcpLoopbackTests
         Assert.NotNull(connector.Channel);
         connector.Channel!.Dispose();
     }
+
+    /// <summary>Stop 후 재시작하면 새 바인딩으로 수락을 재개한다(리스너 재구성 생명주기).</summary>
+    [Fact]
+    public async Task Restart_AfterStop_AcceptsOnNewPort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+
+        var accepted = new List<IByteChannel>();
+        listener.Accepted += channel =>
+        {
+            lock (accepted)
+            {
+                accepted.Add(channel);
+            }
+        };
+
+        try
+        {
+            listener.Start();
+            int firstPort = ((IPEndPoint)listener.LocalEndpoint!).Port;
+            Assert.True(firstPort > 0);
+
+            using var c1 = new TcpClient();
+            await c1.ConnectAsync(IPAddress.Loopback, firstPort);
+            await WaitUntilAsync(() =>
+            {
+                lock (accepted) return accepted.Count == 1;
+            });
+            lock (accepted) accepted[0].Dispose();
+
+            listener.Stop();
+            listener.Start(); // 재시작 — 새 바인딩.
+
+            int secondPort = ((IPEndPoint)listener.LocalEndpoint!).Port;
+            Assert.True(secondPort > 0);
+
+            using var c2 = new TcpClient();
+            await c2.ConnectAsync(IPAddress.Loopback, secondPort);
+            await WaitUntilAsync(() =>
+            {
+                lock (accepted) return accepted.Count == 2;
+            });
+            Assert.True(listener.ActiveConnectionCount >= 1);
+        }
+        finally
+        {
+            lock (accepted)
+            {
+                foreach (IByteChannel channel in accepted)
+                {
+                    channel.Dispose();
+                }
+            }
+
+            listener.Stop();
+        }
+    }
 }
