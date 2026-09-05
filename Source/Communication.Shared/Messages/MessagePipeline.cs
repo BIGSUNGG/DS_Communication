@@ -328,13 +328,22 @@ public sealed class MessagePipeline : IDisposable
                         _converter.Serialize(item.Message, writer);
                         if (writer.WrittenCount == 0)
                         {
-                            // 빈 payload는 송신하지 않는다(메시지 채널은 길이 상한 없음).
+                            // 빈 payload는 송신하지 않는다.
                             throw new ArgumentException("직렬화 결과 페이로드가 비어 있습니다.");
+                        }
+
+                        // 수신 측도 같은 상한(바이트 경로 프레이머·메시지 경로 역직렬화 전 검사)을
+                        // 적용하므로, 초과 페이로드를 보내면 상대가 세션을 끊는다 — 보내기 전에
+                        // 이 항목만 격리해 로컬 실패로 끝낸다(바이트 경로와 동일 계약).
+                        if (writer.WrittenCount > _options.MaxFrameLength)
+                        {
+                            throw new ArgumentException(
+                                $"직렬화 결과 페이로드 길이 {writer.WrittenCount}는 상한 {_options.MaxFrameLength} 이하여야 합니다.");
                         }
                     }
                     catch (Exception e)
                     {
-                        // 직렬화 실패 — 이 항목만 격리하고 송신은 계속한다.
+                        // 직렬화·검증 실패 — 이 항목만 격리하고 송신은 계속한다.
                         item.Flush?.TrySetException(e);
                         ReleaseSlotQuietly();
                         Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");

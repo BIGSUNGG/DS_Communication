@@ -568,6 +568,64 @@ public class RudpLoopbackTests
         }
     }
 
+    /// <summary>
+    /// 메시지 채널(RUDP) 송신도 `MaxFrameLength`를 보내기 전에 검사해 항목만 격리한다 —
+    /// 초과 메시지를 보내면 수신 측(동일 상한)이 세션을 끊으므로, 와이어에 내보내기 전에
+    /// 로컬 실패(flush 예외)로 끝내고 세션은 유지한다(바이트 경로와 동일 계약).
+    /// </summary>
+    [Fact]
+    public async Task OversizeSend_OnMessageChannel_Isolated_SessionStaysConnected()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        CollectHandler? serverHandler = null;
+        var serverSessions = new List<RudpSession>();
+        listener.Accepted += channel =>
+        {
+            RudpSession session = new(
+                channel, new StringConverter(),
+                s => serverHandler = new CollectHandler(s),
+                new MessageQueueOptions { MaxFrameLength = 256 });
+            lock (serverSessions)
+            {
+                serverSessions.Add(session);
+            }
+        };
+        listener.Start();
+        int port = listener.LocalPort;
+
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        using var clientSession = new RudpSession(
+            connector.Channel!, new StringConverter(), s => new CollectHandler(s),
+            new MessageQueueOptions { MaxFrameLength = 256 });
+        await WaitUntilAsync(() =>
+        {
+            lock (serverSessions) return serverSessions.Count == 1;
+        });
+
+        // 상한 초과 송신 — flush가 로컬에서 ArgumentException으로 끝나야 한다.
+        string oversize = new string('x', 1024);
+        ArgumentException error = await Assert.ThrowsAsync<ArgumentException>(
+            () => clientSession.SendAndFlushAsync(oversize));
+        Assert.Contains("상한", error.Message);
+
+        // 세션은 살아 있고, 거부된 메시지는 와이어에 나가지 않는다.
+        Assert.True(clientSession.IsConnected());
+        Assert.Equal(0, serverHandler?.ReceivedCount ?? 0);
+
+        // 이후 정상 송신은 왕복한다.
+        await clientSession.SendAndFlushAsync("ok");
+        await WaitUntilAsync(() => serverHandler?.ReceivedCount == 1);
+        Assert.Equal("ok", serverHandler!.Messages[0]);
+        Assert.True(clientSession.IsConnected());
+
+        lock (serverSessions)
+        {
+            serverSessions[0].Dispose();
+        }
+    }
+
     /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
     private sealed class SlowHandler : MessageHandler
     {

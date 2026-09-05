@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 5)
+
+- **메시지 채널(RUDP) 송신에도 `MaxFrameLength` 사전 검사 — 송신 실패 항목 격리 계약 완성** — 직전 단계(수신 거부)와 대칭: 수신 측이 동일 상한으로 세션을 끊으므로 초과 메시지를 와이어에 내보내면 상대방 세션을 죽이는 결과가 됐다(로컬 과실이 원격 단절로). `SendLoopMessageAsync`가 직렬화 직후 상한 검사를 추가해 초과 항목은 flush `ArgumentException`으로 격리하고 세션은 유지한다 — 바이트 경로의 기존 계약(「송신 격리·수신 거부」)이 양 경로에서 동일하게 성립. 회귀 테스트 `OversizeSend_OnMessageChannel_Isolated_SessionStaysConnected` — 상한 256에 1KB 송신 → flush 예외 + 세션 생존 + 서버 미수신 + 이후 정상 왕복 검증(픽스 없으면 예외 없이 나가 서버 단절 — 실패 확인). **테스트 76 → 77건 통과** → [[../03-Reference/Configuration|Configuration]]
+
 ## 2026-09-05 (후반 4)
 
 - **메시지 단위 채널(RUDP) 수신에도 `MaxFrameLength` 강제 — 수신 메모리 증폭 방어 완성** — 기존엔 상한이 바이트 경로(TCP 프레이머)에만 적용됐고, RUDP는 LiteNetLib 재조립이 자체 상한을 갖지 않아(MaxFragmentsCount 65535 × MTU ≒ **90MB**) 사실상 무제한 재조립·역직렬화가 가능했다(보안 가이드의 「수신 메모리 증폭 방어」가 RUDP에선 성립하지 않음). `MessagePipeline.OnMessageChannelReceived`가 역직렬화 전 상한 검사를 추가해 초과 payload를 `InvalidDataException` → `Error` 단절로 실패 폐쇄한다. 재조립 자체는 LiteNetLib 내부 풀에서 순간적으로 일어나므로 전달 지점에서의 상한으로 충분하다. 회귀 테스트 `OversizeMessage_OnMessageChannel_DisconnectsFailClosed` — 상한 256 설정에 1KB payload 분할 전송 → 단절 + 핸들러 미도달 검증(픽스 없이는 단절 없음 — 10초 타임아웃). **테스트 75 → 76건 통과** → [[../03-Reference/Configuration|Configuration]]·[[../04-Guides/Security|Security]]
