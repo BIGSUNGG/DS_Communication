@@ -442,6 +442,84 @@ public class RudpLoopbackTests
         await WaitUntilAsync(() => stalling!.Completed == 1);
     }
 
+    /// <summary>
+    /// 핸들러가 밀리면 메시지 단위 채널(RUDP)은 상대방을 늦출 수 없다 — `MaxPendingMessages`를
+    /// 슬롯 대기(메시지 보유)까지 포함해 강제하고, 초과 시 흐름 제어 단절(Error)로 실패 폐쇄한다.
+    /// 바로 전의 InlineDispatch 강제(큐 디스패치)와 합쳐져 수신 메모리 누적이 상한 안에 묶인다.
+    /// </summary>
+    [Fact]
+    public async Task ReceiveOverflow_OnMessageChannel_DisconnectsFailClosed()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        DisconnectReason? serverReason = null;
+        Exception? serverError = null;
+        var serverSessions = new List<RudpSession>();
+        listener.Accepted += channel =>
+        {
+            RudpSession session = new(
+                channel, new StringConverter(),
+                s => new SlowHandler(s),
+                new MessageQueueOptions { MaxPendingMessages = 8 });
+            session.Disconnected += (_, e) =>
+            {
+                serverReason = e.Reason;
+                serverError = e.Exception;
+            };
+            lock (serverSessions)
+            {
+                serverSessions.Add(session);
+            }
+        };
+        listener.Start();
+        int port = listener.LocalPort;
+
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        IMessageChannel channel = connector.Channel!;
+        await WaitUntilAsync(() =>
+        {
+            lock (serverSessions) return serverSessions.Count == 1;
+        });
+
+        // 원시 채널로 폭주 — 클라이언트 파이프라인의 백프레셔를 우회해 서버 디스패치를 압도한다.
+        // 서버 핸들러는 메시지당 100ms 점유라 상한(8)을 훨씬 넘는 미처리가 쌓인다.
+        try
+        {
+            for (int i = 0; i < 200; i++)
+            {
+                await channel.SendAsync(Encoding.UTF8.GetBytes($"m{i}"), default, CancellationToken.None)
+                    .AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        }
+        catch
+        {
+            // 단절 이후의 송신 실패는 검증 대상이 아니다.
+        }
+
+        // 흐름 제어 단절 — 무제한 누적 대신 선언된 상한 안에서 Error로 끝나야 한다.
+        await WaitUntilAsync(() => serverReason != null, timeoutMs: 10000);
+        Assert.Equal(DisconnectReason.Error, serverReason);
+        Assert.NotNull(serverError);
+        Assert.Contains("흐름 제어", serverError!.Message);
+
+        lock (serverSessions)
+        {
+            serverSessions[0].Dispose();
+        }
+    }
+
+    /// <summary>느린 핸들러 — 메시지마다 100ms 점유로 수신 디스패치를 압도한다.</summary>
+    private sealed class SlowHandler : MessageHandler
+    {
+        public SlowHandler(ISession session)
+            : base(session)
+        {
+            Register<string>(_ => Thread.Sleep(100));
+        }
+    }
+
     private sealed class BlockingHandler : MessageHandler
     {
         private int _entered;

@@ -37,6 +37,7 @@ public sealed class MessagePipeline : IDisposable
     private int _stopped;              // 0 = 동작, 1 = 정지
     private int _disposed;             // Dispose 1회 가드 — 끊김 통지가 _stopped를 선점해도 정리는 반드시 수행
     private int _notifiedDisconnect;   // 끊김 통지 1회 보장
+    private int _pendingReceives;      // 슬롯 대기 중(메시지 보유) 수 — 메시지 채널 경로의 무제한 누적 방지
 
     /// <summary>바이트 스트림 채널(길이 프레이밍 + coalesce 송신) 파이프라인.</summary>
     public MessagePipeline(IByteChannel channel, IMessageConverter converter, IMessageHandler handler, MessageQueueOptions? options = null)
@@ -454,6 +455,20 @@ public sealed class MessagePipeline : IDisposable
 
     private async ValueTask EnqueueForDispatchAsync(object message)
     {
+        // 메시지 보유(슬롯 대기)까지 상한에 포함해 무제한 누적을 막는다 — 핸들러가 밀리면
+        // UDP 경로는 상대방을 늦출 수 없으므로 실패 폐쇄로 끊는다(흐름 제어).
+        // 바이트 채널 경로는 수신 루프가 이 호출을 순차 대기하므로 동시 대기가 1을 넘지 않아
+        // 여기 도달하지 않고 기존 백프레셔(추가 읽기 중단)를 유지한다.
+        int waiting = Interlocked.Increment(ref _pendingReceives);
+        if (waiting > _options.MaxPendingMessages)
+        {
+            Interlocked.Decrement(ref _pendingReceives);
+            RequestDisconnect(DisconnectReason.Error,
+                new InvalidOperationException(
+                    $"수신 미처리 {waiting}건이 상한 {_options.MaxPendingMessages}건을 넘어 연결을 끊습니다(흐름 제어)."));
+            return;
+        }
+
         try
         {
             await _receiveSlots.WaitAsync(_cts.Token).ConfigureAwait(false);
@@ -465,6 +480,10 @@ public sealed class MessagePipeline : IDisposable
         catch (ObjectDisposedException)
         {
             return;
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _pendingReceives);
         }
 
         _receiveQueue.Enqueue(message);

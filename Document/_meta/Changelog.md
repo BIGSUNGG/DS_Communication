@@ -10,6 +10,10 @@ updated: 2026-09-05
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-05 (후반 3)
+
+- **메시지 단위 채널(RUDP) 수신 백프레셔 공백 해소 — 흐름 제어 단절** — `MaxPendingMessages` 상한을 **슬롯 대기(메시지 보유)까지 포함**해 강제한다(`MessagePipeline.EnqueueForDispatchAsync`의 `_pendingReceives` 카운터). 기존엔 핸들러가 밀리면 대기자가 상한을 넘어 **무제한 누적**(문서화된 한계)되어 느린 핸들러 + 빠른 peer 조합이 메모리 압박 경로였다. UDP는 상대방을 늦출 수 없으므로 초과 시 `DisconnectReason.Error`(메시지에 「흐름 제어」 기재)로 실패 폐쇄한다. 바이트 채널(TCP) 경로는 수신 루프의 순차 대기(동시 대기 ≤ 1)라 기존 백프레셔(추가 읽기 중단)가 그대로 유지된다. 이전 단계(InlineDispatch 강제 무시)와 합쳐져 수신 누적이 선언된 상한 안에 완전히 묶인다. 회귀 테스트 `ReceiveOverflow_OnMessageChannel_DisconnectsFailClosed` — 원시 채널 200건 폭주 + 메시지당 100ms 핸들러로 상한 8을 초과시켜 단절을 검증(픽스 없이는 단절 없음 — 10초 타임아웃). **테스트 74 → 75건 통과** → [[../03-Reference/Configuration|Configuration]]
+
 ## 2026-09-05 (후반 2)
 
 - **메시지 단위 채널(RUDP) 경로에서 `InlineDispatch` 강제 무시** — `MessageQueueOptions.InlineDispatch=true`를 요청해도 `IMessageChannel` 경로는 항상 큐 디스패치를 강제한다(`MessagePipeline.Start`의 디스패치 루프 기동 조건도 함께 변경). 수신 콜백이 **세션 간 공유 폴링 스레드**에서 실행되므로, 핸들러를 그 자리에서 돌리면 느린 핸들러 하나가 다른 세션의 수신·수락·`MaxConnections` 상한 강제까지 막는 구조적 취약점이었다(호스트의 설계 계약 「앱 핸들러는 폴링 스레드에서 실행되지 않는다」를 공개 옵션으로 우회 가능). 바이트 채널(TCP) 경로는 기존 인라인 동작 유지. 회귀 테스트 `InlineDispatchOnRUDP_ForcesQueuedDispatch_OtherSessionsUnstalled` — 세션 A 핸들러 3초 점유 중 세션 B 왕복이 1.5초 안에 완료되는지 검증(픽스 없이는 실패 확인). **테스트 73 → 74건 통과** → [[../03-Reference/Configuration|Configuration]]
