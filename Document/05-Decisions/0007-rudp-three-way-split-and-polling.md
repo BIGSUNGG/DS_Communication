@@ -46,7 +46,7 @@ Accepted
 ### Negative
 
 - 폴링 간격 1ms 고정 — 초저지연 요구가 실측으로 확인되면 `RudpTransportOptions`로 노출해야 한다(코드에 `ponytail:` 주석으로 표시).
-- **분할 불가 방식의 MTU 초과 `ArgumentException`은 세션을 끊는다.** `MessagePipeline`은 채널 `SendAsync`의 예외를 전부 채널 오류로 취급해 해당 항목의 flush를 예외 완료시키고 `Disconnected(Error)`로 끊는다(예외 객체는 `DisconnectedEventArgs.Exception`에 보존). 「송신 실패는 항목 격리」는 **직렬화 실패에만** 적용된다. 항목 격리로 내리려면 Shared 수정이 필요해 이 결정의 범위 밖으로 둔다.
+- **분할 불가 방식의 MTU 초과 `ArgumentException`은 세션을 끊는다(잔존 한계).** `MessagePipeline`은 채널 `SendAsync`의 예외를 전부 채널 오류로 취급해 해당 항목의 flush를 예외 완료시키고 `Disconnected(Error)`로 끊는다(예외 객체는 `DisconnectedEventArgs.Exception`에 보존). **2026-09-05 후속 수정**: `MaxFrameLength` 초과 payload는 채널에 도달하기 전 파이프라인이 격리한다(송신: 보내기 전 항목 격리, 수신: 역직렬화 전 거부) — **대부분의 초대형 송신은 이 사전 검사에서 항목 격리로 끝나고 세션이 살아남는다**. 채널 예외 경로(MTU 가드)는 위의 하한이 여전히 적용된다.
 - 호스트당 폴링 스레드 + LiteNetLib 자체 스레드(논리·수신)가 상주한다 — 프로세스당 리스너/커넥터 인스턴스 수만큼만 늘고 접속 수와는 무관.
 
 ## Alternatives considered

@@ -28,7 +28,7 @@ Accepted
 
 - `HandleMessage(object message)` — **`void` 동기**.
 - 타입 등록: `RegisterMessageType` + `Action<object>` / `Register<T>`.
-- `InlineDispatch`로 즉시/큐 선택. `async` Handler API 없음.
+- `InlineDispatch`로 즉시/큐 선택. **단, 메시지 단위 채널(`IMessageChannel`) 경로는 무시하고 항상 큐 강제**(수신 콜백이 세션 간 공유 폴링 스레드 — 느린 핸들러로 인한 타세션 차단 방지, 2026-09-05 후속 수정). `async` Handler API 없음.
 - **끊김 콜백 없음** — Session `Disconnected`만 사용.
 
 ### Converter
