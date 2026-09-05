@@ -87,14 +87,16 @@ public sealed class TcpListener : IDisposable
             {
                 return;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (token.IsCancellationRequested)
                 {
                     return;
                 }
 
-                // 일시적 수락 오류 — 핫 루프 방지 후 재시도.
+                // 일시적 수락 오류 — 핫 루프 방지 후 재시도. 지속 실패는 조용한 수락 중단이
+                // 되므로 진단을 남긴다(RUDP 폴링 루프의 예외 기록과 동일한 관례).
+                Trace.TraceError($"TCP 수락 예외 — 50ms 후 재시도: {e}");
                 try
                 {
                     await Task.Delay(50, token).ConfigureAwait(false);
