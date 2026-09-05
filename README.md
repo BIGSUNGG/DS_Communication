@@ -11,11 +11,16 @@
 | `Communication.Network.TCP.Shared` | `TcpSession`, `StreamByteChannel`, `TcpTransportOptions` | Shared |
 | `Communication.Network.TCP.Server` | `TcpListener` 수락 루프 | TCP.Shared |
 | `Communication.Network.TCP.Client` | `TcpConnector` 연결 | TCP.Shared |
+| `Communication.Network.RUDP.Shared` | `RudpSession`, `RudpMessageChannel`, `RudpSendOptions`/`RudpDeliveryMethod`, `RudpTransportOptions` | Shared |
+| `Communication.Network.RUDP.Server` | `RudpListener` 수락 루프 | RUDP.Shared |
+| `Communication.Network.RUDP.Client` | `RudpConnector` 연결 | RUDP.Shared |
 
-```
+```console
 dotnet add package Communication.Shared
 dotnet add package Communication.Network.TCP.Server   # 서버만 필요하면
 dotnet add package Communication.Network.TCP.Client   # 클라이언트만 필요하면
+dotnet add package Communication.Network.RUDP.Server  # RUDP 서버만 필요하면
+dotnet add package Communication.Network.RUDP.Client  # RUDP 클라이언트만 필요하면
 ```
 
 ## 주요 동작
@@ -55,8 +60,8 @@ if (await connector.ConnectAsync("127.0.0.1", 32000))
 | ------ | ------ |
 | `Source/` | 라이브러리 7 패키지 |
 | `Test/Communication.Tests` | xUnit 테스트 (`dotnet test`) |
-| `Sandbox/Chat.TCP` | TCP 수동 검증 채팅 샘플 |
-| `Sandbox/Chat.RUDP` | RUDP 수동 검증 채팅 샘플 (`--selftest`) |
+| `Sandbox/Chat.TCP` | TCP 채팅 샘플 (`--selftest` 프로세스 내 왕복 검증) |
+| `Sandbox/Chat.RUDP` | RUDP 채팅 샘플 (`--selftest` 프로세스 내 왕복 검증) |
 | `Document/` | Obsidian 문서 vault — 입구 [`Document/01-Overview/Home.md`](Document/01-Overview/Home.md) |
 | `Legacy/` | 이전 스택·문서 아카이브 (유지보수 대상 아님) |
 
