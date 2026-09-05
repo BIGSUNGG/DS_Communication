@@ -61,6 +61,7 @@ updated: 2026-09-05
 | F4-3 | RUDP 수신 분배 | peer → 채널 등록부(`RudpNetHost`)가 `MessageReceived`로 분배(레거시 `RUDPNetworkReceiveDispatcher` 역할) |
 | F4-4 | RUDP poll | 호스트당 **전용 폴링 스레드 1개**, 간격 고정 1ms(옵션 아님). 스레드 수는 접속 수와 무관 — [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 | F4-5 | RUDP MTU 가드 | 분할 불가 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)으로 MTU 초과 payload 송신 시 `ArgumentException` — 조용한 유실 대신 즉시 실패 (**신규**, 레거시 없음) |
+| F4-6 | 연결 시도 상한 | 침묵 호스트(반개방 경로·블랙홀)에 대한 연결 실패를 선언된 시간 안에 확정 — **TCP**: `TcpTransportOptions.ConnectTimeout`(기본 `null`=OS SYN 재시도 ≈21초), **RUDP**: `RudpTransportOptions.ConnectTimeout`(기본 `null`=LiteNetLib 재전송 ≈5초). 초과 시 `false`, 사용자 취소(`OperationCanceledException`)와는 독립 (**신규**) |
 
 ## F5. 플랫폼·패키지
 
