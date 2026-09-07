@@ -606,11 +606,11 @@ public class RudpLoopbackTests
             lock (serverSessions) return serverSessions.Count == 1;
         });
 
-        // 상한 초과 송신 — flush가 로컬에서 ArgumentException으로 끝나야 한다.
+        // 상한 초과 송신 — flush가 로컬에서 ArgumentException으로 끝나야 한다(통합 검증 문구 — 양측 경로 동일).
         string oversize = new string('x', 1024);
         ArgumentException error = await Assert.ThrowsAsync<ArgumentException>(
             () => clientSession.SendAndFlushAsync(oversize));
-        Assert.Contains("상한", error.Message);
+        Assert.Contains("0보다 크고 256 이하여야 합니다", error.Message);
 
         // 세션은 살아 있고, 거부된 메시지는 와이어에 나가지 않는다.
         Assert.True(clientSession.IsConnected());

@@ -255,23 +255,15 @@ public sealed class MessagePipeline : IDisposable
                 writer.Advance(LengthPrefixFramer.HeaderSize);
                 _converter.Serialize(item.Message, writer);
 
-                // 빈 payload는 상대편에서 EOF와 구분이 안 되므로 송신을 거부한다.
                 int payloadLength = writer.WrittenCount - frameStart - LengthPrefixFramer.HeaderSize;
-                if (payloadLength <= 0 || payloadLength > _options.MaxFrameLength)
-                {
-                    throw new ArgumentException(
-                        $"직렬화 결과 페이로드 길이 {payloadLength}는 0보다 크고 {_options.MaxFrameLength} 이하여야 합니다.");
-                }
-
+                ValidatePayloadLength(payloadLength);
                 BinaryPrimitives.WriteInt32LittleEndian(writer.GetWritableSpan().Slice(frameStart), payloadLength);
             }
             catch (Exception e)
             {
                 // 직렬화·검증 실패 — 이 항목만 격리(부분 프레임 되감기)하고 나머지는 계속 보낸다.
                 writer.RewindTo(frameStart);
-                item.Flush?.TrySetException(e);
-                ReleaseSlotQuietly();
-                Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");
+                IsolateFailedSend(item, e);
                 continue;
             }
 
@@ -326,27 +318,15 @@ public sealed class MessagePipeline : IDisposable
                     try
                     {
                         _converter.Serialize(item.Message, writer);
-                        if (writer.WrittenCount == 0)
-                        {
-                            // 빈 payload는 송신하지 않는다.
-                            throw new ArgumentException("직렬화 결과 페이로드가 비어 있습니다.");
-                        }
 
-                        // 수신 측도 같은 상한(바이트 경로 프레이머·메시지 경로 역직렬화 전 검사)을
-                        // 적용하므로, 초과 페이로드를 보내면 상대가 세션을 끊는다 — 보내기 전에
-                        // 이 항목만 격리해 로컬 실패로 끝낸다(바이트 경로와 동일 계약).
-                        if (writer.WrittenCount > _options.MaxFrameLength)
-                        {
-                            throw new ArgumentException(
-                                $"직렬화 결과 페이로드 길이 {writer.WrittenCount}는 상한 {_options.MaxFrameLength} 이하여야 합니다.");
-                        }
+                        // 빈 payload·상한 초과 — 수신 측과 같은 계약(역직렬화 전 거부)을 송신 전에 적용해
+                        // 상대가 끊는 대신 이 항목만 로컬로 격리한다(바이트 경로와 동일 검증).
+                        ValidatePayloadLength(writer.WrittenCount);
                     }
                     catch (Exception e)
                     {
                         // 직렬화·검증 실패 — 이 항목만 격리하고 송신은 계속한다.
-                        item.Flush?.TrySetException(e);
-                        ReleaseSlotQuietly();
-                        Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");
+                        IsolateFailedSend(item, e);
                         continue;
                     }
 
@@ -610,6 +590,28 @@ public sealed class MessagePipeline : IDisposable
         {
             // 정지 중 해제 — 무시.
         }
+    }
+
+    /// <summary>
+    /// 송신 페이로드 길이 검증(양쪽 송신 경로 공통) — 빈 payload는 상대편에서 EOF와 구분이 안 되므로 거부하고,
+    /// 상한 초과는 수신 측 거부(단절)보다 보내기 전 로컬 격리가 낫다.
+    /// </summary>
+    /// <exception cref="ArgumentException">0 이하이거나 <see cref="MessageQueueOptions.MaxFrameLength"/> 초과인 경우.</exception>
+    private void ValidatePayloadLength(int payloadLength)
+    {
+        if (payloadLength <= 0 || payloadLength > _options.MaxFrameLength)
+        {
+            throw new ArgumentException(
+                $"직렬화 결과 페이로드 길이 {payloadLength}는 0보다 크고 {_options.MaxFrameLength} 이하여야 합니다.");
+        }
+    }
+
+    /// <summary>송신 항목 하나를 격리한다 — flush를 예외 완료시키고 슬롯을 반환한 뒤 진단만 남긴다. 송신 루프는 계속된다.</summary>
+    private void IsolateFailedSend(PendingSend item, Exception e)
+    {
+        item.Flush?.TrySetException(e);
+        ReleaseSlotQuietly();
+        Trace.TraceError($"직렬화 실패 — 항목 격리 후 계속: {e}");
     }
 
     private void DrainSendQueueFaulted()
