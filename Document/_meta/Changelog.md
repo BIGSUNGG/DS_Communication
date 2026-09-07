@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (릴리스 2.1.0)
+
+- **패키지 2.1.0 배포** — TCP TLS 옵션 기능(minor) 단위. 7개 패키지 버전 통일 bump → 커밋 `3c841c1` → 태그 `v2.1.0`(Shared)·`tcp/v2.1.0`(TCP 3종)·`rudp/v2.1.0`(RUDP 3종) push → Actions 4건(verify+publish×3·CI) 전부 성공. [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 버전 표기 갱신
+
 ## 2026-09-09 (사이클 4 — TCP TLS)
 
 - **TCP 전송 TLS(SslStream) 옵션 추가** — [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]]: `TcpTlsOptions`(`ServerCertificate`·`TargetHost`·`RemoteCertificateValidation`·`HandshakeTimeout` 15초 기본), `TcpTransportOptions.Tls`, `StreamByteChannel` 확립 스트림 생성자. 서버는 수락 연결마다 연결별 태스크로 핸드셰이크 선행(상한 슬롯 예약→성공 시 채널 Dispose·실패 시 태스크가 회수, 정확히 1회), 실패·상한 초과는 조용히 폐기 후 수락 계속. 클라이언트는 핸드셰이크 실패 시 연결 실패(`false`) 확정. TLS 1.3 노트(클라이언트 검증 실패 후에도 서버 `Accepted` 가능 — 채널 소유 계약 재확인)·테스트 인증서 플랫폼 주의(Windows ephemeral 키 불가→PFX 재수입, Linux serverAuth EKU 필요) 문서화. 테스트 8건 추가(110→118)
