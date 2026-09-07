@@ -31,6 +31,16 @@ dotnet add package Communication.Network.RUDP.Client  # RUDP 클라이언트만 
 - 수신: 프레임 완료 마감(기본 30초, 첫 바이트 도착 시 시작) 초과 시 `DisconnectReason.Timeout` 단절.
 - 끊김은 `Session.Disconnected(DisconnectReason)` 1회 통지. 재접속·하트비트는 앱 책임.
 
+## 전송 보안 (옵션)
+
+- **TCP TLS(SslStream)** — `TcpTransportOptions.Tls`: 서버는 `ServerCertificate` 설정, 클라이언트는
+  옵션만 설정(기본 OS 인증서 검증). 핸드셰이크 상한 기본 15초(슬로로리스 방어). 기본 `null`은 평문 — 하위호환.
+- **RUDP 패킷 무결성(CRC32c)** — `RudpTransportOptions.Crc32cEnabled`(**양단 같은 설정 필요**):
+  체크섬 위반 패킷(손상·위조)을 프로토콜 처리 전에 폐기. 검출 전용 — 기밀성·인증은 없음.
+- RUDP 기본 연결 키는 공개 상수다 — 기본값으로 서버 시작 시 Trace 경고. 공개망에서는 앱별 값으로 교체.
+
+상세: [`Document/04-Guides/Security.md`](Document/04-Guides/Security.md) · [`Document/04-Guides/Getting-Started.md`](Document/04-Guides/Getting-Started.md) §6
+
 ## 빠른 시작
 
 ```csharp
