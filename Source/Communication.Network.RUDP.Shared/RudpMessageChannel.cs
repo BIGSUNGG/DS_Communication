@@ -17,6 +17,8 @@ public sealed class RudpMessageChannel : IMessageChannel
     private readonly NetPeer _peer;
     private readonly RudpNetHost _host;
     private readonly bool _ownsHost; // 클라이언트 채널만 true — 호스트(폴링 스레드·NetManager)까지 정리
+    private SharedDisconnectReason _latchedReason; // 세션 생성 전 단절 원인(래치) — 플래그보다 먼저 기록된다
+    private int _latchedDisconnect; // 0 = 없음, 1 = 구독자 없이 단절이 발생했음
     private int _disposed; // 0 = 사용 가능, 1 = 정리됨
 
     internal RudpMessageChannel(RudpNetHost host, NetPeer peer, bool ownsHost)
@@ -142,7 +144,19 @@ public sealed class RudpMessageChannel : IMessageChannel
     internal void DeliverReceived(ReadOnlyMemory<byte> payload) => MessageReceived?.Invoke(payload);
 
     /// <summary>호스트가 peer 끊김을 전달한다. 세션당 1회는 <c>Session</c> 쪽 가드가 보장한다.</summary>
-    internal void NotifyTransportDisconnected(SharedDisconnectReason reason) => TransportDisconnected?.Invoke(reason);
+    internal void NotifyTransportDisconnected(SharedDisconnectReason reason)
+    {
+        _latchedReason = reason; // 구독자가 아직 없어도 소실되지 않게 래치 — 세션 생성 창구 경쟁 대응.
+        Volatile.Write(ref _latchedDisconnect, 1);
+        TransportDisconnected?.Invoke(reason);
+    }
+
+    /// <summary>구독 직후 호출 — 구독 전 발생한 단절을 회수한다(이벤트·래치 양쪽 경로로 정확히 1회).</summary>
+    internal bool TryConsumeLatchedDisconnect(out SharedDisconnectReason reason)
+    {
+        reason = _latchedReason;
+        return Interlocked.Exchange(ref _latchedDisconnect, 0) == 1;
+    }
 
     /// <summary>분할 지원 여부 — LiteNetLib에서 ReliableOrdered·ReliableUnordered만 분할된다.</summary>
     private static bool CanFragment(DeliveryMethod method)

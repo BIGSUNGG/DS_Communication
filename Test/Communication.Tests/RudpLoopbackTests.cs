@@ -1064,6 +1064,42 @@ public class RudpLoopbackTests
     }
 
     /// <summary>
+    /// 수용(Accepted)→세션 생성 창구에 단절이 끼어들면 이벤트로는 오지 않는다 — 채널 래치가 회수하고
+    /// Session 재생 보장으로 늦은 앱 구독자에게 정확히 1회 전달된다(리뷰 P3 ① 폐쇄 검증).
+    /// </summary>
+    [Fact]
+    public async Task TransportDisconnectBeforeSessionCreation_LatchedAndReplayed()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        RudpMessageChannel? captured = null;
+        listener.Accepted += channel => captured = channel as RudpMessageChannel; // 세션 미생성 — 창구 재현
+        listener.Start();
+        int port = listener.LocalPort;
+
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+        await WaitUntilAsync(() => captured is not null);
+
+        // 구독자 없는 채널에 단절 발생 — 세션 생성 전 경쟁 창구 시뮬레이션(내부 통지 경로).
+        captured!.NotifyTransportDisconnected(DisconnectReason.Remote);
+
+        RudpSession session = new(captured, new StringConverter(), s => new CollectHandler(s));
+        Assert.False(session.IsConnected()); // 래치 회수로 즉시 끊김 상태
+
+        int fired = 0;
+        DisconnectReason? observed = null;
+        session.Disconnected += (_, e) =>
+        {
+            fired++;
+            observed = e.Reason;
+        };
+
+        Assert.Equal(1, fired); // 늦은 구독 재생 — 원인 보존
+        Assert.Equal(DisconnectReason.Remote, observed);
+    }
+
+    /// <summary>
     /// LiteNetLib 2.1.4 접속 요청 패킷 구성: [0]=ConnectRequest(6)·connectNum 0,
     /// [1..4]=프로토콜 ID 13, [5..12]=connectTime, [13..16]=peerId,
     /// [17]=주소 크기, [18..]=IPv4 SocketAddress, 뒤에 키 문자열(ushort 길이+1, UTF-8).

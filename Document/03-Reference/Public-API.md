@@ -74,7 +74,7 @@ Task SendAndFlushAsync(object message, SendOptions? options = null, Cancellation
 void Disconnect();
 bool IsConnected();
 
-event EventHandler<DisconnectedEventArgs> Disconnected;
+event EventHandler<DisconnectedEventArgs> Disconnected; // 세션당 1회 + 늦은 구독 즉시 재생(구독당 1회)
 // DisconnectedEventArgs.Reason: DisconnectReason { Local, Remote, Error, Timeout, FlowControl }
 // DisconnectedEventArgs.Exception? (Error·FlowControl·TCP 경로 Timeout일 때; RUDP 전송 끊김 통지는 null)
 ```

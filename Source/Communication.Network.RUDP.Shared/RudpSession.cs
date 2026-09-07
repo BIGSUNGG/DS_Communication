@@ -32,12 +32,20 @@ public class RudpSession : Session
         if (handlerFactory is null) throw new ArgumentNullException(nameof(handlerFactory));
 
         // 끊김 통지 구독은 파이프라인 부착 전에 — 부착 직후 수신이 들어와도 통지 경로가 열려 있어야 한다.
-        if (channel is RudpMessageChannel rudpChannel)
+        RudpMessageChannel? rudpChannel = channel as RudpMessageChannel;
+        if (rudpChannel is not null)
         {
             rudpChannel.TransportDisconnected += OnTransportDisconnected;
         }
 
         AttachPipeline(new MessagePipeline(channel, converter, handlerFactory(this), queueOptions));
+
+        // 구독 전 이미 단절이 발생했으면(수용→세션 생성 창구) 래치에서 회수한다 —
+        // 이 경로의 끊김은 이벤트로는 오지 않는다. Session 재생 보장으로 늦은 앱 구독자에게도 전달된다.
+        if (rudpChannel is not null && rudpChannel.TryConsumeLatchedDisconnect(out DisconnectReason latched))
+        {
+            MarkDisconnected(latched, null);
+        }
     }
 
     private void OnTransportDisconnected(DisconnectReason reason) => MarkDisconnected(reason, null);

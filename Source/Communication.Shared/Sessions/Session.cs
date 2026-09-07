@@ -15,6 +15,9 @@ namespace Communication.Shared.Sessions;
 public abstract class Session : ISession
 {
     private readonly IDisposable _channel;
+    private readonly object _disconnectGate = new();
+    private EventHandler<DisconnectedEventArgs>? _disconnectedSubscribers;
+    private DisconnectedEventArgs? _finalDisconnectArgs;
     private MessagePipeline? _pipeline;
     private int _disconnected; // 0 = 연결됨, 1 = 끊김(통지 완료 또는 진행 중)
 
@@ -24,7 +27,46 @@ public abstract class Session : ISession
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
     }
 
-    public event EventHandler<DisconnectedEventArgs>? Disconnected;
+    /// <summary>
+    /// 끊김 통지 — 세션당 정확히 1회. **늦은 구독자(이미 끊긴 뒤 구독)에게도 구독 즉시 1회 재생된다**
+    /// (구독 타이밍 때문에 끊김을 놓치는 앱 부류를 원천 차단). 구독자 예외는 격리(Trace).
+    /// </summary>
+    public event EventHandler<DisconnectedEventArgs>? Disconnected
+    {
+        add
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            DisconnectedEventArgs? replay = null;
+            lock (_disconnectGate)
+            {
+                if (Volatile.Read(ref _disconnected) != 0)
+                {
+                    replay = _finalDisconnectArgs; // 이미 끊김 — 구독자 목록 대신 즉시 재생(중복 없음).
+                }
+                else
+                {
+                    _disconnectedSubscribers += value; // 아직 살아있음 — 정상 발화 경로로 1회.
+                }
+            }
+
+            if (replay is not null)
+            {
+                InvokeIsolated(value, replay);
+            }
+        }
+
+        remove
+        {
+            lock (_disconnectGate)
+            {
+                _disconnectedSubscribers -= value;
+            }
+        }
+    }
 
     public bool IsConnected() => Volatile.Read(ref _disconnected) == 0 && (_pipeline?.IsChannelConnected ?? false);
 
@@ -92,6 +134,14 @@ public abstract class Session : ISession
             return;
         }
 
+        DisconnectedEventArgs args = new(reason, exception);
+        EventHandler<DisconnectedEventArgs>? subscribers;
+        lock (_disconnectGate)
+        {
+            _finalDisconnectArgs = args; // 늦은 구독자 재생용 — 발화 전에 확정(락 안).
+            subscribers = _disconnectedSubscribers;
+        }
+
         try
         {
             _pipeline?.Dispose();
@@ -110,29 +160,28 @@ public abstract class Session : ISession
             // 위와 동일.
         }
 
-        RaiseDisconnected(reason, exception);
-    }
-
-    /// <summary>구독자를 하나씩 호출한다 — 예외를 던지는 구독자도 나머지와 격리된다(Trace).</summary>
-    private void RaiseDisconnected(DisconnectReason reason, Exception? exception)
-    {
-        EventHandler<DisconnectedEventArgs>? subscribers = Disconnected;
+        // 발화는 정리 뒤 — 구독자는 이미 정리된 세션 상태를 관측한다(기존 순서 보존).
         if (subscribers is null)
         {
             return;
         }
 
-        DisconnectedEventArgs args = new(reason, exception);
         foreach (Delegate subscriber in subscribers.GetInvocationList())
         {
-            try
-            {
-                ((EventHandler<DisconnectedEventArgs>)subscriber).Invoke(this, args);
-            }
-            catch (Exception e)
-            {
-                Trace.TraceError($"Disconnected 구독자 예외 — 격리 후 계속: {e}");
-            }
+            InvokeIsolated((EventHandler<DisconnectedEventArgs>)subscriber, args);
+        }
+    }
+
+    /// <summary>구독자를 하나씩 호출한다 — 예외를 던지는 구독자도 나머지와 격리된다(Trace).</summary>
+    private void InvokeIsolated(EventHandler<DisconnectedEventArgs> handler, DisconnectedEventArgs args)
+    {
+        try
+        {
+            handler(this, args);
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"Disconnected 구독자 예외 — 격리 후 계속: {e}");
         }
     }
 

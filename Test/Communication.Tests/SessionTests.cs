@@ -29,6 +29,46 @@ public class SessionTests
         Assert.True(session.IsConnected());
     }
 
+    /// <summary>늦은 구독자(이미 끊긴 뒤 구독)에게도 구독 즉시 정확히 1회 재생된다 — 구독 타이밍으로 끊김을 놓치는 부류 차단.</summary>
+    [Fact]
+    public void Disconnected_LateSubscriber_ReceivesOneTimeReplay()
+    {
+        var channel = new FakeByteChannel();
+        var session = new TestSession(channel, new StringConverter(), new RecordingHandler());
+        session.Dispose(); // Local 단절 — 이 시점엔 구독자 없음
+
+        int fired = 0;
+        DisconnectReason? observed = null;
+        session.Disconnected += (_, e) =>
+        {
+            fired++;
+            observed = e.Reason;
+        };
+
+        Assert.Equal(1, fired); // 구독 즉시 재생
+        Assert.Equal(DisconnectReason.Local, observed);
+    }
+
+    /// <summary>재생은 구독당 1회 — 표준 이벤트 의미론(재구독은 새 구독이라 1회 더 재생)을 그대로 따른다.</summary>
+    [Fact]
+    public void Disconnected_ReplayIsOncePerSubscription()
+    {
+        var channel = new FakeByteChannel();
+        var session = new TestSession(channel, new StringConverter(), new RecordingHandler());
+        session.Dispose();
+
+        int fired = 0;
+        EventHandler<DisconnectedEventArgs> late = (_, _) => fired++;
+        session.Disconnected += late;
+        Assert.Equal(1, fired); // 첫 구독 — 1회 재생
+
+        session.Disconnected -= late;
+        Assert.Equal(1, fired); // 해지는 이미 발생한 재생을 되돌리지 않는다
+
+        session.Disconnected += late; // 재구독 — 새 구독으로 1회 재생
+        Assert.Equal(2, fired);
+    }
+
     [Fact]
     public async Task Disconnect_RaisesLocalOnce_AndFaultsFurtherSends()
     {

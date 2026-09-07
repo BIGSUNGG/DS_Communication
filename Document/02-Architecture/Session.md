@@ -20,7 +20,7 @@ Connector/Listener → Channel → 앱이 `new *Session(...)`. 끊김 관측은 
 | ------ | ------------- |
 | Send / Disconnect / IsConnected | Connect/Accept (Connector/Listener) |
 | Pipeline·Channel 소유 | Converter 구현 |
-| `Disconnected(DisconnectReason)` — 구독자별 호출, 예외 격리(Trace) | Handler 끊김 콜백 · 재접속 (앱) |
+| `Disconnected(DisconnectReason)` — 구독자별 호출, 예외 격리(Trace). **늦은 구독 보장**: 이미 끊긴 세션에 구독하면 즉시 1회 재생(구독당 1회 — 표준 이벤트 의미론) | Handler 끊김 콜백 · 재접속 (앱) |
 
 ## 생성 (앱)
 
