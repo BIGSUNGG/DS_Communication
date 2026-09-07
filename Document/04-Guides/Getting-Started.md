@@ -3,7 +3,7 @@ project: DS_Communication
 type: guide
 status: draft
 tags: [guide, usage, examples]
-updated: 2026-09-05
+updated: 2026-09-09
 ---
 
 # Getting Started — 사용 예시
@@ -143,7 +143,41 @@ await session.SendAndFlushAsync(important, new RudpSendOptions(RudpDeliveryMetho
 - 접속 수와 무관하게 호스트당 폴링 스레드 1개 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
 - 실행 검증: `dotnet run --project Sandbox/Chat.RUDP -- --selftest` (5개 전송 방식 왕복 후 exit 0), 채팅은 `server [port]` / `client [port] [이름]` — `'!'` 접두 줄은 Unreliable로 전송.
 
-## 6. 앱 하트비트
+## 6. 전송 보안 옵션 — TCP TLS · RUDP CRC32c
+
+### TCP TLS (SslStream)
+
+```csharp
+// 서버 — 인증서 설정 시 모든 수락 연결에 대해 핸드셰이크를 먼저 완료한 뒤 Accepted가 온다
+listener.Start(new TcpTransportOptions
+{
+    Tls = new TcpTlsOptions { ServerCertificate = serverCert }, // X509Certificate
+});
+
+// 클라이언트 — 옵션만 설정하면 연결 후 핸드셰이크까지 마친 뒤 채널 노출
+bool ok = await connector.ConnectAsync("game.example.com", 32000, new TcpTransportOptions
+{
+    Tls = new TcpTlsOptions(), // 기본 OS 검증(신뢰 체인·이름 일치). TargetHost 기본 = host 인자
+});
+```
+
+- 핸드셰이크 실패(인증서 거부·프로토콜 위반)와 `HandshakeTimeout`(기본 15초) 초과는 — 클라이언트는 **연결 실패(`false`)**, 서버는 **연결 폐기 후 수락 계속**(상한 슬롯도 회수). 세션·프레이밍은 그대로.
+- 개발용 자체 서명 인증서는 `RemoteCertificateValidation` 콜백에서 수용(지문 검사 권장) — **무조건 통과 콜백 금지(중간자 공격)**.
+- TLS 1.3 주의: 클라이언트가 인증서를 거부해도 서버 쪽 핸드셰이크는 완료돼 `Accepted`가 발생할 수 있다 — 수용 핸들러는 언제나처럼 채널(세션)을 소유·정리.
+- 상세 계약: [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]] · [[Security|Security & Production Checklist]]
+
+### RUDP 패킷 무결성 (CRC32c)
+
+```csharp
+var options = new RudpTransportOptions { Crc32cEnabled = true }; // 양단 같은 설정 — 와이어 비호환
+listener.Start(options);
+bool ok = await connector.ConnectAsync("127.0.0.1", 32000, options);
+```
+
+- 패킷마다 CRC32c(4바이트) — 체크섬 위반 패킷(손상·위조)을 **프로토콜 처리 전에 폐기**한다(위조 접속 요청은 슬롯 예약도 없이 버림). IPv4 UDP 체크섬은 0일 수 있어 이 선별이 유일한 방어선이 될 수 있다.
+- **검출 전용**이다 — 키 없는 CRC라 능동 공격자는 재계산할 수 있다. 기밀성·인증은 없다(평문 유지): 기밀성은 TCP TLS 또는 VPN 위 운용으로 확보.
+
+## 7. 앱 하트비트
 
 일반 메시지 + 앱 타이머. 타임아웃 시 `session.Disconnect()` → `Disconnected(Local)` 또는 앱이 `Remote`로 간주하고 재접속 루프.
 
