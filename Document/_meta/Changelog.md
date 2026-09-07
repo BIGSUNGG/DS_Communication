@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (릴리스 2.4.0)
+
+- **패키지 2.4.0 배포(minor)** — 2.3.1 이후 단위: ①RUDP 리스너 정지 무통지 방치 수정(살아있는 세션에 `Local` 통지 + 죽은 피어 송신 즉시 실패) ②끊김 통지 전달 보장(채널 래치 + `Session.Disconnected` 늦은 구독자 즉시 재생 — 공개 이벤트 보장 강화 → minor). 커밋 `dd968a6` → 태그 ×3 → Actions 4건 전부 성공(**경화된 게시 워크플로 첫 태그 실행** — env 간접화 pack·persist-credentials 없음 실증). [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 표기 갱신
+
 ## 2026-09-09 (사이클 18 — 끊김 통지 전달 보장)
 
 - **늦은 구독자 끊김 통지 보장(보류 P3 ① 완전 폐쇄)** — ①`RudpMessageChannel` 래치: 구독자 없이 발생한 전송 단절을 원인과 함께 기록, `RudpSession` 생성자가 구독 직후 회수(이벤트·래치 양쪽 경로 정확히 1회) ②`Session.Disconnected` 커스텀 접근자 — 이미 끊긴 세션에 늦게 구독해도 즉시 1회 재생(구독당 1회·표준 이벤트 의미론, 락으로 구독·발화 경쟁 폐쇄, 구독자 예외 격리 유지). 테스트 +3(131→134): 늦은 구독 재생·구독당 1회·수용 창구 시뮬. 도중 내 테스트 기대 오류(재구독 중복 가정) 1건 — 표준 의미론으로 정정. [[../02-Architecture/Session|Session]]·[[../03-Reference/Public-API|Public-API]] 동기화. DS_RPC 회귀 77/77
