@@ -3,7 +3,7 @@ project: DS_Communication
 type: context
 status: draft
 tags: [ai, entry]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # CONTEXT — DS_Communication
@@ -39,10 +39,10 @@ updated: 2026-09-05
 
 | 패키지 | 설명 |
 | -------- | ------ |
-| `Communication.Shared` | Session·Channel·Framing·Pipeline·`SendOptions`·`DisconnectReason` (2.0.0 배포) |
-| `Communication.Network.TCP.Shared` | TcpSession·StreamByteChannel·TcpTransportOptions (2.0.0 배포) |
-| `Communication.Network.TCP.Server` | TcpListener 수락 루프 (2.0.0 배포) |
-| `Communication.Network.TCP.Client` | TcpConnector 연결 (2.0.0 배포) |
+| `Communication.Shared` | Session·Channel·Framing·Pipeline·`SendOptions`·`DisconnectReason` (2.0.1 배포) |
+| `Communication.Network.TCP.Shared` | TcpSession·StreamByteChannel·TcpTransportOptions (2.0.1 배포) |
+| `Communication.Network.TCP.Server` | TcpListener 수락 루프 (2.0.1 배포) |
+| `Communication.Network.TCP.Client` | TcpConnector 연결 (2.0.1 배포) |
 | `Communication.Network.TCP_IOCP` | SocketAsyncEventArgs 기반 Connector·Listener·Session |
 | `Communication.Network.RUDP.Shared` | RudpSession·RudpMessageChannel·RudpSendOptions/RudpDeliveryMethod·RudpTransportOptions·내부 RudpNetHost (LiteNetLib 2.1.4) |
 | `Communication.Network.RUDP.Server` | RudpListener 수락 (호스트당 폴링 스레드 1개) |
