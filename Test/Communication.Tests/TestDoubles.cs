@@ -19,6 +19,7 @@ internal sealed class FakeByteChannel : IByteChannel
     private readonly TaskCompletionSource<bool> _writeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private TaskCompletionSource<bool>? _writeGate;
     private volatile bool _connected = true;
+    private volatile bool _eof;
 
     public bool IsConnected => _connected;
 
@@ -41,18 +42,28 @@ internal sealed class FakeByteChannel : IByteChannel
     /// <summary>쓰기가 기록된 직후 호출되는 훅(테스트용).</summary>
     public Action? OnWrite { get; set; }
 
-    /// <summary>읽힐 바이트를 공급한다.</summary>
+    /// <summary>읽힐 바이트를 공급한다. EOF(<see cref="Complete"/>) 이후 공급은 무시된다 —
+    /// 실제 스트림(FIN 이후 도착)과 달리 끊김 뒤 바이트가 존재할 수 없다.</summary>
     public void Feed(ReadOnlySpan<byte> data)
     {
         foreach (byte b in data)
         {
+            if (_eof)
+            {
+                return; // EOF 래치 이후 잔여 공급 폐기 — 실제 채널 동작과 일치.
+            }
+
             _readQueue.Enqueue(b);
             _readAvailable.Release();
         }
     }
 
-    /// <summary>스트림 끝(원격 닫힘)을 알린다. 대기 중인 읽기를 세마포어로 풀어 0 반환으로 이끈다.</summary>
-    public void Complete() => _readAvailable.Release(1024);
+    /// <summary>스트림 끝(원격 닫힘)을 알리고 래치한다. 대기 중인 읽기를 세마포어로 풀어 0 반환으로 이끈다.</summary>
+    public void Complete()
+    {
+        _eof = true;
+        _readAvailable.Release(1024);
+    }
 
     /// <summary>이후 쓰기를 게이트가 풀릴 때까지 막는다.</summary>
     public void BlockWrites()
@@ -77,6 +88,12 @@ internal sealed class FakeByteChannel : IByteChannel
 
     public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        // 래치된 EOF 를 이미 드레인했으면 즉시 재전달(실제 스트림의 반복 0 반환과 일치).
+        if (_eof && _readQueue.IsEmpty)
+        {
+            return 0;
+        }
+
         await _readAvailable.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         if (_readQueue.TryDequeue(out byte value))

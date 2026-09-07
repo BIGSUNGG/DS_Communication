@@ -245,8 +245,9 @@ public class MessagePipelineTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("bad"));
 
         await pipeline.SendAndFlushAsync("good"); // 이후 메시지는 정상 송신.
-        await Task.Delay(50); // 뒤늦은 끊김 통지가 없는지 흡수.
 
+        // 끊김 부재는 결정적: 격리 경로는 fault 관측 전 동기 확정되고, "good" 송신 완료 자체가
+        // 파이프라인 생존 증명(정지 시 fault)이다. 잠자는 수신 루프 외 비동기 끊김원이 없다.
         Assert.Null(reason); // 직렬화 실패는 끊김으로 격상되지 않는다.
         byte[] write = Assert.Single(channel.Writes); // 실패한 항목의 바이트는 와이어에 없음.
         Assert.Equal("good", Encoding.UTF8.GetString(write.AsSpan(4))); // 4바이트 길이 헤더 이후.
@@ -342,8 +343,9 @@ public class MessagePipelineTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("x"));
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("y")); // 루프 생존 — 다음 항목도 처리됨.
-        await Task.Delay(50);
 
+        // 두 번째 fault 관측은 송신 루프가 x·y 모두를 지나쳤음의 결정적 증명 —
+        // 끊김이었으면 flush fault 전에 동기 통지됐다. 잠자는 수신 루프 외 비동기 끊김원 없음.
         Assert.Null(reason);
         Assert.Empty(channel.Writes);
     }
@@ -377,8 +379,9 @@ public class MessagePipelineTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => pipeline.SendAndFlushAsync("bad"));
 
         await pipeline.SendAndFlushAsync("good");
-        await Task.Delay(50);
 
+        // 결정적 부재 증명: "good" 완송 완료 = 파이프라인 생존(정지 시 fault),
+        // 격리 결정은 fault 관측 전 동기 확정. 비동기 끊김원은 잠자는 수신 콜백 외 없다.
         Assert.Null(reason);
         (byte[] Payload, SendOptions? Options) sent = Assert.Single(channel.Sent);
         Assert.Equal("good", Encoding.UTF8.GetString(sent.Payload));
@@ -397,8 +400,8 @@ public class MessagePipelineTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("x"));
         await Assert.ThrowsAsync<ArgumentException>(() => pipeline.SendAndFlushAsync("y")); // 루프 생존.
-        await Task.Delay(50);
 
+        // 두 번째 fault 관측 = 루프가 두 항목 모두 통과의 결정적 증명.
         Assert.Null(reason);
         Assert.Empty(channel.Sent); // 빈 페이로드는 채널까지 가지 않는다.
     }

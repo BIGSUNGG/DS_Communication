@@ -205,17 +205,29 @@ public class TcpLoopbackTests
     [Fact]
     public async Task Connect_ToClosedPort_ReturnsFalse()
     {
-        // 임시 포트 하나를 열었다 닫아 "아무도 안 듣는 포트"를 만든다.
-        using (var placeholder = new TcpListener(IPAddress.Loopback, 0))
+        // 임시 포트를 열었다 닫아 "아무도 안 듣는 포트"를 만든다. 창 안에 다른 프로세스가
+        // 그 포트를 선점해 연결이 성공하면(이론상 가능) 새 포트로 재시도 — false 판정은
+        // 항상 검증된 빈 포트에 대해서만 내린다.
+        for (int attempt = 0; attempt < 5; attempt++)
         {
-            placeholder.Start();
-            int closedPort = ((IPEndPoint)placeholder.LocalEndpoint!).Port;
-            placeholder.Stop();
+            int closedPort;
+            using (var placeholder = new TcpListener(IPAddress.Loopback, 0))
+            {
+                placeholder.Start();
+                closedPort = ((IPEndPoint)placeholder.LocalEndpoint!).Port;
+            } // Dispose가 리스너를 닫는다 — 닫힌 직후 connect해 창 최소화.
 
             var connector = new TcpConnector();
-            Assert.False(await connector.ConnectAsync("127.0.0.1", closedPort));
-            Assert.Null(connector.Channel);
+            if (!await connector.ConnectAsync("127.0.0.1", closedPort))
+            {
+                Assert.Null(connector.Channel);
+                return;
+            }
+
+            connector.Channel?.Dispose(); // 극히 드문 선점 — 다음 포트로 재시도.
         }
+
+        Assert.Fail("연속 5회 포트 선점 — 빈 포트 확보 실패");
     }
 
     [Fact]

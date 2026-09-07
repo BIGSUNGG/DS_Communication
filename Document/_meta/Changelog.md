@@ -10,6 +10,13 @@ updated: 2026-09-08
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-08 (사이클 2 — 테스트 인프라 품질)
+
+- **감사 원장 잔여 테스트 인프라 3건 해소(제품 코드 무변경, 110건 동일 통과)**
+  - `FakeByteChannel` **EOF 래치** — `Complete()`가 EOF를 걸고 이후 `Feed`는 폐기, 드레인된 EOF는 `ReadAsync`가 즉시 0 재전달(실제 스트림 반복 EOF와 일치). 기존 테스트는 모두 Feed-then-Complete 순서라 무영향 확인
+  - 「끊김 부재」 증명의 **결정적 강건화** — 4개 테스트의 `Task.Delay(50)+Assert.Null`을 제거: 격리 결정은 fault 관측 전 동기 확정, 후속 송신 완료 자체가 파이프라인 생존 증명(정지 시 fault), 잠자는 수신 루프 외 비동기 끊김원 없음을 근거로 즉시 단언
+  - `Connect_ToClosedPort_ReturnsFalse` **경쟁 완화** — placeholder 포트 선점 시(이론상) 새 포트로 최대 5회 재시도해 false 판정을 항상 검증된 빈 포트에 대해서만 내리고, Dispose 직후 connect로 창 최소화
+
 ## 2026-09-08
 
 - **감사 원장 잔여 문서-코드 불일치 정리** — [[../02-Architecture/Components|Components]]가 존재하지 않는 `IConnector`/`IListener` 인터페이스를 계약 타입으로 나열한 것을 실제 공개 API(스택별 구체 `TcpConnector`·`TcpListener`·`RudpConnector`·`RudpListener`)로 수정하고 TCP_IOCP 절에 「후속 — 미구현」 표기. ADR [[0001-transport-channel-abstraction|0001]] Decision 3·[[0002-tcp-backend-selection|0002]] Decision 5에 3분할 출하(TCP 2.0.0, RUDP)에 따른 **amended 각주** 추가(근거 [[0007-rudp-three-way-split-and-polling|ADR 0007]]), [[0003-connection-lifecycle-options|ADR 0003]] `DisconnectReason` 목록에 `Timeout`·`FlowControl` 보강
