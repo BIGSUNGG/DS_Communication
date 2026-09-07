@@ -20,11 +20,11 @@ updated: 2026-09-08
 4. Communication.Network.RUDP  (LiteNetLib — [[0005-rudp-litenetlib-interim]],
    Shared/Server/Client 3분할·폴링 스레드 1개 — [[0007-rudp-three-way-split-and-polling]])  ✅
    → Test (RUDP) + Sandbox/Chat.RUDP                           ✅
-5. Communication.Network.TCP_IOCP
+5. Communication.Network.TCP_IOCP  ← **보류** (2026-09-08)
    → Test (TCP_IOCP) + Sandbox/Chat.TCP_IOCP
 ```
 
-현재: **1~4단계 완료** (테스트 110 통과). 다음은 5단계 TCP_IOCP.
+현재: **1~4단계 완료** (테스트 110 통과). 5단계 TCP_IOCP는 **니즈 확인 전까지 보류**한다(2026-09-08 사용자 결정) — 기존 TCP 스택도 .NET 비동기 소켓(IOCP 기반) 위에서 돌므로 순수 이점이 불명확하다. 실측 니즈·벤치마크 근거가 확보되면 재검토.
 
 IPC·자체 RUDP 교체는 이 로드맵 **이후**.
 
