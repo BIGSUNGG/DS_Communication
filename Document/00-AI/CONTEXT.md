@@ -63,6 +63,7 @@ updated: 2026-09-09
 ## 관련 노트
 
 - 사람용 시작: [[../01-Overview/Home|Home]]
+- 5개 영역 전수 스캔 감사(2026-09-09): [[../01-Overview/Audit-Full-Scan|Audit-Full-Scan]]
 - 상위(DS_RPC) 활용 제안: [[../01-Overview/Proposals-Upstream|Proposals-Upstream]]
 - 기능 스펙(이어받을 레거시 기능): [[../01-Overview/Feature-Spec|Feature-Spec]]
 - 사용 예시: [[../04-Guides/Getting-Started|Getting-Started]]
