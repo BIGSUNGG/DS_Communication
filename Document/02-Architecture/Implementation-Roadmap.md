@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, roadmap]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # Implementation Roadmap
@@ -24,7 +24,7 @@ updated: 2026-09-05
    → Test (TCP_IOCP) + Sandbox/Chat.TCP_IOCP
 ```
 
-현재: **1~4단계 완료** (테스트 107 통과). 다음은 5단계 TCP_IOCP.
+현재: **1~4단계 완료** (테스트 110 통과). 다음은 5단계 TCP_IOCP.
 
 IPC·자체 RUDP 교체는 이 로드맵 **이후**.
 

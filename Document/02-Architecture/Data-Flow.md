@@ -2,6 +2,7 @@
 project: DS_Communication
 type: architecture
 status: draft
+updated: 2026-09-08
 tags: [architecture, data-flow]
 updated: 2026-09-05
 ---
@@ -19,7 +20,7 @@ updated: 2026-09-05
 ```mermaid
 stateDiagram-v2
   [*] --> Connected
-  Connected --> Disconnected: EOF Remote or Error or Local Disconnect
+  Connected --> Disconnected: EOF Remote / Error / Timeout / Local Disconnect / FlowControl
   Disconnected --> [*]
 ```
 
@@ -63,7 +64,7 @@ RUDP:
 | 상황 | 동작 |
 | ------ | ------ |
 | Connect 실패 | `false` |
-| 수신 끊김 | `Disconnected(Remote)` 또는 `Error` |
+| 수신 끊김 | `Disconnected(Remote)`·`Error`·`Timeout`(프레임 완료 마감 초과)·`FlowControl`(수신 큐 상한 초과) |
 | `Disconnect()` | `Disconnected(Local)` |
 | 앱 재접속 | 새 Session — 라이브러리 이벤트 없음 |
 

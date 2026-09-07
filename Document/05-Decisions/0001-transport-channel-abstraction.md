@@ -3,14 +3,14 @@ project: DS_Communication
 type: adr
 status: draft
 tags: [adr, architecture, transport, ipc]
-updated: 2026-07-11
+updated: 2026-09-08
 ---
 
 # ADR 0001: Transport channel abstraction
 
 ## Status
 
-Accepted
+Accepted — 단, Decision 3은 **amended**(스택당 1 패키지 → TCP·RUDP 3분할, [[0007-rudp-three-way-split-and-polling]])
 
 ## Context
 
@@ -32,6 +32,7 @@ Accepted
    - `ISharedMemoryChannel` — 후속 Shared Memory (인터페이스 예약)
 2. **메시지 파이프라인은 Shared**에 한 번만 둔다. 스트림 전송은 `LengthPrefixFramer`를 공유한다.
 3. **스택당 NuGet 1개**: 지금 `Network.TCP`, `Network.TCP_IOCP`, `Network.RUDP`; 후속 `IPC.Stream`, `IPC.SharedMemory`.
+   > **수정(2026-09-08)**: 폐기 — TCP·RUDP는 Client/Server/Shared **3분할**로 출하했다(TCP 2.0.0, RUDP). 근거: [[0007-rudp-three-way-split-and-polling]]. TCP_IOCP·IPC는 1 패키지 유지.
 4. **앱 공개면은 `ISession` / Connector / Listener**. Channel은 전송 패키지 내부·고급 확장용.
 5. **직렬화는 Shared에 구현하지 않는다.** `IMessageConverter`는 `IBufferWriter` Serialize + `ReadOnlySpan` Deserialize ([[0006-session-ownership-and-converter]]).
 6. **Session은 앱이 Channel 위에 생성**한다. Connector/Listener는 연결만 담당.

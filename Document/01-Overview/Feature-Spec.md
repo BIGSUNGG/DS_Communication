@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, feature-spec]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # Feature Spec — 레거시에서 이어받을 기능 명세
@@ -30,7 +30,7 @@ updated: 2026-09-05
 | ---- | ------ | ------ |
 | F2-1 | 큐잉 송신 | `SendAsync(message, SendOptions?)` — fire-and-forget 큐잉 |
 | F2-2 | 완료 대기 송신 | `SendAndFlushAsync` — 큐잉 후 **wire 기록까지** await |
-| F2-3 | 끊김 통지 | `Disconnected(DisconnectedEventArgs)` 1회. `Reason = Local / Remote / Error`, Error면 `Exception` 포함 (ADR 0003, [[../05-Decisions/0003-connection-lifecycle-options]]) |
+| F2-3 | 끊김 통지 | `Disconnected(DisconnectedEventArgs)` 1회. `Reason = Local / Remote / Error / Timeout / FlowControl`. Error는 원인 예외, TCP 경로 Timeout(`TimeoutException`)·FlowControl(`InvalidOperationException`)도 예외 포함 (ADR 0003, [[../05-Decisions/0003-connection-lifecycle-options]]) |
 | F2-4 | 연결 상태 | `IsConnected()` = 로컬 끊김 플래그 AND transport 상태 |
 | F2-5 | 명시 끊김 | `Disconnect()` — 로컬 주도, `Reason=Local` 통지 |
 | F2-6 | 리소스 정리·끊김 후 송신 | Session/파이프라인 Dispose; 끊김·Dispose 후 송신은 **예외로 완료된 Task** 반환 (동기 throw 아님) |
@@ -98,11 +98,11 @@ updated: 2026-09-05
 | F1-1·F1-2·F1-6 TCP 연결·수락·취소 | 구현 — `TcpConnector`·`TcpListener`, loopback 테스트 통과 |
 | F1-4·F1-5 RUDP 연결·수락 | 구현 — `RudpConnector`·`RudpListener`(연결 키·`MaxConnections` 슬롯 예약), loopback 테스트 통과 |
 | F2 세션 수명·송신 (F2-1~F2-6) | 구현 — 끊김 후 송신 faulted Task 포함. RUDP는 `RudpSession`이 peer 끊김 통지를 `Disconnected`로 이어 붙임 |
-| F3 메시지 파이프라인 (F3-1~F3-9) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리. `IMessageChannel` 경로(F3-2 프레이밍 제외) RUDP에서 사용 |
+| F3 메시지 파이프라인 (F3-1~F3-10) | 구현 — `IBufferWriter` Converter, 백프레셔 대기, 핸들러 예외 격리, 직렬화 실패 항목 격리. `IMessageChannel` 경로(F3-2 프레이밍 제외) RUDP에서 사용 |
 | F4-1 TCP keep-alive | 구현 — Windows IOControl / Unix 원시 옵션, 미지원 필드 무시 |
 | F4-2~F4-5 RUDP 전송 옵션·분배·poll·MTU 가드 | 구현 — `RudpSendOptions`/`RudpDeliveryMethod` 5방식 왕복 테스트, 폴링 스레드 1개, 분할 불가 방식 MTU 초과 `ArgumentException` 테스트 |
 | F5 플랫폼·패키지 | 구현 — netstandard2.1, TCP·RUDP 3분할, `IByteChannel`+`IMessageChannel` |
-| F6 검증 (Shared·TCP·RUDP 범위) | 충족 — `Test/Communication.Tests` **71건 통과**(Shared·TCP 66 + RUDP loopback 5), `Sandbox/Chat.TCP`·`Sandbox/Chat.RUDP`(`--selftest` 5/5 왕복, exit 0) 실행 확인 |
+| F6 검증 (Shared·TCP·RUDP 범위) | 충족 — `Test/Communication.Tests` **110건 통과**, `Sandbox/Chat.TCP`·`Sandbox/Chat.RUDP`(`--selftest` 5/5 왕복, exit 0) 실행 확인 |
 | F1-3 (TCP_IOCP), F4-1의 IOCP keep-alive | 미착수 — 로드맵 5단계 |
 
 ## 관련

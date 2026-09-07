@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, components]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # Components
@@ -16,8 +16,6 @@ updated: 2026-09-05
 
 | 타입 | 책임 |
 | ------ | ------ |
-| `IConnector` | `ConnectAsync` → `bool`, 성공 시 `Channel` 노출. Session은 만들지 않음. |
-| `IListener` | Accept 시 Channel 콜백. Session은 앱이 생성. |
 | `ISession` | Send / Disconnect / IsConnected / `Disconnected(DisconnectReason)`. |
 | `Session` | 앱이 `new`. Pipeline 소유. |
 | `DisconnectReason` | `Local` \| `Remote` \| `Error` \| `Timeout` \| `FlowControl`. |
@@ -26,6 +24,8 @@ updated: 2026-09-05
 | `SendOptions` | 송신 부가 옵션 기반 타입. |
 
 이벤트: **`Disconnected`만** (재접속 이벤트 없음 — [[0003-connection-lifecycle-options]]).
+
+Connector/Listener는 **공용 인터페이스가 없다** — 각 스택 패키지의 구체 타입(`TcpConnector`·`TcpListener`, `RudpConnector`·`RudpListener`)이 같은 사용 패턴(`ConnectAsync` → `bool` + `Channel`, `Accepted(Channel)`)을 따른다. 인터페이스 도입 없이 구체 타입 직접 노출 — [[0001-transport-channel-abstraction]] Decision 4.
 
 ## Shared — 메시지
 
@@ -66,7 +66,7 @@ updated: 2026-09-05
 | `SocketKeepAliveOptions` | OS TCP keep-alive (사용자 설정). |
 | `StreamByteChannel` | `NetworkStream` → `IByteChannel`. Dispose 훅으로 리스너 연결 수 회수. |
 
-## Network.TCP_IOCP
+## Network.TCP_IOCP (후속 — 로드맵 5단계, 미구현)
 
 | 타입 | 책임 |
 | ------ | ------ |

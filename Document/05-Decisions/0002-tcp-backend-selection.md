@@ -3,14 +3,14 @@ project: DS_Communication
 type: adr
 status: draft
 tags: [adr, architecture, tcp, iocp]
-updated: 2026-07-11
+updated: 2026-09-08
 ---
 
 # ADR 0002: TCP and TCP_IOCP as separate stacks
 
 ## Status
 
-Accepted (supersedes earlier draft that merged Stream/IOCP into one TCP package)
+Accepted (supersedes earlier draft that merged Stream/IOCP into one TCP package) — 단, Decision 5는 **amended**(3분할 금지 → TCP·RUDP 3분할, [[0007-rudp-three-way-split-and-polling]])
 
 ## Context
 
@@ -25,6 +25,7 @@ TCP(`NetworkStream`)와 TCP_IOCP(`SocketAsyncEventArgs`)는 프레이밍·세션
 3. 둘 다 **`IByteChannel` + Shared `LengthPrefixFramer` + `MessagePipeline`**을 사용한다. 바이트 채널 구현만 패키지 내부에 둔다.
 4. 소비자는 참조할 NuGet으로 스택을 고른다. 런타임 Backend 스위치는 없다.
 5. Client/Server/Shared **3분할은 하지 않는다** — 스택(전송)당 NuGet 1개.
+   > **수정(2026-09-08)**: 폐기 — TCP·RUDP는 Client/Server/Shared **3분할**로 출하했다(TCP 2.0.0, RUDP). 근거·네임스페이스 단일화 규칙: [[0007-rudp-three-way-split-and-polling]]. TCP_IOCP는 1 패키지 유지.
 
 ## Consequences
 

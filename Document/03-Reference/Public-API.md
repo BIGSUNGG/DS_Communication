@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, api]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # Public API
@@ -15,8 +15,8 @@ updated: 2026-09-05
 ```text
 // Client
 Task<bool> ConnectAsync(..., CancellationToken cancellationToken = default);
-IByteChannel Channel { get; }     // TCP / TCP_IOCP — Connect 성공 후
-IMessageChannel Channel { get; }  // RUDP — Connect 성공 후
+IByteChannel? Channel { get; }     // TCP / TCP_IOCP — Connect 성공 후
+IMessageChannel? Channel { get; }  // RUDP — Connect 성공 후
 
 // 앱
 if (!await connector.ConnectAsync(host, port)) return;
@@ -66,7 +66,7 @@ bool IsConnected();
 
 event EventHandler<DisconnectedEventArgs> Disconnected;
 // DisconnectedEventArgs.Reason: DisconnectReason { Local, Remote, Error, Timeout, FlowControl }
-// DisconnectedEventArgs.Exception? (Error·Timeout·FlowControl일 때)
+// DisconnectedEventArgs.Exception? (Error·FlowControl·TCP 경로 Timeout일 때; RUDP 전송 끊김 통지는 null)
 ```
 
 **재접속 이벤트 없음.** 앱이 `Disconnected` 후 `ConnectAsync` + `new Session`.

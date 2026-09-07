@@ -3,12 +3,18 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-09-05
+updated: 2026-09-08
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-08
+
+- **감사 원장 잔여 문서-코드 불일치 정리** — [[../02-Architecture/Components|Components]]가 존재하지 않는 `IConnector`/`IListener` 인터페이스를 계약 타입으로 나열한 것을 실제 공개 API(스택별 구체 `TcpConnector`·`TcpListener`·`RudpConnector`·`RudpListener`)로 수정하고 TCP_IOCP 절에 「후속 — 미구현」 표기. ADR [[0001-transport-channel-abstraction|0001]] Decision 3·[[0002-tcp-backend-selection|0002]] Decision 5에 3분할 출하(TCP 2.0.0, RUDP)에 따른 **amended 각주** 추가(근거 [[0007-rudp-three-way-split-and-polling|ADR 0007]]), [[0003-connection-lifecycle-options|ADR 0003]] `DisconnectReason` 목록에 `Timeout`·`FlowControl` 보강
+- **`DisconnectedEventArgs.Exception` XML 문서 사실 보정** — TCP 바이트 채널 경로는 `Timeout`(`TimeoutException`)·`FlowControl`(`InvalidOperationException`)도 예외를 실으나 RUDP 전송 끊김 통지는 `null`임을 명시 (동작 변경 없음, `MessagePipeline`·`RudpSession` 코드 확인) → [[../03-Reference/Public-API|Public-API]]·[[../01-Overview/Feature-Spec|Feature-Spec]](F2-3) 동기화
+- **테스트 수 통일** — Roadmap 107 → **110**(실측), Feature-Spec 구현 상태 71 → 110, F3 범위 F3-1~F3-10으로 갱신 → [[../02-Architecture/Data-Flow|Data-Flow]] 상태 다이어그램·종료 표에 `Timeout`·`FlowControl` 반영, [[../00-AI/GLOSSARY|GLOSSARY]] `DisconnectReason` 행 보강
 
 ## 2026-09-05 (후반 31)
 

@@ -3,7 +3,7 @@ project: DS_Communication
 type: adr
 status: draft
 tags: [adr, architecture, lifecycle, disconnect]
-updated: 2026-07-11
+updated: 2026-09-08
 ---
 
 # ADR 0003: Disconnect detection and TCP keep-alive options
@@ -27,6 +27,8 @@ Accepted (하트비트·재접속은 앱 책임; 라이브러리는 끊김 통�
    - `Local` — 앱/Session `Disconnect()` 호출
    - `Remote` — 상대 종료·정상 FIN 등
    - `Error` — 예외·프레이밍 오류 등 (선택: `Exception?` 인자)
+   - `Timeout` — 수신 프레임 완료 마감(`FrameTimeout`) 초과 (추가 — 슬로로리스 방어)
+   - `FlowControl` — 수신 큐 상한 도달 실폐쇄 단절 (추가 — `IMessageChannel` 경로)
 3. **하트비트 — 앱 책임** (일반 메시지 + 앱 타이머)
 4. **재접속 — 앱 책임**
    - `Disconnected` 구독 → 백오프 → `ConnectAsync` → `new *Session(...)` → (서버) 핸드셰이크/토큰
