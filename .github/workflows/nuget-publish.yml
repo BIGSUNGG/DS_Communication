@@ -17,6 +17,8 @@ jobs:
       - name: Checkout
         # actions/checkout v6.1.0
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # zizmor:artipacked — 이 잡은 git 자격증명을 쓰지 않는다
 
       - name: Setup .NET
         # actions/setup-dotnet v5.4.0
@@ -45,6 +47,8 @@ jobs:
       - name: Checkout
         # actions/checkout v6.1.0
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # zizmor:artipacked — 이 잡은 git 자격증명을 쓰지 않는다
 
       - name: Setup .NET
         # actions/setup-dotnet v5.4.0
@@ -61,16 +65,17 @@ jobs:
           echo "Publishing version: $VERSION (tag: $TAG)"
 
       - name: Pack (Source libraries only)
+        env: # zizmor:template-injection — run 확장 대신 env 경유
+          OUT_DIR: ${{ github.workspace }}/artifacts
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          OUT="${{ github.workspace }}/artifacts"
-          mkdir -p "$OUT"
-          VER="${{ steps.ver.outputs.version }}"
+          mkdir -p "$OUT_DIR"
           for proj in \
             Source/Communication.Shared/Communication.Shared.csproj
           do
             dotnet pack "$proj" \
               -c Release \
-              -o "$OUT" \
+              -o "$OUT_DIR" \
               -p:Version="$VER" \
               -p:PackageVersion="$VER" \
               --verbosity minimal
@@ -97,6 +102,8 @@ jobs:
       - name: Checkout
         # actions/checkout v6.1.0
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # zizmor:artipacked
 
       - name: Setup .NET
         # actions/setup-dotnet v5.4.0
@@ -113,10 +120,11 @@ jobs:
           echo "Publishing version: $VERSION (tag: $TAG)"
 
       - name: Pack (TCP libraries only)
+        env: # zizmor:template-injection — run 확장 대신 env 경유
+          OUT_DIR: ${{ github.workspace }}/artifacts
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          OUT="${{ github.workspace }}/artifacts"
-          mkdir -p "$OUT"
-          VER="${{ steps.ver.outputs.version }}"
+          mkdir -p "$OUT_DIR"
           PROJS="Source/Communication.Network.TCP.Shared"
           PROJS="$PROJS Source/Communication.Network.TCP.Server"
           PROJS="$PROJS Source/Communication.Network.TCP.Client"
@@ -124,7 +132,7 @@ jobs:
           do
             dotnet pack "$dir/${dir##*/}.csproj" \
               -c Release \
-              -o "$OUT" \
+              -o "$OUT_DIR" \
               -p:Version="$VER" \
               -p:PackageVersion="$VER" \
               --verbosity minimal
@@ -151,6 +159,8 @@ jobs:
       - name: Checkout
         # actions/checkout v6.1.0
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # zizmor:artipacked
 
       - name: Setup .NET
         # actions/setup-dotnet v5.4.0
@@ -167,10 +177,11 @@ jobs:
           echo "Publishing version: $VERSION (tag: $TAG)"
 
       - name: Pack (RUDP libraries only)
+        env: # zizmor:template-injection — run 확장 대신 env 경유
+          OUT_DIR: ${{ github.workspace }}/artifacts
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          OUT="${{ github.workspace }}/artifacts"
-          mkdir -p "$OUT"
-          VER="${{ steps.ver.outputs.version }}"
+          mkdir -p "$OUT_DIR"
           PROJS="Source/Communication.Network.RUDP.Shared"
           PROJS="$PROJS Source/Communication.Network.RUDP.Server"
           PROJS="$PROJS Source/Communication.Network.RUDP.Client"
@@ -178,7 +189,7 @@ jobs:
           do
             dotnet pack "$dir/${dir##*/}.csproj" \
               -c Release \
-              -o "$OUT" \
+              -o "$OUT_DIR" \
               -p:Version="$VER" \
               -p:PackageVersion="$VER" \
               --verbosity minimal

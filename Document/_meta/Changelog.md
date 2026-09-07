@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 16 — 배포 파이프라인 보안 경화)
+
+- **워크플로 시크릿 처리 경화(zizmor 전수 스캔 기반)** — 전 기계 스캔(lens full: jscpd·madge·gitleaks 무결정, zizmor 실결과)에서 나온 배포 파이프라인 소급: ①`persist-credentials: false` 전 5 checkout(nuget-publish 4·ci 1) — 잡이 git 자격증명을 쓰지 않으므로 지속 금지 ②`template-injection` 3곳(pack 단계 `${{ }}` run 확장 → env 경유로 간접화). YAML 유효성·게이트(130/130) 통과. **[보류]** `use-trusted-publishing`(OIDC)은 NuGet.org 측 신뢰 게시 설정 필요 → [[../00-AI/PENDING|PENDING]] — 제품 코드·패키지 무변경(다음 태그부터 적용)
+
 ## 2026-09-09 (릴리스 2.3.1 — 패키지 랜딩 페이지 보안 동기화)
 
 - **README 전송 보안 절 추가 + 2.3.1 배포(patch)** — 루트 README는 `Source/Directory.Build.props`가 모든 nupkg에 링크하는 **패키지 랜딩 페이지**인데 TLS·CRC32c 언급이 전혀 없었다(소비자 도달성 공백 — 문서-코드 불일치). TCP TLS·RUDP CRC32c·기본 키 경고 요약 절 추가 후 패키지 내 README 반영(nupkg 압축 확인)·커밋 `f44cfb4` → 태그 ×3 → Actions 4건 전부 성공. 직전 반복의 “출시 불가” 판정 정정: Source/ 불변이어도 패키지 콘텐츠(README) 변경은 소비자 가시 단위다

@@ -15,6 +15,8 @@ jobs:
       - name: Checkout
         # actions/checkout v6.1.0
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false # zizmor:artipacked — 이 잡은 git 자격증명을 쓰지 않는다
 
       - name: Setup .NET
         # actions/setup-dotnet v5.4.0
