@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 11 — 상위 제안 노트)
+
+- **[[../01-Overview/Proposals-Upstream|Proposals-Upstream]] 신규** — 스펙 개선 영역 5 의무 절차(상위 활용 제안 기록, 상위 저장소는 미수정): P1 TCP TLS 옵션 통과(TLS 1.3 `Accepted` 주의 포함), P2 RUDP CRC32c 양단 일괄 설정, P3 연결·프레임 타임아웃 정책 통일, P4 `ActiveConnectionCount`·`DisconnectReason.FlowControl` 운영 신호 소비. [[../00-AI/CONTEXT|CONTEXT]] 관련 노트에 링크
+
 ## 2026-09-09 (릴리스 2.3.0)
 
 - **패키지 2.3.0 배포(minor)** — 2.2.1 이후 단위: RUDP 기본 연결 키 시작 경고(운영자 가시 진단 — 키 값 미노출) + 송션 경로 검증·격리 통합(동작 보존 구조). 커밋 `cec704b` → 태그 `v2.3.0`·`tcp/v2.3.0`·`rudp/v2.3.0` → Actions 4건 전부 성공. [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 표기 갱신
