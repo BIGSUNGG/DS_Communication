@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using Communication.Shared.Channels;
 using Communication.Shared.Messages;
@@ -307,5 +308,39 @@ internal sealed class UnattachedTestSession : Session
     public UnattachedTestSession(IByteChannel channel)
         : base(channel)
     {
+    }
+}
+
+/// <summary>Trace 출력을 수집하는 수신기(시작 경고 검증용) — 추가 후 반드시 제거해야 한다(전역 상태).</summary>
+internal sealed class TraceCapture : TraceListener
+{
+    private readonly List<string> _messages = new();
+
+    public IReadOnlyList<string> Messages
+    {
+        get
+        {
+            lock (_messages)
+            {
+                return _messages.ToList();
+            }
+        }
+    }
+
+    public override void Write(string? message) => Add(message);
+
+    public override void WriteLine(string? message) => Add(message);
+
+    private void Add(string? message)
+    {
+        if (message is null)
+        {
+            return;
+        }
+
+        lock (_messages)
+        {
+            _messages.Add(message);
+        }
     }
 }

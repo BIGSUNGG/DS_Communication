@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 8 — 기본 키 시작 경고)
+
+- **RUDP 기본 연결 키 시작 경고** — `RudpListener.Start`가 공개 상수 기본 키로 시작되면 Trace 경고를 남긴다(문서 전용이던 ⚠️ 위험을 운영자 가시 신호로 전환). 키 값 자체는 미노출(시크릿 처리). 테스트 +1(121→122, `TraceCapture` 더블): 기본 키 경고 발생·커스텀 키 무경고·키 값 미노출. [[../04-Guides/Security|Security]]·[[../03-Reference/Configuration|Configuration]] ConnectionKey 행 갱신
+
 ## 2026-09-09 (릴리스 2.2.1)
 
 - **패키지 2.2.1 배포(patch)** — 2.2.0 이후 내부 수정 2단위: 프레이머 지연 컴팩트(핫패스 O(N²) 복사 제거) + 네트워크 테스트 순차 실행(결정성). 사용법·기능 무변화. 7개 패키지 통일 bump → 커밋 `b91af87` → 태그 `v2.2.1`·`tcp/v2.2.1`·`rudp/v2.2.1` → Actions 4건 전부 성공. [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 표기 갱신

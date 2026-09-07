@@ -50,7 +50,7 @@ updated: 2026-09-09
 | ✅ 옵션 | `MaxFrameLength`(기본 4MB, 절대 상한 64MB) — 수신 메모리 증폭 방어. 바이트 경로는 프레이머, **메시지 단위 채널(RUDP)은 역직렬화 전 거부**(LiteNetLib 재조립 자체 상한 ≒90MB) |
 | ✅ 옵션 | `MaxConnections` — 연결 고갈 방어. TCP는 수락 후 즉시 닫음, **RUDP는 접속 요청 시점에 슬롯을 예약**해 같은 폴링 배치의 다수 요청이 상한을 함께 넘지 못하게 하고 `Reject()` |
 | ✅ 옵션 | RUDP `DisconnectTimeout`(기본 5000ms) — UDP는 스트림 끝이 없어 **half-open 감지의 유일한 신호**. 앱 하트비트와 별개 |
-| ⚠️ 기본값 주의 | RUDP `ConnectionKey` 기본값(`"DS_Communication.RUDP"`)은 **공개 상수**다 — 그대로 두면 키 검증이 사실상 방어 역할을 못 하므로 공개망에서는 앱별 값으로 교체해야 한다(인증 대체는 아님) |
+| ⚠️ 기본값 주의 | RUDP `ConnectionKey` 기본값(`"DS_Communication.RUDP"`)은 **공개 상수**다 — 그대로 두면 키 검증이 사실상 방어 역할을 못 하므로 공개망에서는 앱별 값으로 교체해야 한다(인증 대체는 아님). **기본 키로 서버 시작 시 Trace 경고**가 남는다(키 값 자체는 미노출 — 시크릿 처리) |
 | ✅ 구조 | RUDP 분할 불가 전송 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)의 MTU 초과 송신은 와이어에 나가기 전에 `ArgumentException`으로 거부 — 조용한 유실 없음. 단 이 예외는 **세션을 `Disconnected(Error)`로 끊는다**(자기 자신에 대한 서비스 거부 가능성이 있으므로 메시지 크기 상한은 앱이 관리) |
 | ✅ 구조 | 수신 버퍼는 누적 데이터 기준 성장(선언 길이 선할당 없음) |
 | ✅ 구조 | 변형 프레임(길이 0·음수·상한 초과) 수신 시 `InvalidDataException` → 단절(fail-closed) |

@@ -1034,6 +1034,36 @@ public class RudpLoopbackTests
     }
 
     /// <summary>
+    /// 기본 연결 키로 서버를 시작하면 시작 경고가 Trace에 남는다(공개 상수 — 교체 유도).
+    /// 커스텀 키로는 경고가 없고, 경로 어디에도 키 값 자체는 노출되지 않는다(시크릿 처리).
+    /// </summary>
+    [Fact]
+    public void DefaultConnectionKey_WarnsAtListenerStart_WithoutLeakingKey()
+    {
+        var capture = new TraceCapture();
+        Trace.Listeners.Add(capture);
+        try
+        {
+            using (var defaultListener = new RudpListener(IPAddress.Loopback, 0))
+            {
+                defaultListener.Start(); // 기본 키
+            }
+
+            using (var customListener = new RudpListener(IPAddress.Loopback, 0))
+            {
+                customListener.Start(new RudpTransportOptions { ConnectionKey = "app-secret-1" });
+            }
+
+            Assert.Contains(capture.Messages, m => m.Contains("공개 기본값"));
+            Assert.DoesNotContain(capture.Messages, m => m.Contains("app-secret-1")); // 키 값 노출 금지
+        }
+        finally
+        {
+            Trace.Listeners.Remove(capture); // 전역 리스너 — 반드시 회수
+        }
+    }
+
+    /// <summary>
     /// LiteNetLib 2.1.4 접속 요청 패킷 구성: [0]=ConnectRequest(6)·connectNum 0,
     /// [1..4]=프로토콜 ID 13, [5..12]=connectTime, [13..16]=peerId,
     /// [17]=주소 크기, [18..]=IPv4 SocketAddress, 뒤에 키 문자열(ushort 길이+1, UTF-8).

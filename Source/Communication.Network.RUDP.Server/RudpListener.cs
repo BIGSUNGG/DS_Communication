@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using Communication.Shared.Channels;
 
@@ -59,6 +60,14 @@ public sealed class RudpListener : IDisposable
         {
             host.Dispose();
             throw new InvalidOperationException($"RUDP 리스너 바인딩 실패 ({_address}:{_port}).");
+        }
+
+        // 기본 연결 키는 공개 상수라 키 검증이 사실상 방어 역할을 못 한다 — 시작 시점에 운영자에게 노출한다.
+        // 키 값 자체는 로그에 남기지 않는다(시크릿 처리 원칙).
+        if ((options?.ConnectionKey ?? RudpTransportOptions.DefaultConnectionKey) == RudpTransportOptions.DefaultConnectionKey)
+        {
+            Trace.TraceWarning(
+                "RUDP 연결 키가 공개 기본값으로 시작됐습니다 — 공개망에서는 RudpTransportOptions.ConnectionKey를 앱별 값으로 교체하십시오.");
         }
 
         _host = host;
