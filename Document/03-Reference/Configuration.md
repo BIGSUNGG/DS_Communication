@@ -79,6 +79,7 @@ updated: 2026-09-09
 | `ConnectTimeout` | 클라이언트 연결 시도 상한(ms). 침묵 호스트(블랙홀)에 대한 연결 실패를 이 시간 이내에 확정 — LiteNetLib 기본은 약 5초(500ms × 10회) 고정. `null`이면 기본 유지 | `null` |
 | `ConnectionKey` | 접속 요청 검증 키. 서버는 이 키와 일치하는 요청만 수락(`AcceptIfKey`), 클라이언트는 이 키로 접속. `null`·빈 문자열 거부 | `"DS_Communication.RUDP"` |
 | `IPv6` | IPv6 소켓도 함께 바인딩 | `false` |
+| `Crc32cEnabled` | 패킷 무결성 검사(CRC32c 레이어). 송신마다 체크섬(4바이트)을 붙이고 수신은 **위반 패킷을 프로토콜 처리 전 폐기** — IPv4 UDP 체크섬이 0일 수 있어 손상 패킷이 앱까지 스며드는 것을 막는다. 위변조 **검출**뿐 방지 아님(키 없는 CRC). **양단 같은 설정 필요**(와이어 비호환). 기밀성은 없음(평문 유지) | `false` |
 
 - **poll 간격은 옵션이 아니다** — 호스트당 전용 폴링 스레드 1개가 고정 1ms 간격으로 `PollEvents()`를 드레인한다. 스레드 수는 접속 수와 무관하게 고정 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
 - `UnsyncedEvents`는 노출하지 않는다(기본 `false` 유지) — `true`면 수신 콜백이 소켓 스레드에서 실행되어 앱 코드가 한 번만 블럭해도 전체 접속의 수신이 멈춘다.

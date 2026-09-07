@@ -957,6 +957,80 @@ public class RudpLoopbackTests
         lock (accepted) Assert.Single(accepted);
     }
 
+    /// <summary>CRC32c 레이어를 켠 양단은 정상적으로 연결·양방향 왕복한다(와이어 +4바이트 경로).</summary>
+    [Fact]
+    public async Task Crc32c_Enabled_RoundTrip()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+        var options = new RudpTransportOptions { Crc32cEnabled = true };
+
+        RudpSession? serverSession = null;
+        CollectHandler? serverHandler = null;
+        listener.Accepted += channel =>
+            serverSession = new RudpSession(channel, new StringConverter(), session =>
+            {
+                serverHandler = new CollectHandler(session);
+                return serverHandler;
+            });
+        listener.Start(options);
+        int port = listener.LocalPort;
+
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port, options));
+
+        CollectHandler? clientHandler = null;
+        using var clientSession = new RudpSession(connector.Channel!, new StringConverter(), session =>
+        {
+            clientHandler = new CollectHandler(session);
+            return clientHandler;
+        });
+
+        await WaitUntilAsync(() => serverSession != null);
+
+        await clientSession.SendAndFlushAsync("ping");
+        await WaitUntilAsync(() => serverHandler?.ReceivedCount == 1);
+        Assert.Equal("ping", serverHandler!.Messages[0]);
+
+        await serverSession!.SendAndFlushAsync("pong");
+        await WaitUntilAsync(() => clientHandler?.ReceivedCount == 1);
+        Assert.Equal("pong", clientHandler!.Messages[0]);
+    }
+
+    /// <summary>
+    /// CRC32c를 켠 서버는 체크섬 없는(위반) 접속 요청 패킷을 **프로토콜 처리 전에** 폐기한다 —
+    /// 슬롯 예약이 일어나지 않으므로 고갈 없이 즉시 정상 접속이 가능하다.
+    /// </summary>
+    [Fact]
+    public async Task Crc32c_PacketWithoutChecksum_DroppedBeforeSlotReservation()
+    {
+        using var listener = new RudpListener(IPAddress.Loopback, 0);
+
+        RudpSession? serverSession = null;
+        listener.Accepted += channel =>
+            serverSession = new RudpSession(channel, new StringConverter(), s => new CollectHandler(s));
+        listener.Start(new RudpTransportOptions { MaxConnections = 1, Crc32cEnabled = true });
+        int port = listener.LocalPort;
+
+        // 수동 구성 패킷(체크섬 없음) — 손상·위조 패킷과 같은 위치에 놓인다.
+        using var attacker = new UdpClient();
+        attacker.Connect(IPAddress.Loopback, port);
+        IPEndPoint attackerEndpoint = (IPEndPoint)attacker.Client.LocalEndPoint!;
+        byte[] request = BuildConnectRequest(RudpTransportOptions.DefaultConnectionKey, attackerEndpoint);
+        await attacker.SendAsync(request, request.Length);
+
+        // 폴링 주기(1ms)보다 넉넉히 — 슬롯 예약이 일어났다면 CRC가 무시된 것이다.
+        await Task.Delay(400);
+        Assert.Equal(0, listener.ActiveConnectionCount);
+
+        // 정상(CRC 켠) 클라이언트는 즉시 접속 가능 — 고갈이 없다.
+        var connector = new RudpConnector();
+        Assert.True(await connector.ConnectAsync("127.0.0.1", port, new RudpTransportOptions { Crc32cEnabled = true }));
+        await WaitUntilAsync(() => serverSession != null);
+        Assert.Equal(1, listener.ActiveConnectionCount);
+
+        serverSession?.Dispose();
+    }
+
     /// <summary>
     /// LiteNetLib 2.1.4 접속 요청 패킷 구성: [0]=ConnectRequest(6)·connectNum 0,
     /// [1..4]=프로토콜 ID 13, [5..12]=connectTime, [13..16]=peerId,

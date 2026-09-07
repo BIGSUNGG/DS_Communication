@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using LiteNetLib;
+using LiteNetLib.Layers;
 using LiteNetLib.Utils;
 using SharedDisconnectReason = Communication.Shared.Connection.DisconnectReason;
 
@@ -41,7 +42,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     {
         _connectionKey = options?.ConnectionKey ?? RudpTransportOptions.DefaultConnectionKey;
         _maxConnections = options?.MaxConnections;
-        _manager = new NetManager(this, null)
+        _manager = new NetManager(this, options?.Crc32cEnabled == true ? new Crc32cLayer() : null)
         {
             DisconnectTimeout = options?.DisconnectTimeout ?? RudpTransportOptions.DefaultDisconnectTimeoutMs,
             IPv6Enabled = options?.IPv6 ?? false,

@@ -23,7 +23,7 @@ updated: 2026-09-09
 3. **핸드셰이크 상한 15초(기본)** — `HandshakeTimeout`. 슬로로리스(연결만 열고 ClientHello를 끌어안기) 방어. netstandard2.1 SslStream 인증 API에 취소 토큰이 없어 시간 경쟁 + 스트림 폐기로 중단한다.
 4. **서버 핸드셰이크는 수락 루프를 점유하지 않는다** — 연결별 태스크로 비동기 처리. 상한 슬롯은 수락 시점에 예약(동시 핸드셰이크 포함 상한 강제), 실패 시 핸드셰이크 태스크가·성공 시 채널 Dispose가 회수 — 정확히 1회.
 5. **검증은 기본 OS 정책** — `RemoteCertificateValidation` 콜백은 개발용 자체 서명 수용 등 커스텀 정책용. 무조건 통과 콜백은 중간자 공격을 여는 것이므로 문서에서 금지 고지.
-6. **RUDP에는 넣지 않는다** — LiteNetLib `XorEncryptLayer`는 기지평문 공격에 취약한 난독화일 뿐이라 "암호화"로 제공하지 않는다. RUDP 기밀성은 상위(TLS 유사 계층·VPN) 몫으로 남긴다.
+6. **RUDP 암호화는 넣지 않는다** — LiteNetLib `XorEncryptLayer`는 기지평문 공격에 취약한 난독화일 뿐이라 "암호화"로 제공하지 않는다. RUDP 기밀성은 상위(TLS 유사 계층·VPN) 몫으로 남긴다. **무결성(CRC32c)은 별개로 2026-09-09 후속 추가** — `RudpTransportOptions.Crc32cEnabled`(기본 `false`)로 손상·위조 패킷을 프로토콜 처리 전 폐기한다(검출 전용, 기밀성은 여전히 미제공).
 
 ## 결과
 

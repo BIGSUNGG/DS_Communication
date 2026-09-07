@@ -153,6 +153,7 @@ class RudpTransportOptions
     int DisconnectTimeout;          // 끊김 판정(ms), 기본 5000 — UDP half-open 감지의 유일한 신호
     string ConnectionKey;           // 접속 검증 키, 기본 "DS_Communication.RUDP"
     bool IPv6;                      // 기본 false (IPv4만)
+    bool Crc32cEnabled;             // 패킷 무결성(CRC32c) 검사, 기본 false — 양단 같은 설정 필요(와이어 비호환)
     int? ConnectTimeout;            // 연결 시도 상한(ms), null = LiteNetLib 기본(≈5초)
 }
 

@@ -10,6 +10,11 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 5 — RUDP 무결성)
+
+- **RUDP 패킷 무결성 검사(CRC32c) 옵션 추가** — `RudpTransportOptions.Crc32cEnabled`(기본 `false`, 양단 같은 설정 필요·와이어 비호환): 송신마다 체크섬(4바이트) 부여, 수신은 **체크섬 위반 패킷을 프로토콜 처리 전 폐기** — IPv4 UDP 체크섬이 0일 수 있어 손상 패킷이 앱까지 스며드는 것을 전송 가장자리에서 차단(위조 접속 요청은 슬롯 예약 전 폐기). 검출 전용(키 없는 CRC — 능동 공격자 재계산 가능), 기밀성·인증 없음. 테스트 2건 추가(118→120): CRC 켠 양단 왕복, 체크섬 없는 위조 접속 요청의 슬롯 예약 차단
+- [[../04-Guides/Security|Security]] RUDP 행 분리(✅ 무결성 옵션 / ❌ 기밀성 미제공), [[../03-Reference/Configuration|Configuration]]·[[../03-Reference/Public-API|Public-API]] 옵션 동기화, [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]] 결정 6 보강(암호화 거부 유지·무결성 추가)
+
 ## 2026-09-09 (릴리스 2.1.0)
 
 - **패키지 2.1.0 배포** — TCP TLS 옵션 기능(minor) 단위. 7개 패키지 버전 통일 bump → 커밋 `3c841c1` → 태그 `v2.1.0`(Shared)·`tcp/v2.1.0`(TCP 3종)·`rudp/v2.1.0`(RUDP 3종) push → Actions 4건(verify+publish×3·CI) 전부 성공. [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 버전 표기 갱신
