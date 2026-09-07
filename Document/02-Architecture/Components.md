@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, components]
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Components
@@ -60,7 +60,7 @@ Connector/Listener는 **공용 인터페이스가 없다** — 각 스택 패키
 
 | 타입 | 책임 |
 | ------ | ------ |
-| `TcpConnector` / `TcpListener` | TCP 연결·수락. 리스너는 `MaxConnections` 상한 강제 — 초과 수락 연결은 즉시 닫고 수락 계속, `ActiveConnectionCount`로 현황 노출. |
+| `TcpConnector` / `TcpListener` | TCP 연결·수락. 리스너는 `MaxConnections` 상한 강제 — 초과 수락 연결은 즉시 닫고 수락 계속, `ActiveConnectionCount`로 현황 노출. `Tls.ServerCertificate` 설정 시 수락 연결마다 TLS 핸드셰이크를 연결별 태스크로 선행 완료(실패·상한 초과는 슬롯 회수 후 조용히 폐기), 커넥터는 `Tls` 설정 시 핸드셰이크 후 채널 노출 — [[../../05-Decisions/0008-tcp-tls-sslstream | ADR 0008]]. |
 | `TcpSession` | `IByteChannel` + Framer + Pipeline. |
 | `TcpTransportOptions` | `NoDelay`·`KeepAlive`·**`MaxConnections`**(동시 수락 상한). |
 | `SocketKeepAliveOptions` | OS TCP keep-alive (사용자 설정). |

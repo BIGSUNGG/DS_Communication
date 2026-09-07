@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, api]
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Public API
@@ -48,11 +48,21 @@ class TcpTransportOptions
     bool NoDelay;                       // TCP_NODELAY, 기본 true (라이브러리 coalesce와 중복되는 Nagle 해제)
     int? MaxConnections;                // 동시 수락 상한, null = 무제한
     int? ConnectTimeout;                // 연결 시도 상한(ms), null = OS 기본(SYN 재시도 수십 초)
+    TcpTlsOptions? Tls;                 // TLS(SslStream) 옵션, null = 평문(기존 동작)
+}
+
+class TcpTlsOptions
+{
+    X509Certificate? ServerCertificate;             // 리스너 전용 — 설정 시 수락 연결마다 핸드셰이크 선행
+    string? TargetHost;                             // 클라이언트 SNI·이름 검증, null = ConnectAsync의 host
+    RemoteCertificateValidationCallback? RemoteCertificateValidation; // 클라이언트 검증 콜백, null = OS 기본
+    int HandshakeTimeout;                           // 핸드셰이크 상한(ms), 기본 15000
 }
 ```
 
 - `Enabled = false` 또는 옵션 생략: keep-alive 변경 없음(또는 OS 기본).
 - Unity/netstandard2.1에서 일부 필드는 OS가 무시할 수 있음 — 문서/Configuration에 플랫폼 노트.
+- `Tls`는 하위호환 추가(기본 `null` = 평문 그대로). 서버는 `ServerCertificate`, 클라이언트는 옵션 자체로 TLS를 켠다 — 세부 계약·TLS 1.3 노트는 [[Configuration]] `TcpTlsOptions` 항.
 
 ## ISession
 

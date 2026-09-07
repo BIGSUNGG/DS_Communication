@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, configuration]
-updated: 2026-09-05
+updated: 2026-09-09
 ---
 
 # Configuration
@@ -43,6 +43,17 @@ updated: 2026-09-05
 | `ConnectTimeout` | 연결 시도 상한(ms). 호스트가 응답하지 않으면(반개방 경로) OS SYN 재시도가 기본 수십 초(Windows ≈21초)까지 끄는 것을 상한 안으로 끌어당긴다. 초과 시 연결 실패(`false`) — 취소(`OperationCanceledException`)와는 독립. `0`·음수 거부 | `null`(OS 기본) |
 
 `TcpTransportOptions.ConnectTimeout`에 설정 — `TcpConnector`가 연결 경로에서 적용.
+
+## TcpTlsOptions (TCP)
+
+| 옵션 | 설명 | 기본 |
+| ------ | ------ | ------------ |
+| `ServerCertificate` | 서버 인증서(리스너 전용). 설정 시 모든 수락 연결에 대해 핸드셰이크를 먼저 완료한 뒤 `Accepted` 전달. 실패·상한 초과 연결은 즉시 닫히고 슬롯 회수 후 수락 계속 | `null`(TLS 끔) |
+| `TargetHost` | 클라이언트가 검증할 대상 호스트명(SNI·이름 일치). `null`이면 `ConnectAsync`의 `host` 인자 사용. 빈 문자열 거부 | `null` |
+| `RemoteCertificateValidation` | 클라이언트의 서버 인증서 검증 콜백. `null`이면 OS 기본 검증(신뢰 체인·이름 일치) — 자체 서명은 거부됨. **무조건 통과 콜백은 금지(중간자 공격)** | `null` |
+| `HandshakeTimeout` | TLS 핸드셰이크 상한(ms) — 핸드셰이크만 열어두는 슬로로리스 방어. 서버: 연결 닫기·슬롯 회수, 클라이언트: 연결 실패(`false`) 확정. `0`·음수 거부 | `15000` |
+
+`TcpTransportOptions.Tls`에 설정 — `TcpConnector`(클라이언트)·`TcpListener`(서버, `ServerCertificate` 필요)가 적용. 핸드셰이크는 프레임 통신 전에 완료되므로 세션·파이프라인은 변경 없이 그대로 동작한다. TLS 1.3 노트: 클라이언트가 인증서 검증 실패로 끊어도 서버 측 핸드셰이크가 완료돼 `Accepted`가 발생할 수 있다(Schannel은 검증 결과를 핸드셰이크 완료 후 보고) — 수용 핸들러는 언제나처럼 세션·채널을 소유·정리해야 한다.
 
 ## SocketKeepAliveOptions (TCP / TCP_IOCP)
 

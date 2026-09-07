@@ -47,6 +47,14 @@ public sealed class TcpTransportOptions
         }
     }
 
+    /// <summary>
+    /// TLS(SslStream) 옵션. <c>null</c>(기본)이면 평문 스트림 — 기존 동작 그대로.
+    /// 서버는 <see cref="TcpTlsOptions.ServerCertificate"/> 설정 시, 클라이언트는 이 값이 설정된 경우
+    /// 연결 확립 후 프레임 통신 전에 TLS 핸드셰이크를 완료한다. 핸드셰이크 상한은
+    /// <see cref="TcpTlsOptions.HandshakeTimeout"/>(기본 15초) — 슬로로리스 방어.
+    /// </summary>
+    public TcpTlsOptions? Tls { get; set; }
+
     private int? _maxConnections;
     private int? _connectTimeout;
 }

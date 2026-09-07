@@ -1,5 +1,7 @@
 using System;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using Communication.Shared.Channels;
@@ -9,6 +11,7 @@ namespace Communication.Network.TCP;
 /// <summary>
 /// TCP 클라이언트 연결. 연결만 열고, 세션 생성은 앱이 한다.
 /// 성공 후 <see cref="Channel"/>을 노출한다.
+/// <c>TcpTransportOptions.Tls</c> 설정 시 연결 후 TLS 핸드셰이크까지 완료한 뒤 채널을 노출한다.
 /// </summary>
 public sealed class TcpConnector
 {
@@ -46,7 +49,7 @@ public sealed class TcpConnector
                 if (await Task.WhenAny(connectTask, timeoutTask).ConfigureAwait(false) == timeoutTask)
                 {
                     client.Dispose();
-                    _ = connectTask.ContinueWith(static _ => { }, TaskScheduler.Default);
+                    _ = connectTask.ContinueWith(static t => { _ = t.Exception; }, TaskScheduler.Default);
                     return false;
                 }
             }
@@ -69,7 +72,49 @@ public sealed class TcpConnector
             throw new OperationCanceledException(cancellationToken);
         }
 
-        StreamByteChannel channel = new(client);
+        StreamByteChannel channel;
+        if (options?.Tls is { } tls)
+        {
+            // TLS 핸드셰이크 — 실패(인증서 거부·프로토콜 위반·상한 초과)는 연결 실패(false)로 확정한다.
+            SslStream ssl = new(client.GetStream(), leaveInnerStreamOpen: false, tls.RemoteCertificateValidation);
+            try
+            {
+                Task handshake = ssl.AuthenticateAsClientAsync(
+                    tls.TargetHost ?? host, clientCertificates: null, enabledSslProtocols: SslProtocols.None, checkCertificateRevocation: false);
+                if (!await TlsHandshake.AwaitAsync(ssl, handshake, tls.HandshakeTimeout).ConfigureAwait(false))
+                {
+                    throw new TimeoutException($"TLS 핸드셰이크가 {tls.HandshakeTimeout}ms 안에 완료되지 않았습니다.");
+                }
+            }
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                // 취소 등록부가 클라이언트를 닫아 핸드셰이크가 실패한 경우 — 취소로 보고한다.
+                client.Dispose();
+                throw new OperationCanceledException(cancellationToken);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    ssl.Dispose();
+                }
+                catch
+                {
+                    // 닫기 실패가 정리를 막으면 안 된다.
+                }
+
+                client.Dispose();
+                return false;
+            }
+
+            channel = new StreamByteChannel(ssl, client.Client);
+        }
+        else
+        {
+            channel = new StreamByteChannel(client);
+        }
+
+        // 소켓 옵션은 원본 소켓에 적용한다(TLS 스트림 아래 공유 소켓).
         channel.Socket.NoDelay = options?.NoDelay ?? true;
         KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
         Channel = channel;

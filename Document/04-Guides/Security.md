@@ -3,7 +3,7 @@ project: DS_Communication
 type: guide
 status: stable
 tags: [guide, security, production]
-updated: 2026-09-05
+updated: 2026-09-09
 ---
 
 # Security & Production Checklist
@@ -43,7 +43,8 @@ updated: 2026-09-05
 
 | 상태 | 항목 |
 | ------ | ------ |
-| ❌ 미제공 | **암호화·인증 없음** — 평문 TCP / 평문 UDP(RUDP). 신뢰 네트워크 내부 전용이며, 공개망 투입 시 반드시 별도 암호화 레이어(SslStream 등)를 겹쳐야 한다(로드맵 항목). RUDP는 LiteNetLib `PacketLayerBase`(XorEncryptLayer·Crc32cLayer) 자리가 있지만 **현재 `null`** — 미사용 |
+| ✅ 옵션 | **TCP TLS(SslStream)** — `TcpTransportOptions.Tls` 설정 시 연결 확립 후·프레임 통신 전에 TLS 핸드셰이크를 완료한다(서버: `TcpTlsOptions.ServerCertificate`, 클라이언트: 옵션 자체). 핸드셰이크 상한 15초(슬로로리스 방어), 실패·상한 초과 연결은 즉시 닫히고 슬롯은 회수된다. 인증서 검증은 기본 OS 검증 — 무조건 통과 콜백 금지([[../05-Decisions/0008-tcp-tls-sslstream | ADR 0008]]) |
+| ❌ 미제공(RUDP) | **RUDP는 평문 UDP** — LiteNetLib `PacketLayerBase`(XorEncryptLayer·Crc32cLayer) 자리가 있지만 **현재 `null`** — 미사용. Xor는 사실상 난독화(기지평문 공격에 취약)라 "암호화"로 제공하지 않는다. RUDP의 기밀성은 TLS 계층이나 VPN 위 운용으로 확보 |
 | ✅ 옵션 | `FrameTimeout`(기본 30초) — 슬로로리스(부분 프레임 끌어안기) 방어 |
 | ✅ 옵션 | `MaxFrameLength`(기본 4MB, 절대 상한 64MB) — 수신 메모리 증폭 방어. 바이트 경로는 프레이머, **메시지 단위 채널(RUDP)은 역직렬화 전 거부**(LiteNetLib 재조립 자체 상한 ≒90MB) |
 | ✅ 옵션 | `MaxConnections` — 연결 고갈 방어. TCP는 수락 후 즉시 닫음, **RUDP는 접속 요청 시점에 슬롯을 예약**해 같은 폴링 배치의 다수 요청이 상한을 함께 넘지 못하게 하고 `Reject()` |

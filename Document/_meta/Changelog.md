@@ -3,12 +3,17 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-09 (사이클 4 — TCP TLS)
+
+- **TCP 전송 TLS(SslStream) 옵션 추가** — [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]]: `TcpTlsOptions`(`ServerCertificate`·`TargetHost`·`RemoteCertificateValidation`·`HandshakeTimeout` 15초 기본), `TcpTransportOptions.Tls`, `StreamByteChannel` 확립 스트림 생성자. 서버는 수락 연결마다 연결별 태스크로 핸드셰이크 선행(상한 슬롯 예약→성공 시 채널 Dispose·실패 시 태스크가 회수, 정확히 1회), 실패·상한 초과는 조용히 폐기 후 수락 계속. 클라이언트는 핸드셰이크 실패 시 연결 실패(`false`) 확정. TLS 1.3 노트(클라이언트 검증 실패 후에도 서버 `Accepted` 가능 — 채널 소유 계약 재확인)·테스트 인증서 플랫폼 주의(Windows ephemeral 키 불가→PFX 재수입, Linux serverAuth EKU 필요) 문서화. 테스트 8건 추가(110→118)
+- [[../04-Guides/Security|Security]] ❌유일 항목(평문 전송) 해소 — TCP ✅옵션 전환, RUDP 평문 고지(XorEncryptLayer는 난독화일 뿐 미제공 유지). [[../03-Reference/Configuration|Configuration]] `TcpTlsOptions` 항·[[../03-Reference/Public-API|Public-API]] 옵션 블록·[[../02-Architecture/Components|Components]] TCP 행 동기화
 
 ## 2026-09-08 (사이클 3 — TCP_IOCP 착수 보류)
 

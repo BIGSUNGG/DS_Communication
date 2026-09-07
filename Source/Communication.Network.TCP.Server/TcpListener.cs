@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Communication.Shared.Channels;
@@ -11,6 +14,8 @@ namespace Communication.Network.TCP;
 /// <summary>
 /// TCP 수락 루프. 수락된 채널은 <see cref="Accepted"/>로 전달하며, 세션 생성은 앱이 한다.
 /// <c>TcpTransportOptions.MaxConnections</c> 설정 시 상한 도달 후 수락된 연결은 즉시 닫는다.
+/// <c>TcpTransportOptions.Tls</c>의 <see cref="TcpTlsOptions.ServerCertificate"/> 설정 시
+/// 모든 수락 연결에 대해 TLS 핸드셰이크를 먼저 완료한 뒤 채널을 전달한다.
 /// </summary>
 public sealed class TcpListener : IDisposable
 {
@@ -143,26 +148,72 @@ public sealed class TcpListener : IDisposable
                 continue;
             }
 
-            // Dispose 시 상한 슬롯 회수 — 세션이 채널(또는 세션 자신을) 정리하면 수에서 빠진다.
-            StreamByteChannel channel = new(client, () => Interlocked.Decrement(ref _connectionCount));
-
-            // 수락마다 최신 구독자를 읽는다 — Start 이후 구독자도 채널을 받는다.
-            Action<IByteChannel>? accepted = Accepted;
-            if (accepted is null)
+            // TLS 경로 — 핸드셰이크는 수락 루프를 점유하지 않는 연결별 태스크로 돌린다.
+            // 침묵 클라이언트의 슬로로리스 핸드셰이크가 이후 수락을 지연시키지 못하게 한다.
+            // 상한 슬롯은 이미 예약됐다 — 핸드셰이크 실패 시 이 태스크가, 성공 시 채널 Dispose가 회수한다.
+            if (options?.Tls?.ServerCertificate is { } certificate)
             {
-                channel.Dispose(); // 구독자 없음 — 연결이 새지 않도록 정리 후 수락 계속.
+                _ = HandshakeTlsAsync(client, certificate, options.Tls);
                 continue;
             }
 
+            // Dispose 시 상한 슬롯 회수 — 세션이 채널(또는 세션 자신을) 정리하면 수에서 빠진다.
+            StreamByteChannel channel = new(client, () => Interlocked.Decrement(ref _connectionCount));
+            HandOff(channel);
+        }
+    }
+
+    /// <summary>TLS 핸드셰이크를 완료하고 성공 시에만 채널을 전달한다. 실패(프로토콜 위반·상한 초과)는 로그·정리 후 조용히 끝난다.</summary>
+    private async Task HandshakeTlsAsync(TcpClient client, X509Certificate certificate, TcpTlsOptions tls)
+    {
+        SslStream ssl = new(client.GetStream(), leaveInnerStreamOpen: false);
+        try
+        {
+            Task handshake = ssl.AuthenticateAsServerAsync(
+                certificate, clientCertificateRequired: false, enabledSslProtocols: SslProtocols.None, checkCertificateRevocation: false);
+            if (!await TlsHandshake.AwaitAsync(ssl, handshake, tls.HandshakeTimeout).ConfigureAwait(false))
+            {
+                throw new TimeoutException($"TLS 핸드셰이크가 {tls.HandshakeTimeout}ms 안에 완료되지 않았습니다.");
+            }
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"TLS 핸드셰이크 실패 — 연결 닫고 수락 계속: {e}");
             try
             {
-                accepted.Invoke(channel);
+                ssl.Dispose(); // 스트림 닫기는 내부 NetworkStream→소켓까지 닫는다.
             }
-            catch (Exception e)
+            catch
             {
-                Trace.TraceError($"수락 핸들러 예외 — 채널 정리 후 수락 계속: {e}");
-                channel.Dispose();
+                // 닫기 실패가 정리를 막으면 안 된다.
             }
+
+            Interlocked.Decrement(ref _connectionCount); // 수락 루프가 예약한 슬롯 회수
+            return;
+        }
+
+        HandOff(new StreamByteChannel(ssl, client.Client, () => Interlocked.Decrement(ref _connectionCount)));
+    }
+
+    /// <summary>채널을 <see cref="Accepted"/>로 전달한다. 구독자 부재·구독자 예외는 채널 정리로 격리한다.</summary>
+    private void HandOff(StreamByteChannel channel)
+    {
+        // 수락마다 최신 구독자를 읽는다 — Start 이후 구독자도 채널을 받는다.
+        Action<IByteChannel>? accepted = Accepted;
+        if (accepted is null)
+        {
+            channel.Dispose(); // 구독자 없음 — 연결이 새지 않도록 정리 후 수락 계속.
+            return;
+        }
+
+        try
+        {
+            accepted.Invoke(channel);
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"수락 핸들러 예외 — 채널 정리 후 수락 계속: {e}");
+            channel.Dispose();
         }
     }
 }
