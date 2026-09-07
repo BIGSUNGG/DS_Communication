@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 26 — 정지 중 TLS 핸드셰이크 늦은 콜백 차단)
+
+- **PENDING P3 ② 해소** — `TcpListener` 정지 이후 완료된 TLS 핸드셰이크가 `Accepted`를 늦게 발화하던 타이밍 결함 차단: 핸드셰이크 완료→전달 사이에 수락 루프 토큰(Stop이 취소)을 검사해 폐기+슬롯 회수. 보류 사유(테스트 불가·등록부 위험)가 재분석으로 무너짐 — 늦은 ClientHello 클라이언트로 결정적 재현. 테스트 +1(134→135). 루프 종료 시점 종결 단위 — 미출시(다음 릴리스 단위 후보)
+
 ## 2026-09-09 (사이클 22 — 잔여 노트 동기화)
 
 - **[[../00-AI/GLOSSARY|GLOSSARY]]·[[../01-Overview/Feature-Spec|Feature-Spec]] 최신화** — 세션 중 반영이 누락됐던 마지막 두 노트. Feature-Spec: F4-7 TCP TLS·F4-8 RUDP CRC32c·F4-9 기본 키 경고 신규 행, F2-3 늦은 구독 재생 서술. GLOSSARY: `TcpTransportOptions`·`TcpTlsOptions`·끊김 재생 보장 신규, `RudpTransportOptions` 행에 `ConnectTimeout`·`Crc32cEnabled` 추가. 06-Troubleshooting은 미생성 — 실제 문제 발생 전 생성은 억지스러운 작업이라 판단·기록만

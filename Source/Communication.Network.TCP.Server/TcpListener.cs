@@ -153,7 +153,7 @@ public sealed class TcpListener : IDisposable
             // 상한 슬롯은 이미 예약됐다 — 핸드셰이크 실패 시 이 태스크가, 성공 시 채널 Dispose가 회수한다.
             if (options?.Tls?.ServerCertificate is { } certificate)
             {
-                _ = HandshakeTlsAsync(client, certificate, options.Tls);
+                _ = HandshakeTlsAsync(client, certificate, options.Tls, token);
                 continue;
             }
 
@@ -164,7 +164,7 @@ public sealed class TcpListener : IDisposable
     }
 
     /// <summary>TLS 핸드셰이크를 완료하고 성공 시에만 채널을 전달한다. 실패(프로토콜 위반·상한 초과)는 로그·정리 후 조용히 끝난다.</summary>
-    private async Task HandshakeTlsAsync(TcpClient client, X509Certificate certificate, TcpTlsOptions tls)
+    private async Task HandshakeTlsAsync(TcpClient client, X509Certificate certificate, TcpTlsOptions tls, CancellationToken listenerToken)
     {
         SslStream ssl = new(client.GetStream(), leaveInnerStreamOpen: false);
         try
@@ -189,6 +189,24 @@ public sealed class TcpListener : IDisposable
             }
 
             Interlocked.Decrement(ref _connectionCount); // 수락 루프가 예약한 슬롯 회수
+            return;
+        }
+
+        // 리스너 정지(Stop) 이후에 완료된 핸드셰이크 — 정지된 리스너에서 Accepted를 늦게
+        // 발화하지 않고 폐기한다(슬롯 회수 동일). 클라이언트는 핸드셰이크를 마칠 수 있지만
+        // 연결은 즉시 닫힌다. 검사→발화 사이 나노초 창구는 통상 클래스의 잔여 경쟁이다.
+        if (listenerToken.IsCancellationRequested)
+        {
+            try
+            {
+                ssl.Dispose();
+            }
+            catch
+            {
+                // 닫기 실패가 정리를 막으면 안 된다.
+            }
+
+            Interlocked.Decrement(ref _connectionCount);
             return;
         }
 

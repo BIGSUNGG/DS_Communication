@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Communication.Network.TCP;
@@ -218,6 +219,47 @@ public class TcpTlsTests
         Assert.False(connected);
         Assert.Null(connector.Channel);
         Assert.InRange(stopwatch.Elapsed.TotalMilliseconds, 200, 2000); // 상한(300ms) 집행의 시간 증거 — 타 원인 즉시 실패와 구분
+    }
+
+    /// <summary>
+    /// 정지(Stop) 시점에 진행 중이던 TLS 핸드셰이크가 이후 완료돼도 Accepted는 발화하지 않는다 —
+    /// 정지된 리스너의 늦은 콜백 차단(P3 ②). 클라이언트는 TCP만 열고 ClientHello를 늦춰 시나리오를 만든다.
+    /// </summary>
+    [Fact]
+    public async Task Tls_StopDuringPendingHandshake_NoLateAccepted()
+    {
+        using X509Certificate2 certificate = CreateTestCertificate();
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        int acceptedCount = 0;
+        listener.Accepted += channel =>
+        {
+            acceptedCount++;
+            channel.Dispose();
+        };
+        listener.Start(new TcpTransportOptions
+        {
+            Tls = new TcpTlsOptions { ServerCertificate = certificate, HandshakeTimeout = 10_000 },
+        });
+        int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+        using RawTcpClient raw = new();
+        await raw.ConnectAsync(IPAddress.Loopback, port);
+        listener.Stop(); // 핸드셰이크 대기 중 정지
+
+        // 늦은 ClientHello — 서버는 핸드셰이크를 마칠 수 있으나 폐기하고 Accepted를 발화하지 않는다.
+        using SslStream clientSsl = new(raw.GetStream(), false, (_, _, _, _) => true);
+        try
+        {
+            await clientSsl.AuthenticateAsClientAsync("127.0.0.1", null, SslProtocols.None, false)
+                .WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch
+        {
+            // 서버가 즉시 폐기하면 클라이언트 핸드셰이크 실패 가능 — 계약은 어느 쪽이든 Accepted 부재다.
+        }
+
+        await Task.Delay(500); // 늦은 Accepted 관찰 여유
+        Assert.Equal(0, acceptedCount); // 수정 전이라면 늦은 HandOff로 1이 된다
     }
 
     [Theory]
