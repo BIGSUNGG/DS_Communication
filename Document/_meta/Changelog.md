@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 12 — SignalGate 직접 계약 핀)
+
+- **[[../00-AI/CONTEXT|CONTEXT]] 테스트 수 122→128** — `SignalGate`(공개 동시성 기반, 송션·디스패치 루프 웨이크업)이 간접 커버뿐이던 테스트 공백을 직접 핀 6건으로 마감: 신호 웨이크업·퍼밋 래치(선행 신호)·연속 신호 단일 퍼밋 붕괴·조건부 재신호(참/거짓)·Dispose 해제(대기자 완료→이후 ODE). 도중 테스트 어설션 방향 오류(NotEqual) 1건 발견·수정 — 게이트 동작 자체는 정상 확인
+
 ## 2026-09-09 (사이클 11 — 상위 제안 노트)
 
 - **[[../01-Overview/Proposals-Upstream|Proposals-Upstream]] 신규** — 스펙 개선 영역 5 의무 절차(상위 활용 제안 기록, 상위 저장소는 미수정): P1 TCP TLS 옵션 통과(TLS 1.3 `Accepted` 주의 포함), P2 RUDP CRC32c 양단 일괄 설정, P3 연결·프레임 타임아웃 정책 통일, P4 `ActiveConnectionCount`·`DisconnectReason.FlowControl` 운영 신호 소비. [[../00-AI/CONTEXT|CONTEXT]] 관련 노트에 링크
