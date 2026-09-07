@@ -16,7 +16,9 @@ namespace Communication.Tests;
 
 /// <summary>
 /// TCP TLS(SslStream) 경로 — 핸드셰이크 성공·실패·상한, 슬롯 회수, 옵션 검증.
+/// 실 소켓·타이밍 마감 사용 — 다른 네트워크 클래스와 한 컬렉션에서 순차 실행(결정적 테스트).
 /// </summary>
+[Collection("network-loopback")]
 public class TcpTlsTests
 {
     private static X509Certificate2 CreateTestCertificate()

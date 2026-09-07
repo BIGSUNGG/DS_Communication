@@ -9,6 +9,8 @@ using Xunit;
 
 namespace Communication.Tests;
 
+/// <summary>실 소켓·타이밍 마감을 쓰는 클래스들은 한 컬렉션으로 묶어 병렬 실행 간섭을 없한다(결정적 테스트).</summary>
+[Collection("network-loopback")]
 public class TcpLoopbackTests
 {
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan? timeout = null)
