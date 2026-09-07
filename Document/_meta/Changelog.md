@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 22 — 잔여 노트 동기화)
+
+- **[[../00-AI/GLOSSARY|GLOSSARY]]·[[../01-Overview/Feature-Spec|Feature-Spec]] 최신화** — 세션 중 반영이 누락됐던 마지막 두 노트. Feature-Spec: F4-7 TCP TLS·F4-8 RUDP CRC32c·F4-9 기본 키 경고 신규 행, F2-3 늦은 구독 재생 서술. GLOSSARY: `TcpTransportOptions`·`TcpTlsOptions`·끊김 재생 보장 신규, `RudpTransportOptions` 행에 `ConnectTimeout`·`Crc32cEnabled` 추가. 06-Troubleshooting은 미생성 — 실제 문제 발생 전 생성은 억지스러운 작업이라 판단·기록만
+
 ## 2026-09-09 (사이클 21 — 홈 노트 동기화)
 
 - **[[../01-Overview/Home|Home]](사람용 진입점) 최신화** — 2.4.0 현행 반영: 테스트 110→134, 전송 보안 옵션 행(TLS·CRC32c·기본 키 경고) 추가, TCP_IOCP "미착수"→보류(2026-09-08 결정 서술), ADR 목록 0008 포함, 감사·상위 제안 노트 링크, 재생 보장 서술. YAML 갱신

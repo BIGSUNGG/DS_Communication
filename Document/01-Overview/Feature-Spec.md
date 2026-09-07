@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, feature-spec]
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Feature Spec — 레거시에서 이어받을 기능 명세
@@ -30,7 +30,7 @@ updated: 2026-09-08
 | ---- | ------ | ------ |
 | F2-1 | 큐잉 송신 | `SendAsync(message, SendOptions?)` — fire-and-forget 큐잉 |
 | F2-2 | 완료 대기 송신 | `SendAndFlushAsync` — 큐잉 후 **wire 기록까지** await |
-| F2-3 | 끊김 통지 | `Disconnected(DisconnectedEventArgs)` 1회. `Reason = Local / Remote / Error / Timeout / FlowControl`. Error는 원인 예외, TCP 경로 Timeout(`TimeoutException`)·FlowControl(`InvalidOperationException`)도 예외 포함 (ADR 0003, [[../05-Decisions/0003-connection-lifecycle-options]]) |
+| F2-3 | 끊김 통지 | `Disconnected(DisconnectedEventArgs)` 1회 — **늦은 구독자(이미 끊긴 후 구독)에게도 구독 즉시 1회 재생**(2.4.0+, 구독당 1회). `Reason = Local / Remote / Error / Timeout / FlowControl`. Error는 원인 예외, TCP 경로 Timeout(`TimeoutException`)·FlowControl(`InvalidOperationException`)도 예외 포함 (ADR 0003, [[../05-Decisions/0003-connection-lifecycle-options]]) |
 | F2-4 | 연결 상태 | `IsConnected()` = 로컬 끊김 플래그 AND transport 상태 |
 | F2-5 | 명시 끊김 | `Disconnect()` — 로컬 주도, `Reason=Local` 통지 |
 | F2-6 | 리소스 정리·끊김 후 송신 | Session/파이프라인 Dispose; 끊김·Dispose 후 송신은 **예외로 완료된 Task** 반환 (동기 throw 아님) |
@@ -62,6 +62,9 @@ updated: 2026-09-08
 | F4-4 | RUDP poll | 호스트당 **전용 폴링 스레드 1개**, 간격 고정 1ms(옵션 아님). 스레드 수는 접속 수와 무관 — [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 | F4-5 | RUDP MTU 가드 | 분할 불가 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)으로 MTU 초과 payload 송신 시 `ArgumentException` — 조용한 유실 대신 즉시 실패 (**신규**, 레거시 없음) |
 | F4-6 | 연결 시도 상한 | 침묵 호스트(반개방 경로·블랙홀)에 대한 연결 실패를 선언된 시간 안에 확정 — **TCP**: `TcpTransportOptions.ConnectTimeout`(기본 `null`=OS SYN 재시도 ≈21초), **RUDP**: `RudpTransportOptions.ConnectTimeout`(기본 `null`=LiteNetLib 재전송 ≈5초). 초과 시 `false`, 사용자 취소(`OperationCanceledException`)와는 독립 (**신규**) |
+| F4-7 | TCP TLS (SslStream) | `TcpTransportOptions.Tls`(2.1.0+) — 서버는 `ServerCertificate` 설정 시 수락 연결마다 **핸드셰이크 선행 완료**(실패·`HandshakeTimeout` 기본 15초 초과는 폐기 후 수락 계속, 상한 슬롯 회수), 클라이언트는 옵션 설정 시 핸드셰이크 후 채널(실패=`false`). 기본 `null`=평문. TLS 1.3: 클라이언트 검증 거부 후에도 서버 `Accepted` 발생 가능 (ADR [[0008-tcp-tls-sslstream]]) (**신규**) |
+| F4-8 | RUDP 패킷 무결성 | `RudpTransportOptions.Crc32cEnabled`(2.2.0+, 기본 `false`, **양단 같은 설정 필요**) — 체크섬 위반 패킷(손상·위조)을 **프로토콜 처리 전 폐기**(위조 접속 요청은 슬롯 예약 없음). 검출 전용 — 기밀성·인증 없음 (**신규**) |
+| F4-9 | 기본 키 시작 경고 | `RudpListener.Start`가 공개 상수 기본 `ConnectionKey`로 시작되면 Trace 경고(키 값 미노출) — 공개망 교체 유도 (2.3.0+) (**신규**) |
 
 ## F5. 플랫폼·패키지
 

@@ -3,7 +3,7 @@ project: DS_Communication
 type: context
 status: draft
 tags: [ai, glossary]
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # Glossary
@@ -26,6 +26,7 @@ updated: 2026-09-08
 | Coalesce / SendAndFlush | 배치 Write / wire await. |
 | Reconnect | **앱 책임** — `ConnectAsync` + `new Session` + (서버) 토큰/핸드셰이크. |
 | DisconnectReason | `Local` \| `Remote` \| `Error` \| `Timeout` \| `FlowControl` — `Disconnected` 이벤트 인자. |
+| 끊김 재생 보장 | 이미 끊긴 세션에 늦게 구독해도 구독 즉시 1회 재생(2.4.0+, 구독당 1회 — 표준 이벤트 의미론). |
 | SocketKeepAliveOptions | TCP/TCP_IOCP 전송 옵션 — OS keep-alive (half-open 보조). |
 | Disconnect detection | 스트림: EOF·오류. RUDP: peer 끊김 통지(수신 루프가 없어 채널 통지를 세션이 이어 받음)·`DisconnectTimeout`. → `Disconnected(Reason)`. `Timeout`은 프레임 완료 마감(`FrameTimeout`) 초과 시. |
 | Heartbeat | 앱 책임. |
