@@ -114,6 +114,14 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
 
     internal void Stop()
     {
+        // 살아있는 채널에 로컬 종료를 직접 통지한다 — 폴링 스레드가 멈추면 NetManager의 끊김 이벤트는
+        // 드레인되지 않으므로, 여기서 통지하지 않으면 세션이 끊김을 영원히 모른다(UDP엔 EOF가 없다)
+        // 송신도 죽은 피어로 조용히 유실된다. 채널 Dispose의 ReleaseChannel은 소유자 확인으로 중복 통지·회수가 없다.
+        foreach (RudpMessageChannel channel in _channels.Values)
+        {
+            ReleaseChannel(channel, SharedDisconnectReason.Local);
+        }
+
         // NetManager를 먼저 정지시킨다 — Stop(true)가 접속 중인 peer에 끊김 메시지를 보내 상대가
         // 타임아웃이 아니라 RemoteConnectionClose로 끊김을 본다. 이후 폴링 스레드 정리는 무해하다.
         try

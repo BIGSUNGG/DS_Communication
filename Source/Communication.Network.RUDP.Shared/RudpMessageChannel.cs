@@ -70,6 +70,13 @@ public sealed class RudpMessageChannel : IMessageChannel
             return Faulted(new InvalidOperationException("채널이 정리되어 송신할 수 없습니다."));
         }
 
+        // Dispose 전이라도 피어가 이미 끊긴 찰나에는 LiteNetLib Send가 조용히 유실된다 —
+        // 침묵 대신 즉시 실패로 끝내 송신자가 유실을 관측하게 한다(채널 오류 → 세션 단절 경유).
+        if (_peer.ConnectionState != ConnectionState.Connected)
+        {
+            return Faulted(new InvalidOperationException("피어가 연결되어 있지 않아 송신할 수 없습니다."));
+        }
+
         RudpDeliveryMethod requested = (options as RudpSendOptions)?.DeliveryMethod ?? RudpDeliveryMethod.ReliableOrdered;
 
         DeliveryMethod method;

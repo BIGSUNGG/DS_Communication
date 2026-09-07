@@ -202,8 +202,9 @@ public sealed class MessagePipeline : IDisposable
         _sendGate.Signal();
 
         // Dispose 경쟁: 직전 정지면 Dispose 드레인이 이 항목을 놓쳤을 수 있다.
-        // 드레인과 TrySet 계열이라 중복 시 먼저 faults가 남는다.
-        if (_stopped != 0)
+        // 드레인과 TrySet 계열이라 중복 시 먼저 faults가 남는다. Volatile 읽기 — 스토퍼의
+        // Volatile.Write와 짝을 이불러 이 판정이 오래된 값으로 우회하지 않게 한다(flush 무한 대기 방지).
+        if (Volatile.Read(ref _stopped) != 0)
         {
             flush?.TrySetException(new InvalidOperationException("파이프라인이 정지되어 송신하지 못했습니다."));
         }

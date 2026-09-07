@@ -10,6 +10,14 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 17 — 독립 리뷰 기반 RUDP 정지 통지 결함 수정)
+
+- **신규 컨텍스트 reviewer 서브에이전트 적대적 결함 리뷰(전 Source 30파일) → P2 1건·P3 4건**
+  - **[P2 수정] `RudpNetHost.Stop` 무통지 세션 방치** — 폴링 스레드 정지로 NetManager 끊김 이벤트가 드레인되지 않아 리스너 Stop/Dispose 시 서버 세션이 끊김을 영원히 모르고(UDP엔 EOF 없음) 송신도 죽은 피어로 조용히 유실됐다. `Stop`이 살아있는 채널에 `ReleaseChannel(Local)`로 직접 통지(채널 Dispose의 소유자 확인으로 중복 없음). `RudpMessageChannel.SendAsync`에 피어 `ConnectionState` 가드 추가 — 침묵 유실 대신 즉시 실패. 테스트 +1(130→131): Stop→서버 세션 `Disconnected(Local)`
+  - **[P3 수정] `EnqueueAsync` flush 경쟁의 비휘발성 읽기** — 스토퍼의 `Volatile.Write`와 짝이 안 맞아 이론적 flush 무한 대기 가능성 → `Volatile.Read`로 폐쇄
+  - **[P3 보류 3건 → PENDING]** — 수용 경칭 래치 설계, Stop 후 TLS 핸드셰이크 최대 15초 지연 콜백, 프레이머 경계 CTS 재사용(재실장 시 위험 설계 노트)
+  - 리뷰가 청정 확인한 축: 슬롯 회수 전 경로·MaxFrameLength 양측·FrameTimeout 무력화 없음·SignalGate 무손실 웨이크업·핫패스 무할당
+
 ## 2026-09-09 (사이클 16 — 배포 파이프라인 보안 경화)
 
 - **워크플로 시크릿 처리 경화(zizmor 전수 스캔 기반)** — 전 기계 스캔(lens full: jscpd·madge·gitleaks 무결정, zizmor 실결과)에서 나온 배포 파이프라인 소급: ①`persist-credentials: false` 전 5 checkout(nuget-publish 4·ci 1) — 잡이 git 자격증명을 쓰지 않으므로 지속 금지 ②`template-injection` 3곳(pack 단계 `${{ }}` run 확장 → env 경유로 간접화). YAML 유효성·게이트(130/130) 통과. **[보류]** `use-trusted-publishing`(OIDC)은 NuGet.org 측 신뢰 게시 설정 필요 → [[../00-AI/PENDING|PENDING]] — 제품 코드·패키지 무변경(다음 태그부터 적용)
