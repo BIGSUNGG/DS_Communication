@@ -10,6 +10,13 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 20 — 테스트 스위트 강화)
+
+- **신규 컨텍스트 리뷰어의 테스트 스위트 감사(124테스트 전수) → VACUOUS 1·WEAK 6 전량 강화**
+  - **[VACUOUS] `Tls_Server_RejectsPlaintextClient`** — Accepted 즉시 폐기 구독자가 count→0을 만드는 경로와 거부가 구분 안 됐다 → `acceptedCount==0` 단언 추가(평문 수용 회귀 탐지 가능)
+  - **[WEAK×6]** — TCP 에코 완복 내용 미검증(`ping`/`pong` 서술 추가), keep-alive **배선** 미검증(소켓 옵션==1 직접 단언 — Apply 호출 누락 회귀 탐지), 클라이언트 TLS 상한의 시간 증거 부재(Stopwatch 범위 200–2000ms + WaitAsync 상한), coalesce 테스트의 샘플링 경쟁(SendAndFlush 완료 후 세는 결정적 구조로), 청urn 태그 `Contains`→정확 시퀀스(혼입·중복 탐지) ×2
+  - 감사 요약: 124중 117 SOUND — 이벤트 핸들러 내 단언·정적 상태 누출·예외 타입 모호성 등 나머지 사냥 축은 청정 확인
+
 ## 2026-09-09 (릴리스 2.4.0)
 
 - **패키지 2.4.0 배포(minor)** — 2.3.1 이후 단위: ①RUDP 리스너 정지 무통지 방치 수정(살아있는 세션에 `Local` 통지 + 죽은 피어 송신 즉시 실패) ②끊김 통지 전달 보장(채널 래치 + `Session.Disconnected` 늦은 구독자 즉시 재생 — 공개 이벤트 보장 강화 → minor). 커밋 `dd968a6` → 태그 ×3 → Actions 4건 전부 성공(**경화된 게시 워크플로 첫 태그 실행** — env 간접화 pack·persist-credentials 없음 실증). [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 표기 갱신

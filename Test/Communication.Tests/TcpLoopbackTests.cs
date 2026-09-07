@@ -48,6 +48,18 @@ public class TcpLoopbackTests
             }
         }
 
+        /// <summary>수신 스냅샷 — 내용 검증용(RUDP 쌍둥이와 동일 패턴).</summary>
+        public IReadOnlyList<object> Messages
+        {
+            get
+            {
+                lock (_received)
+                {
+                    return _received.ToList();
+                }
+            }
+        }
+
         private void OnMessage(string message)
         {
             lock (_received)
@@ -92,7 +104,9 @@ public class TcpLoopbackTests
         await clientSession.SendAndFlushAsync("ping");
 
         await WaitUntilAsync(() => serverHandler?.ReceivedCount == 1); // 서버 수신
+        Assert.Equal("ping", Assert.IsType<string>(serverHandler!.Messages[0])); // 내용까지 — 카운트만으로는 왜곡·오수신 미탐(강화)
         await WaitUntilAsync(() => clientHandler?.ReceivedCount == 1); // 에코 왕복
+        Assert.Equal("pong", Assert.IsType<string>(clientHandler!.Messages[0]));
 
         DisconnectReason? clientReason = null;
         DisconnectReason? serverReason = null;
@@ -134,6 +148,9 @@ public class TcpLoopbackTests
 
         bool connected = await connector.ConnectAsync("127.0.0.1", port, options);
         Assert.True(connected);
+        // 배선까지 — KeepAliveApplicator.Apply가 빠지면(유닛 테스트만으론 탐지 불가) 여기서 잡는다(강화).
+        Assert.Equal(1, (int)((StreamByteChannel)connector.Channel!).Socket.GetSocketOption(
+            System.Net.Sockets.SocketOptionLevel.Socket, System.Net.Sockets.SocketOptionName.KeepAlive)!);
 
         using var clientSession = new TcpSession(connector.Channel!, new StringConverter(), session => new EchoHandler(session));
         await clientSession.SendAndFlushAsync("keep-alive-check");

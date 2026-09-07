@@ -166,7 +166,12 @@ public class TcpTlsTests
     {
         using X509Certificate2 certificate = CreateTestCertificate();
         using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Accepted += channel => channel.Dispose(); // 수락된 채널의 소유자 — 즉시 정리해 슬롯을 회수한다.
+        int acceptedCount = 0;
+        listener.Accepted += channel =>
+        {
+            acceptedCount++; // 구분 강화 — 거부 경로는 Accepted가 발생하면 안 된다(구독자 정리가 count→0을 만드는 경로와 분리)
+            channel.Dispose();
+        };
         listener.Start(ServerOptions(certificate));
         int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
 
@@ -177,6 +182,7 @@ public class TcpTlsTests
 
         await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
         Assert.Equal(0, listener.ActiveConnectionCount);
+        Assert.Equal(0, acceptedCount); // 평문 수용 회귀 시 즉시 폐기돼도 여기서 잡힌다(강화)
     }
 
     [Fact]
@@ -205,9 +211,13 @@ public class TcpTlsTests
         int port = ((IPEndPoint)rawListener.LocalEndpoint).Port;
 
         var connector = new TcpConnector();
-        bool connected = await connector.ConnectAsync("127.0.0.1", port, ClientOptions(handshakeTimeoutMs: 300));
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        bool connected = await connector.ConnectAsync("127.0.0.1", port, ClientOptions(handshakeTimeoutMs: 300))
+            .WaitAsync(TimeSpan.FromSeconds(5)); // 상한 미시행 시 무한 대기가 아닌 실패로 끝난다(강화)
+        stopwatch.Stop();
         Assert.False(connected);
         Assert.Null(connector.Channel);
+        Assert.InRange(stopwatch.Elapsed.TotalMilliseconds, 200, 2000); // 상한(300ms) 집행의 시간 증거 — 타 원인 즉시 실패와 구분
     }
 
     [Theory]

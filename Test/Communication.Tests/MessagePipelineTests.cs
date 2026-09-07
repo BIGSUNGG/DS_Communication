@@ -55,13 +55,13 @@ public class MessagePipelineTests
         var handler = new RecordingHandler();
         using var pipeline = new MessagePipeline(channel, new StringConverter(), handler);
 
-        // 루프 시작 전에 큐잉해 두 메시지가 한 배치로 드레인되게 한다.
-        Task first = pipeline.SendAsync("a");
-        Task second = pipeline.SendAsync("b");
-        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
+        // 루프 시작 전에 큐잉해 두 메시지가 한 배치로 드레인되게 한다. SendAndFlush 완료는
+        // 쓰기 완료를 의미하므로 완료 후 세는 Writes.Count는 경쟁 없이 결정적이다(부분 쓰기 회귀 감지 강화).
+        Task first = pipeline.SendAndFlushAsync("a");
+        Task second = pipeline.SendAndFlushAsync("b");
         pipeline.Start();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
 
-        await WaitUntilAsync(() => channel.Writes.Count >= 1);
         byte[] written = Assert.Single(channel.Writes); // 두 프레임이 한 write로 coalesce
         Assert.Equal(4 + 1 + 4 + 1, written.Length);
     }

@@ -89,7 +89,8 @@ public class ChurnSoakTests
 
             string tag = $"r{i}";
             await session.SendAndFlushAsync(tag);
-            await WaitUntilAsync(() => collector!.Messages.Contains(tag));
+            await WaitUntilAsync(() => collector!.Messages.Count > 0);
+            Assert.Equal(new[] { tag }, collector!.Messages); // 태그 단독 — 혼입·중복 없음(이름이 주장하는 바, 강화)
 
             session.Dispose(); // 로컬 단절 → 서버 채널 정리 → 슬롯 회수
             await WaitUntilAsync(() => listener.ActiveConnectionCount == 0); // 매 라운드 누수 단언
@@ -121,7 +122,8 @@ public class ChurnSoakTests
 
             string tag = $"r{i}";
             await session.SendAndFlushAsync(tag);
-            await WaitUntilAsync(() => collector!.Messages.Contains(tag));
+            await WaitUntilAsync(() => collector!.Messages.Count > 0);
+            Assert.Equal(new[] { tag }, collector!.Messages); // 태그 단독 — 혼입·중복 없음(이름이 주장하는 바, 강화)
 
             session.Dispose();
             await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
