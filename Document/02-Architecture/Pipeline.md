@@ -3,7 +3,7 @@ project: DS_Communication
 type: architecture
 status: draft
 tags: [architecture, pipeline]
-updated: 2026-09-01
+updated: 2026-09-09
 ---
 
 # Pipeline
@@ -34,7 +34,7 @@ updated: 2026-09-01
 
 ## 수신
 
-스트림: `LengthPrefixFrameReader` — **단일 누적 버퍼**(ArrayPool, 기본 ~64KB)에 부분 읽기를 모으고, 완성된 프레임은 내부 버퍼의 **제로카피 슬라이스**로 반환(다음 읽기 전까지 유효). 버퍼는 **선언된 프레임 길이가 아니라 실제 누적된 데이터 기준으로만 성장**(버퍼가 가득 찼을 때만 2배) — 헤더만으로 거대 버퍼를 선할당하는 메모리 증폭 공격 방지. 슬라이스 → Deserialize → Handler.
+스트림: `LengthPrefixFrameReader` — **단일 누적 버퍼**(ArrayPool, 기본 ~64KB)에 부분 읽기를 모으고, 완성된 프레임은 내부 버퍼의 **제로카피 슬라이스**로 반환(다음 읽기 전까지 유효). 버퍼는 **선언된 프레임 길이가 아니라 실제 누적된 데이터 기준으로만 성장**(버퍼가 가득 찼을 때만 2배) — 헤더만으로 거대 버퍼를 선할당하는 메모리 증폭 공격 방지. **컴팩트는 읽기 창이 부족할 때만**(프레임마다 무조건 당기면 한 세그먼트에 묶인 N프레임이 O(N²) 복사가 된다 — 2.2.x). 슬라이스 → Deserialize → Handler.
 메시지 채널: payload span → Deserialize → Handler.
 EOF/오류 → Session.`MarkDisconnected` → `Disconnected` 이벤트. 길이 0 프레임은 프로토콜 위반(Error). **프레임 길이 상한**(`MaxFrameLength`, 기본 `4MB` — 절대 상한 64MB) 초과 프레임은 수신 거부(Error 단절). **프레임 완료 마감**(`FrameTimeout`, 기본 30초): 첫 바이트 도착 시 시작되어 마감 내 프레임 미완성 시 `TimeoutException` → `DisconnectReason.Timeout` 단절(슬로로리스 방어). 완전 유휴 연결은 대상 아님.
 

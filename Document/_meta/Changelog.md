@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (사이클 6 — 프레이머 핫패스)
+
+- **`LengthPrefixFrameReader` 지연 컴팩트** — 기존엔 `ReadFrameAsync`마다 미처리 데이터를 무조건 앞으로 당겨 한 세그먼트에 묶인 N프레임이 O(N²) 복사였다. 파싱을 `_offset` 기준으로 바꾸고 **읽기 창(4KB 하한)이 부족할 때만** 컴팩트→그래도 부족하면 성장. 동작 계약(제로카피 슬라이스·EOF·마감·성장 상한) 불변. 테스트 +1(120→121): 파이프라인 50프레임 컴팩트 ≤1회 회귀 핀(`CompactionCount` 내부 노출). DS_RPC 회귀(빌드+테스트 77건) 통과 — [[../02-Architecture/Pipeline|Pipeline]] 수신 절 갱신
+
 ## 2026-09-09 (릴리스 2.2.0)
 
 - **패키지 2.2.0 배포** — RUDP CRC32c 무결성 옵션(minor) 단위. 7개 패키지 버전 통일 bump → 커밋 `d73d67b` → 태그 `v2.2.0`·`tcp/v2.2.0`·`rudp/v2.2.0` push → Actions 4건(verify+publish×3·CI) 전부 성공. [[../00-AI/CONTEXT|CONTEXT]]·[[../03-Reference/Packages|Packages]] 버전 표기 갱신

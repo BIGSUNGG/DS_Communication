@@ -280,4 +280,33 @@ public class FramingTests
             System.Buffers.ArrayPool<byte>.Shared.Return(rented);
         }
     }
+
+    /// <summary>
+    /// 한 번에 도착한(파이프라인된) N프레임을 프레임마다 컴팩트하지 않고 소비한다 —
+    /// 프레임당 무조건 컴팩트면 세그먼트당 O(N²) 복사가 된다(성능 회귀 탐지 핀).
+    /// </summary>
+    [Fact]
+    public async Task PipelinedFrames_DoNotCompactPerFrame()
+    {
+        var channel = new FakeByteChannel();
+        const int frameCount = 50;
+        byte[] payload = new byte[100];
+        new Random(7).NextBytes(payload);
+        for (int i = 0; i < frameCount; i++)
+        {
+            FeedFrame(channel, payload);
+        }
+
+        channel.Complete();
+
+        using var reader = new LengthPrefixFrameReader(channel);
+        for (int i = 0; i < frameCount; i++)
+        {
+            ReadOnlyMemory<byte> frame = await reader.ReadFrameAsync();
+            Assert.Equal(payload, frame.ToArray());
+        }
+
+        Assert.True((await reader.ReadFrameAsync()).IsEmpty); // 전부 소비 — 프레임 경계 EOF
+        Assert.InRange(reader.CompactionCount, 0, 1); // 창이 부족할 때만 컴팩트 — 프레임당이면 49회
+    }
 }
