@@ -10,6 +10,14 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (상용 하드닝 — 수용 루프 생존성·폭풍 청urn)
+
+- **TCP 수용 루프 생존성 결함 수정** — `TcpListener.AcceptLoopAsync`에서 소켓 옵션 적용(`NoDelay`)이 try 밖에 있어, 수용 직후 상대가 RST로 끊는 경합에서 예외가 나면 수용 루프가 조용히 죽어 **서버 전체가 연결을 받지 못하는 전면 장애**가 됐었다. 옵션 적용 실패는 해당 연결만 버리고 수용 계속으로 격리. 같은 클래스의 `HandshakeTlsAsync`는 `SslStream` 생성(GetStream 포함)이 try 밖이라 스트림 확보 실패 시 **상한 슬롯 미회수 + 클라이언트 누수 + 미관찰 태스크 예외**로 새었다 — 생성까지 실패 범위에 넣고 null 안전 정리
+- **`TcpConnector` 동일 계열 수정** — TLS 스트림 생성 try 진입·소켓 옵션 적용 가드(실패는 연결 실패 `false` 확정, 예외 방출·리소스 누수 없음)
+- **폭풍 청urn 소크 회귀 2건 추가(146 → 148)** — `ChurnSoakTests`: TCP 16동시×3 wave(절반 RST·절반 FIN 즉시 이탈 + 절반 왕복), RUDP 10동시×상한 4(수용·거부·즉시 이탈 혼합). 검증: 매 wave `ActiveConnectionCount` 0 회복(슬롯 누수 없음)·태그 정합성·폭풍 뒤 서버 생존·**방금 놓은 포트 즉시 재바인딩 왕복**(포트 재사용). 동시 RST 청urn은 수용 직후 끊김 경합을 확률적 노출
+- **RUDP 세션 생성 창구 계약 문서화** — 메시지 단위 채널은 구독 전 도착 메시지를 버퍼링하지 않는다: `RudpListener.Accepted` 통지 시점에 세션을 **동기 생성**해야 하고, 채널을 다른 스레드로 넘겨 생성을 미루면 그 사이 메시지가 유실된다(TCP는 스트림 버퍼링으로 동일 창구 없음) → [[../03-Reference/Public-API|Public-API]]·`RudpListener.Accepted` XML 문서
+- **볼트 동기화** — [[../01-Overview/Production-Readiness-Review|Production-Readiness-Review]]·[[../01-Overview/Audit-Full-Scan|Audit-Full-Scan]]의 2.5.0 이전 잔여 주장("RUDP 기밀성 없음") 현행화(DTLS 옵션 존재, 기본은 평문 유지), 소크 갭 표기 갱신(자동 청urn 소크 추가, 24시간+ 실서비스 소크는 여전히 부재)
+
 ## 2026-09-08 (RUDP TLS 구현 — 2.5.0)
 
 - **ADR [[0009-rudp-tls-dtls]] — RUDP 옵션 TLS(DTLS 1.2, BouncyCastle.Cryptography 2.7.0) 구현** — 검토([[../01-Overview/Rudp-Tls-Feasibility|Rudp-Tls-Feasibility]])를 ADR로 격상하고 구현 완료. `RudpTransportOptions.Tls`(`RudpTlsOptions`) — 연결 확립 후 신뢰 채널 위 핸드셰이크 선행 완료(폴링 스레드 밖, 상한 15초, 실패·초과 폐기+슬롯 회수), 클라 검증 핀닝/`TargetHost` 필수(미설정 기본 거부), BC 타입 공개면 비노출(ADR 0007 패턴), 메시지 경계 보존은 내부 3바이트 봉투+청킹(16,381B 초과 `ReliableOrdered`만, 64MB 상한, 위반 fail-closed). 구현 함정 2건 해결 기록 — BC 이중 빌드(netstandard2.0에 Span 오버로드 없음 → virtual 발행), 빈 큐 BC 수신 무기한 블록(펌프 `HasPendingData` 가드)
