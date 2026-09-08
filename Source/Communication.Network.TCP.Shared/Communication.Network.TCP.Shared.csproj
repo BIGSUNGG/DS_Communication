@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP.Shared</PackageId>
-    <Version>2.4.1</Version>
+    <Version>2.5.0</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>연결형 통신 전송 계층 TCP 공유 계층 — TcpSession·StreamByteChannel·TcpTransportOptions (.NET Standard 2.1, Unity 호환).</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>

@@ -80,6 +80,7 @@ updated: 2026-09-09
 | `ConnectionKey` | 접속 요청 검증 키. 서버는 이 키와 일치하는 요청만 수락(`AcceptIfKey`), 클라이언트는 이 키로 접속. `null`·빈 문자열 거부. **기본 키로 서버 시작 시 Trace 경고**(키 값은 미노출) | `"DS_Communication.RUDP"` |
 | `IPv6` | IPv6 소켓도 함께 바인딩 | `false` |
 | `Crc32cEnabled` | 패킷 무결성 검사(CRC32c 레이어). 송신마다 체크섬(4바이트)을 붙이고 수신은 **위반 패킷을 프로토콜 처리 전 폐기** — IPv4 UDP 체크섬이 0일 수 있어 손상 패킷이 앱까지 스며드는 것을 막는다. 위변조 **검출**뿐 방지 아님(키 없는 CRC). **양단 같은 설정 필요**(와이어 비호환). 기밀성은 없음(평문 유지) | `false` |
+| `Tls` | 전송 TLS(DTLS 1.2, BouncyCastle). 설정 시 연결 확립 후 신뢰 채널 위 핸드셰이크 선행 완료 — 실패·`HandshakeTimeout`(기본 15초) 초과는 채널 폐기 + 슬롯 회수(수락 계속). 서버는 `ServerCertificate`(개인 키 포함 `X509Certificate2`), 클라는 `RemoteCertificateValidation`(핀닝) 또는 `TargetHost`(이름 일치) **필수** — 미설정 시 기본 거부(fail-closed). 16,381바이트 초과 메시지는 `ReliableOrdered`만 가능(내부 청킹·재조립, 상한 64MB), 그 외 방식 초과는 `ArgumentException`. **양단 같은 설정 필요**(와이어 비호환) — [[../05-Decisions/0009-rudp-tls-dtls | ADR 0009]] | `null`(평문) |
 
 - **poll 간격은 옵션이 아니다** — 호스트당 전용 폴링 스레드 1개가 고정 1ms 간격으로 `PollEvents()`를 드레인한다. 스레드 수는 접속 수와 무관하게 고정 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
 - `UnsyncedEvents`는 노출하지 않는다(기본 `false` 유지) — `true`면 수신 콜백이 소켓 스레드에서 실행되어 앱 코드가 한 번만 블럭해도 전체 접속의 수신이 멈춘다.

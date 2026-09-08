@@ -12,7 +12,7 @@ updated: 2026-09-09
 
 ## 한 줄 요약
 
-연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 로드맵 1~4단계 완료 — Shared·TCP·RUDP 구현, 테스트 135 통과, Sandbox/Chat.TCP·Chat.RUDP 검증. TCP는 **옵션 TLS(SslStream)** 지원(`TcpTransportOptions.Tls`, 핸드셰이크 상한 15초 — [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]]), RUDP는 평문 + **옵션 무결성 검사**(`Crc32cEnabled` — 손상·위조 패킷 프로토콜 처리 전 폐기, 기밀성은 없음). 송신 직렬화 실패는 항목 격리(끊김 아님). RUDP는 TCP처럼 **Shared/Server/Client 3분할**, LiteNetLib 2.1.4를 **RUDP.Shared에만** 참조해 타입을 공개면에서 은닉, **호스트당 전용 폴링 스레드 1개**(접속 수와 무관) + 세션별 디스패치 큐, 메시지별 `RudpSendOptions`/`RudpDeliveryMethod` — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]. TCP_IOCP는 니즈 확인 전까지 **보류**(2026-09-08).
+연결형 통신 전송 계층 재작성. Connector는 Channel만 열고 **앱이 Session 생성**. Converter는 **IBufferWriter / Span**. 끊김은 **Session `Disconnected(DisconnectReason)`만**. **재접속·하트비트는 앱**. TCP keep-alive는 **사용자 설정**. 스택: TCP → RUDP(LiteNetLib) → TCP_IOCP. 순서: [[../02-Architecture/Implementation-Roadmap|Implementation-Roadmap]]. 로드맵 1~4단계 완료 — Shared·TCP·RUDP 구현, 테스트 135 통과, Sandbox/Chat.TCP·Chat.RUDP 검증. TCP는 **옵션 TLS(SslStream)** 지원(`TcpTransportOptions.Tls`, 핸드셰이크 상한 15초 — [[../05-Decisions/0008-tcp-tls-sslstream|ADR 0008]]), RUDP는 **옵션 TLS(DTLS 1.2, BouncyCastle)** 지원(`RudpTransportOptions.Tls` 2.5.0+ — 연결 후 핸드셰이크 선행, 클라 검증 핀닝/TargetHost 필수·미설정 기본 거부, 메시지 경계는 내부 봉투+청킹 보존 — [[../05-Decisions/0009-rudp-tls-dtls|ADR 0009]]) + **옵션 무결성 검사**(`Crc32cEnabled` — 손상·위조 패킷 프로토콜 처리 전 폐기). 송신 직렬화 실패는 항목 격리(끊김 아님). RUDP는 TCP처럼 **Shared/Server/Client 3분할**, LiteNetLib 2.1.4를 **RUDP.Shared에만** 참조해 타입을 공개면에서 은닉, **호스트당 전용 폴링 스레드 1개**(접속 수와 무관) + 세션별 디스패치 큐, 메시지별 `RudpSendOptions`/`RudpDeliveryMethod` — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]. TCP_IOCP는 니즈 확인 전까지 **보류**(2026-09-08).
 
 ## 저장소
 
@@ -64,6 +64,7 @@ updated: 2026-09-09
 
 - 사람용 시작: [[../01-Overview/Home|Home]]
 - 5개 영역 전수 스캔 감사(2026-09-09): [[../01-Overview/Audit-Full-Scan|Audit-Full-Scan]]
+- 상용 서버 라이브러리 투입 검토(2026-09-09): [[../01-Overview/Production-Readiness-Review|Production-Readiness-Review]]
 - 상위(DS_RPC) 활용 제안: [[../01-Overview/Proposals-Upstream|Proposals-Upstream]]
 - 기능 스펙(이어받을 레거시 기능): [[../01-Overview/Feature-Spec|Feature-Spec]]
 - 사용 예시: [[../04-Guides/Getting-Started|Getting-Started]]

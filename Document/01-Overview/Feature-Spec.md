@@ -65,6 +65,7 @@ updated: 2026-09-09
 | F4-7 | TCP TLS (SslStream) | `TcpTransportOptions.Tls`(2.1.0+) — 서버는 `ServerCertificate` 설정 시 수락 연결마다 **핸드셰이크 선행 완료**(실패·`HandshakeTimeout` 기본 15초 초과는 폐기 후 수락 계속, 상한 슬롯 회수), 클라이언트는 옵션 설정 시 핸드셰이크 후 채널(실패=`false`). 기본 `null`=평문. TLS 1.3: 클라이언트 검증 거부 후에도 서버 `Accepted` 발생 가능 (ADR [[0008-tcp-tls-sslstream]]) (**신규**) |
 | F4-8 | RUDP 패킷 무결성 | `RudpTransportOptions.Crc32cEnabled`(2.2.0+, 기본 `false`, **양단 같은 설정 필요**) — 체크섬 위반 패킷(손상·위조)을 **프로토콜 처리 전 폐기**(위조 접속 요청은 슬롯 예약 없음). 검출 전용 — 기밀성·인증 없음 (**신규**) |
 | F4-9 | 기본 키 시작 경고 | `RudpListener.Start`가 공개 상수 기본 `ConnectionKey`로 시작되면 Trace 경고(키 값 미노출) — 공개망 교체 유도 (2.3.0+) (**신규**) |
+| F4-10 | RUDP TLS (DTLS 1.2) | `RudpTransportOptions.Tls`(`RudpTlsOptions`, 2.5.0+, 기본 `null`=평문, **양단 같은 설정 필요**) — 연결 확립 후 신뢰 채널 위 핸드셰이크 선험 완료(상한 15초, 실패·초과 폐지+슬롯 회수). 서버는 `ServerCertificate`(개인 키 포함) 설정 시, 클라는 옵션 자체 설정 시 TLS. 클라 검증은 핀닝/`TargetHost` **필수**(미설정 기본 거부). 메시지 경계는 내부 봉투+청킹로 보존(16,381B 초과 `ReliableOrdered`만, 64MB 상한). BC 타입 공개면 비노출 ([[../05-Decisions/0009-rudp-tls-dtls | ADR 0009]]) (**신규**) |
 
 ## F5. 플랫폼·패키지
 

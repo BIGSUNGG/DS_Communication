@@ -7,6 +7,14 @@ namespace Communication.Network.RUDP;
 /// </summary>
 public sealed class RudpTransportOptions
 {
+    /// <summary>
+    /// 전송 TLS(DTLS 1.2) 옵션. 설정 시 연결 확립 후 신뢰 채널 위에서 핸드셰이크를 완료한 뒤 채널을 전달한다.
+    /// 서버는 <see cref="RudpTlsOptions.ServerCertificate"/> 설정 시, 클라이언트는 옵션 자체가 설정된 경우 TLS를 켠다.
+    /// 기본(<c>null</c>)은 평문 — 기존 동작 그대로. **양단 같은 설정**이어야 한다(와이어 비호환).
+    /// BouncyCastle.Cryptography 의존성이 추가되며 BC 타입은 공개면에 노출되지 않는다.
+    /// </summary>
+    public RudpTlsOptions? Tls { get; set; }
+
     /// <summary>기본 연결 키. 앱이 토큰·핸드셰이크 식별자로 바꾸지 않는 한 이 값으로 접속을 검증한다.</summary>
     public const string DefaultConnectionKey = "DS_Communication.RUDP";
 

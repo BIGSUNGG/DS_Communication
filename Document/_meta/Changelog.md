@@ -10,6 +10,22 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-08 (RUDP TLS 구현 — 2.5.0)
+
+- **ADR [[0009-rudp-tls-dtls]] — RUDP 옵션 TLS(DTLS 1.2, BouncyCastle.Cryptography 2.7.0) 구현** — 검토([[../01-Overview/Rudp-Tls-Feasibility|Rudp-Tls-Feasibility]])를 ADR로 격상하고 구현 완료. `RudpTransportOptions.Tls`(`RudpTlsOptions`) — 연결 확립 후 신뢰 채널 위 핸드셰이크 선행 완료(폴링 스레드 밖, 상한 15초, 실패·초과 폐기+슬롯 회수), 클라 검증 핀닝/`TargetHost` 필수(미설정 기본 거부), BC 타입 공개면 비노출(ADR 0007 패턴), 메시지 경계 보존은 내부 3바이트 봉투+청킹(16,381B 초과 `ReliableOrdered`만, 64MB 상한, 위반 fail-closed). 구현 함정 2건 해결 기록 — BC 이중 빌드(netstandard2.0에 Span 오버로드 없음 → virtual 발행), 빈 큐 BC 수신 무기한 블록(펌프 `HasPendingData` 가드)
+- **테스트 135 → 146** — `RudpTlsTests` 11건: 핀닝 왕복(RSA·ECDSA)·TargetHost 일치/불일치·핀닝 불일치 거부·기본 거부·상한 슬롯 회수·중 끊김 슬롯 회수·전 방식 혼합·200KB 청킹·비분할 상한 거체
+- **Sandbox** — `Chat.RUDP --tls-selftest`(핀닝·전 방식·청킹)·`--bench [--tls]` 성능 게이트 추가. **벤치마크(512B 에코 왕복): 평문 1,790 msg/s vs TLS 1,703 msg/s ≈ 5% 오버헤드** — 게임 메시지 크기에서 BC 관리형 암호 비용은 전송 지연 대비 미미(4KB: 1.33 MB/s)
+- **볼트 동기화** — [[../04-Guides/Security|Security]] ❌→✅(RUDP 기밀성), [[../01-Overview/Feature-Spec|Feature-Spec]] F4-10, [[../03-Reference/Public-API|Public-API]](`RudpTlsOptions`·TLS 런타임 의미), [[../03-Reference/Configuration|Configuration]](`Tls` 행), [[../03-Reference/Packages|Packages]](BC 의존 규칙), [[../04-Guides/Getting-Started|Getting-Started]] §6 RUDP TLS 예시, [[../00-AI/CONTEXT|CONTEXT]] 갱신, 패키지 7종 **2.4.1 → 2.5.0**(미태그·미배포 — 릴리스는 별도 확인 후)
+
+## 2026-09-08 (RUDP TLS 검토)
+
+- **[[../01-Overview/Rudp-Tls-Feasibility|Rudp-Tls-Feasibility]] 신설** — "RUDP에 TLS 지원 가능한가" 검토. 결론: **가능** — SslStream은 UDP 불가, 표준 해법 DTLS, BCL 부재 → BouncyCastle.Cryptography(netstandard2.0, DTLS 클래스 확인) 도입 전제. 권장 설계: LiteNetLib 연결 확립 후 reliable 채널 위 핸드셰이크(ADR 0008 패턴 미러) + 채널 랩 레코드 암호화. 주의점 7건(폴링 스레드 블로킹 금지·MTU·와이어 비호환·BC 성능 등)과 경량 대안(PSK 우선) 기록. 승인 시 ADR 0009로 격상 예정
+- **동 노트에 상용화(Unity 서버) 구현 권장안 추가** — BC DTLS 확정 권장(AOT 안전·OS 스토어 불필요·BC 프리미티브로 플랫폼 편차 회피), DTLS 1.2 기준(BC C# 1.3 미확인), 클라 검증은 핀닝 기본, PSK는 인프라 링크 한정, 성능 게이트(Sandbox 벤치마크 선행), TCP SslStream 실패 시 BC TLS 교체 가능성 기록
+
+## 2026-09-09 (상용 투입 검토)
+
+- **[[../01-Overview/Production-Readiness-Review|Production-Readiness-Review]] 신설** — Source 전 30파일 열독 + 테스트 135/135 실행 + netstandard2.1 Release 빌드 검증. 결론: 조건부 사용 가능(TCP+TLS 상용 투입 가능, RUDP는 신뢰망 한정). 갭: 소크·벤치마크·관측성·송신 타임아웃·Unity 런타임 실측. [[../00-AI/CONTEXT|CONTEXT]] 관련 노트 링크 추가
+
 ## 2026-09-09 (릴리스 2.4.1)
 
 - **패키지 2.4.1 배포(patch)** — 정지 후 완료된 TLS 핸드셰이크 늦은 `Accepted` 차단(`1fe96aa`, 테스트 135). 커밋 `e018fbf` → 태그 ×3 → Actions 4건 전부 성공. 표기 갱신 — 세션 8번째 릴리스(2.0.1→2.4.1)

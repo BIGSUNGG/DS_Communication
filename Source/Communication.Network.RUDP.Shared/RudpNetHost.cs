@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
+using Communication.Shared.Channels;
 using LiteNetLib;
 using LiteNetLib.Layers;
 using LiteNetLib.Utils;
@@ -31,6 +33,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     private readonly ConcurrentDictionary<int, RudpMessageChannel> _channels = new();
     private readonly string _connectionKey;
     private readonly int? _maxConnections;
+    private readonly RudpTlsOptions? _tls;
     private Thread? _pollThread;
     private volatile bool _running;
     private bool _isServer;
@@ -42,6 +45,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     {
         _connectionKey = options?.ConnectionKey ?? RudpTransportOptions.DefaultConnectionKey;
         _maxConnections = options?.MaxConnections;
+        _tls = options?.Tls;
         _manager = new NetManager(this, options?.Crc32cEnabled == true ? new Crc32cLayer() : null)
         {
             DisconnectTimeout = options?.DisconnectTimeout ?? RudpTransportOptions.DefaultDisconnectTimeoutMs,
@@ -63,8 +67,8 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     /// <summary>수락됐으나 아직 회수되지 않은 채널 수. <c>MaxConnections</c> 상한 강제의 기준이다.</summary>
     internal int ActiveConnectionCount => Volatile.Read(ref _connectionCount);
 
-    /// <summary>연결이 확립된 peer마다 채널을 만들어 통지한다. 서버는 수락, 클라이언트는 연결 완료가 여기로 온다.</summary>
-    internal Action<RudpMessageChannel>? PeerAccepted { get; set; }
+    /// <summary>연결이 확립된 peer마다 채널을 만들어 통지한다. TLS 설정 시 <b>핸드셰이크 성공 후</b> 랩 채널로 온다.</summary>
+    internal Action<IMessageChannel>? PeerAccepted { get; set; }
 
     /// <summary>채널로 등록되기 전에 peer가 끊긴 경우 통지 — 클라이언트 연결 실패 판정에 쓴다.</summary>
     internal Action? PeerFailed { get; set; }
@@ -258,8 +262,19 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
         RudpMessageChannel channel = new(this, peer, ownsHost: !_isServer);
         _channels[peer.Id] = channel;
 
-        // 수락마다 최신 구독자를 읽는다 — Start 이후 구독자도 채널을 받는다(TcpListener와 동일 계약).
-        Action<RudpMessageChannel>? accepted = PeerAccepted;
+        if (_tls is not null)
+        {
+            StartTlsHandshake(channel); // 핸드셰이크를 폴링 스레드에서 돌리면 전체 이벤트 드레인이 멈춘다 — 전용 태스크로.
+            return;
+        }
+
+        DeliverAccepted(channel);
+    }
+
+    /// <summary>구독자에게 채널을 전달한다 — 수락마다 최신 구독자를 읽는다(Start 이후 구독자도 받는다, TcpListener와 동일 계약).</summary>
+    private void DeliverAccepted(IMessageChannel channel)
+    {
+        Action<IMessageChannel>? accepted = PeerAccepted;
         if (accepted is null)
         {
             channel.Dispose(); // 구독자 없음 — 연결이 새지 않도록 정리.
@@ -275,6 +290,40 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
             Trace.TraceError($"RUDP 수락 핸들러 예외 — 채널 정리 후 계속: {e}");
             channel.Dispose();
         }
+    }
+
+    /// <summary>
+    /// TLS 켠 연결의 핸드셰이크 게이트 — 성공 시 랩 채널을 <see cref="PeerAccepted"/>로 넘기고,
+    /// 실패·상한 초과는 채널을 폐기한다(서버: ReleaseChannel → 슬롯 회수, 클라: 호스트까지 정리 + 연결 실패 확정).
+    /// </summary>
+    private void StartTlsHandshake(RudpMessageChannel channel)
+    {
+        RudpDtlsTransport transport = new(channel);
+        RudpTlsOptions tls = _tls!;
+
+        _ = Task.Run(async () =>
+        {
+            Org.BouncyCastle.Tls.DtlsTransport dtls;
+            try
+            {
+                dtls = await RudpDtlsHandshake.RunAsync(transport, tls, _isServer).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceError($"RUDP TLS 핸드셰이크 실패 — 연결 정리: {e}");
+                transport.Close();
+                if (!_isServer)
+                {
+                    PeerFailed?.Invoke(); // 클라: 연결 실패 확정(커넥터 completion).
+                }
+
+                channel.Dispose();
+                return;
+            }
+
+            // 성공 — Stop 등으로 채널이 이미 회수됐어도 세션 생성 창구의 래치 회수가 단절을 전달한다.
+            DeliverAccepted(new RudpTlsChannel(channel, transport, dtls));
+        });
     }
 
     public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)

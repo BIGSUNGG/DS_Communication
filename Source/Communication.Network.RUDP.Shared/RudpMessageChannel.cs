@@ -12,7 +12,7 @@ namespace Communication.Network.RUDP;
 /// 프레이머가 필요 없다. 앱은 이 타입을 직접 만들지 않는다 — <c>RudpConnector.Channel</c> 또는
 /// <c>RudpListener.Accepted</c>로 받는다.
 /// </summary>
-public sealed class RudpMessageChannel : IMessageChannel
+public sealed class RudpMessageChannel : IMessageChannel, IRudpTransportEvents
 {
     private readonly NetPeer _peer;
     private readonly RudpNetHost _host;
@@ -44,6 +44,10 @@ public sealed class RudpMessageChannel : IMessageChannel
     /// 메시지 채널 경로에는 수신 루프가 없어 원격 끊김을 이 통지가 대신 전달한다.
     /// </summary>
     internal event Action<SharedDisconnectReason>? TransportDisconnected;
+
+    /// <summary>세션 구독 추가 대행 — <see cref="IRudpTransportEvents"/> 명시 구현.</summary>
+    void IRudpTransportEvents.AddTransportDisconnectedHandler(Action<SharedDisconnectReason> handler)
+        => TransportDisconnected += handler;
 
     internal int PeerId => _peer.Id;
 
@@ -152,7 +156,7 @@ public sealed class RudpMessageChannel : IMessageChannel
     }
 
     /// <summary>구독 직후 호출 — 구독 전 발생한 단절을 회수한다(이벤트·래치 양쪽 경로로 정확히 1회).</summary>
-    internal bool TryConsumeLatchedDisconnect(out SharedDisconnectReason reason)
+    bool IRudpTransportEvents.TryConsumeLatchedDisconnect(out SharedDisconnectReason reason)
     {
         reason = _latchedReason;
         return Interlocked.Exchange(ref _latchedDisconnect, 0) == 1;

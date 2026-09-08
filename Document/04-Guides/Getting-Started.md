@@ -143,7 +143,32 @@ await session.SendAndFlushAsync(important, new RudpSendOptions(RudpDeliveryMetho
 - 접속 수와 무관하게 호스트당 폴링 스레드 1개 — [[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]].
 - 실행 검증: `dotnet run --project Sandbox/Chat.RUDP -- --selftest` (5개 전송 방식 왕복 후 exit 0), 채팅은 `server [port]` / `client [port] [이름]` — `'!'` 접두 줄은 Unreliable로 전송.
 
-## 6. 전송 보안 옵션 — TCP TLS · RUDP CRC32c
+## 6. 전송 보안 옵션 — TCP TLS · RUDP TLS · RUDP CRC32c
+
+### RUDP TLS (DTLS 1.2)
+
+```csharp
+// 서버 — 개인 키 포함 인증서 설정(자체 서명·사내 CA 모두 가능, 게임 전용 서버는 핀닝 조합이 표준)
+using X509Certificate2 certificate = LoadServerCertificate(); // RSA-2048+ 또는 ECDSA P-256
+listener.Start(new RudpTransportOptions
+{
+    Tls = new RudpTlsOptions { ServerCertificate = certificate },
+});
+
+// 클라이언트 — 서버 인증서 DER의 SHA-256 지문으로 핀닝(미설정 시 기본 거부)
+byte[] expectedDer = LoadPinnedCertificateDer();
+await connector.ConnectAsync("127.0.0.1", port, new RudpTransportOptions
+{
+    Tls = new RudpTlsOptions
+    {
+        RemoteCertificateValidation = der =>
+            RudpTlsOptions.GetSha256Fingerprint(der) == "ab:cd:…:ef",
+    },
+});
+```
+
+- 실행 검증: `dotnet run --project Sandbox/Chat.RUDP -- --tls-selftest`(핀닝 연결·전 방식 왕복·청킹 후 exit 0), 성능 게이트: `--bench [--tls] [크기] [횟수]`
+- 상세 계약: [[../05-Decisions/0009-rudp-tls-dtls|ADR 0009]] · [[Security|Security & Production Checklist]]
 
 ### TCP TLS (SslStream)
 

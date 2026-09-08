@@ -155,6 +155,18 @@ class RudpTransportOptions
     bool IPv6;                      // 기본 false (IPv4만)
     bool Crc32cEnabled;             // 패킷 무결성(CRC32c) 검사, 기본 false — 양단 같은 설정 필요(와이어 비호환)
     int? ConnectTimeout;            // 연결 시도 상한(ms), null = LiteNetLib 기본(≈5초)
+    RudpTlsOptions? Tls;            // 전송 TLS(DTLS 1.2, BouncyCastle), 기본 null = 평문 — 양단 같은 설정 필요
+}
+
+delegate bool RudpRemoteCertificateValidation(byte[] serverCertificateDer);
+
+sealed class RudpTlsOptions
+{
+    X509Certificate2? ServerCertificate;             // 서버 전용 — 개인 키 포함 필수(RSA/ECDSA)
+    string? TargetHost;                              // 클라 전용 — SAN/CN 이름 일치 검증
+    RudpRemoteCertificateValidation? RemoteCertificateValidation;  // 클라 전용 — 핀닝(둘 다 없으면 기본 거부)
+    int HandshakeTimeout;                            // 핸드셰이크 상한(ms), 기본 15000 — 슬로로리스 방어
+    static string GetSha256Fingerprint(byte[] certificateDer);      // 핀닝 비교용 지문(16진 콜론)
 }
 
 class RudpSession : Session
@@ -179,6 +191,7 @@ sealed class RudpMessageChannel : IMessageChannel
 - **원격 끊김**: 메시지 채널 경로에는 수신 루프가 없어 `RudpSession`이 채널의 peer 끊김 통지를 `Session.Disconnected`로 이어 붙인다. LiteNetLib 이유 → Shared `DisconnectReason` 매핑: `Timeout`→Timeout, `RemoteConnectionClose`→Remote, `DisconnectPeerCalled`→Local, 나머지→Error.
 - **접속 수 상한**: `MaxConnections`는 접속 요청 시점에 슬롯을 **예약**해 검사한다(같은 폴링 배치의 다수 요청이 상한을 함께 넘지 못함). 초과·키 불일치는 `Reject()` 되고 `Accepted` 통지가 없다. peer 끊김 또는 채널 Dispose 시 슬롯 회수.
 - **자원 소유**: 클라이언트는 peer가 하나뿐이라 `RudpMessageChannel.Dispose()`가 내부 호스트(폴링 스레드·NetManager)까지 정리한다. 서버 채널은 호스트를 소유하지 않으며 `RudpListener.Stop()`이 `NetManager.Stop(true)`로 접속 중 peer에 끊김 메시지를 보낸다.
+- **TLS(DTLS 1.2)**: `Tls` 설정 시 연결 확립 후 신뢰 채널 위에서 핸드셰이크를 완료한 뒤에만 채널 전달(실패·상한 초과는 폐기 + 슬롯 회수). 앱은 `IMessageChannel` 그대로 — BC 타입 비노출, 메시지 경계는 내부 3바이트 봉투+청킹로 보존(16,381B 초과는 `ReliableOrdered`만, 64MB 상한, 위반 수신 fail-closed). 클라 검증 미설정 시 기본 거부 — [[../05-Decisions/0009-rudp-tls-dtls|ADR 0009]].
 - **하트비트·재접속은 앱**. `DisconnectTimeout`(기본 5000ms)이 UDP half-open 감지의 유일한 신호다 — [[0003-connection-lifecycle-options]].
 
 ## Handler

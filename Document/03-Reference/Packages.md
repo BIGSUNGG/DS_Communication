@@ -14,7 +14,7 @@ updated: 2026-09-08
 | `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.4.1 배포 |
 | `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.4.1 배포 |
 | `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.4.1 배포 |
-| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** | 구현 완료 — 테스트 포함, 2.4.1 배포 |
+| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** + **BouncyCastle.Cryptography 2.7.0**(TLS 옵션) | 구현 완료 — 테스트 포함, 2.5.0(2.4.1 + RUDP TLS) |
 | `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.4.1 배포 |
 | `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.4.1 배포 |
 | `Communication.Network.TCP_IOCP` | netstandard2.1 | Shared | 미착수 |
@@ -33,7 +33,7 @@ updated: 2026-09-08
 | Network.TCP.Shared | `TcpSession`, Stream `IByteChannel`, `TcpTransportOptions`·`SocketKeepAliveOptions` |
 | Network.TCP.Server | `TcpListener` 수락 루프 |
 | Network.TCP.Client | `TcpConnector` 연결 |
-| Network.RUDP.Shared | `RudpSession`, LiteNetLib `IMessageChannel`(`RudpMessageChannel`), `RudpSendOptions`·`RudpDeliveryMethod`, `RudpTransportOptions`, 내부 `RudpNetHost`(NetManager 소유·폴링 루프 1개·peer 등록부) |
+| Network.RUDP.Shared | `RudpSession`, LiteNetLib `IMessageChannel`(`RudpMessageChannel`), `RudpSendOptions`·`RudpDeliveryMethod`, `RudpTransportOptions`(`RudpTlsOptions` — DTLS 1.2, BC 타입 비노출), 내부 `RudpNetHost`(NetManager 소유·폴링 루프 1개·peer 등록부·핸드셰이크 게이트) |
 | Network.RUDP.Server | `RudpListener` 수락 (`Accepted(IMessageChannel)`, `MaxConnections` 슬롯 예약) |
 | Network.RUDP.Client | `RudpConnector` 연결 (채널이 호스트까지 소유) |
 | Network.TCP_IOCP | IOCP `IByteChannel` |
@@ -44,6 +44,7 @@ updated: 2026-09-08
 - 나머지 스택(TCP_IOCP·IPC)은 1 패키지 유지 (분할 필요 시 TCP·RUDP 선례 따름)
 - 전송 패키지 상호 참조 없음 (같은 스택의 .Shared 제외)
 - LiteNetLib `PackageReference`는 **RUDP.Shared에만** — Server·Client는 전이 참조, LiteNetLib 타입은 공개 API에 노출 금지 ([[0007-rudp-three-way-split-and-polling]])
+- **BouncyCastle.Cryptography도 같은 규칙**(2.5.0+) — RUDP.Shared에만 참조, BC 타입 공개면 비노출, 어댑터의 Span 오버로드는 virtual 발행(netstandard2.0/net6.0 이중 빌드 호환 — [[0009-rudp-tls-dtls]])
 - 자체 RUDP는 이후 **별 프로젝트**
 - 배포: GitHub Actions `nuget-publish.yml` — `v*` 태그 → Communication.Shared, `tcp/v*` 태그 → TCP 3종, `rudp/v*` 태그 → RUDP 3종 (2.4.1 배포 완료)
 
