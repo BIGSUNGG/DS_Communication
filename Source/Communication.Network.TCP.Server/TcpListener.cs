@@ -127,9 +127,28 @@ public sealed class TcpListener : IDisposable
                 continue;
             }
 
-            // 소켓 옵션은 래핑 전에 원본 소켓에 적용한다.
-            client.NoDelay = options?.NoDelay ?? true;
-            KeepAliveApplicator.Apply(client.Client, options?.KeepAlive);
+            // 소켓 옵션은 래핑 전에 원본 소켓에 적용한다. 수용 직후 상대가 RST로 끊는 경합으로
+            // 적용이 실패하면 이 연결만 버린다 — 이 예외가 루프를 벗어나면 수용이 조용히 죽어
+            // 서버 전체가 연결을 받지 못한다(전면 장애). KeepAliveApplicator는 내부에서 이미 격리된다.
+            try
+            {
+                client.NoDelay = options?.NoDelay ?? true;
+                KeepAliveApplicator.Apply(client.Client, options?.KeepAlive);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceError($"수용 연결 소켓 옵션 적용 실패 — 연결 닫고 수용 계속: {e}");
+                try
+                {
+                    client.Dispose();
+                }
+                catch
+                {
+                    // 닫기 실패가 수용 루프를 막으면 안 된다.
+                }
+
+                continue;
+            }
 
             // 연결 수 상한 — 초과면 카운트를 되돌리고 즉시 닫은 뒤 수락 계속.
             int active = Interlocked.Increment(ref _connectionCount);
@@ -166,9 +185,10 @@ public sealed class TcpListener : IDisposable
     /// <summary>TLS 핸드셰이크를 완료하고 성공 시에만 채널을 전달한다. 실패(프로토콜 위반·상한 초과)는 로그·정리 후 조용히 끝난다.</summary>
     private async Task HandshakeTlsAsync(TcpClient client, X509Certificate certificate, TcpTlsOptions tls, CancellationToken listenerToken)
     {
-        SslStream ssl = new(client.GetStream(), leaveInnerStreamOpen: false);
+        SslStream? ssl = null;
         try
         {
+            ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
             Task handshake = ssl.AuthenticateAsServerAsync(
                 certificate, clientCertificateRequired: false, enabledSslProtocols: SslProtocols.None, checkCertificateRevocation: false);
             if (!await TlsHandshake.AwaitAsync(ssl, handshake, tls.HandshakeTimeout).ConfigureAwait(false))
@@ -181,11 +201,23 @@ public sealed class TcpListener : IDisposable
             Trace.TraceError($"TLS 핸드셰이크 실패 — 연결 닫고 수락 계속: {e}");
             try
             {
-                ssl.Dispose(); // 스트림 닫기는 내부 NetworkStream→소켓까지 닫는다.
+                ssl?.Dispose(); // 스트림 닫기는 내부 NetworkStream→소켓까지 닫는다. ssl 생성 전 실패(null)면 아래서 클라이언트를 닫는다.
             }
             catch
             {
                 // 닫기 실패가 정리를 막으면 안 된다.
+            }
+
+            if (ssl is null)
+            {
+                try
+                {
+                    client.Dispose(); // 스트림 생성 전 실패 — 클라이언트 직접 정리.
+                }
+                catch
+                {
+                    // 닫기 실패가 정리를 막으면 안 된다.
+                }
             }
 
             Interlocked.Decrement(ref _connectionCount); // 수락 루프가 예약한 슬롯 회수

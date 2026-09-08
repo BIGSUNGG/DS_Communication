@@ -76,9 +76,12 @@ public sealed class TcpConnector
         if (options?.Tls is { } tls)
         {
             // TLS 핸드셰이크 — 실패(인증서 거부·프로토콜 위반·상한 초과)는 연결 실패(false)로 확정한다.
-            SslStream ssl = new(client.GetStream(), leaveInnerStreamOpen: false, tls.RemoteCertificateValidation);
+            // 스트림 생성(GetStream·SslStream ctor)까지 실패 범위에 넣는다 — 밖에서 던지면
+            // 클라이언트가 정리되지 않고 예외가 호출자에게 그대로 방출된다.
+            SslStream? ssl = null;
             try
             {
+                ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: false, tls.RemoteCertificateValidation);
                 Task handshake = ssl.AuthenticateAsClientAsync(
                     tls.TargetHost ?? host, clientCertificates: null, enabledSslProtocols: SslProtocols.None, checkCertificateRevocation: false);
                 if (!await TlsHandshake.AwaitAsync(ssl, handshake, tls.HandshakeTimeout).ConfigureAwait(false))
@@ -96,7 +99,7 @@ public sealed class TcpConnector
             {
                 try
                 {
-                    ssl.Dispose();
+                    ssl?.Dispose();
                 }
                 catch
                 {
@@ -107,16 +110,26 @@ public sealed class TcpConnector
                 return false;
             }
 
-            channel = new StreamByteChannel(ssl, client.Client);
+            channel = new StreamByteChannel(ssl!, client.Client);
         }
         else
         {
             channel = new StreamByteChannel(client);
         }
 
-        // 소켓 옵션은 원본 소켓에 적용한다(TLS 스트림 아래 공유 소켓).
-        channel.Socket.NoDelay = options?.NoDelay ?? true;
-        KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
+        // 소켓 옵션은 원본 소켓에 적용한다(TLS 스트림 아래 공유 소켓). 연결 확립 직후 끊김
+        // 경합으로 적용이 실패하면 연결 실패(false)로 확정한다 — 예외 방출·리소스 누수 없이.
+        try
+        {
+            channel.Socket.NoDelay = options?.NoDelay ?? true;
+            KeepAliveApplicator.Apply(channel.Socket, options?.KeepAlive);
+        }
+        catch (Exception)
+        {
+            channel.Dispose();
+            return false;
+        }
+
         Channel = channel;
         return true;
     }

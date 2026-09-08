@@ -25,7 +25,15 @@ public sealed class RudpListener : IDisposable
         _port = port;
     }
 
-    /// <summary>수락된 채널 통지. 세션 생성 등 앱 로직에서 던진 예외는 격리된다.</summary>
+    /// <summary>
+    /// 수락된 채널 통지. 세션 생성 등 앱 로직에서 던진 예외는 격리된다.
+    /// </summary>
+    /// <remarks>
+    /// 메시지 단위 채널(RUDP)은 구독 전에 도착한 메시지를 버퍼링하지 않는다 —
+    /// 통지 시점에 <c>RudpSession</c>을 **동기적으로** 생성해야 한다(핸들러 안에서 <c>new</c> 후 반환).
+    /// 채널을 다른 스레드로 넘겨 세션 생성을 미루면 그 사이 도착한 메시지는 유실된다.
+    /// TCP는 스트림 버퍼링으로 동일 창구가 없다.
+    /// </remarks>
     public event Action<IMessageChannel>? Accepted;
 
     /// <summary>바인딩된 실제 포트. 포트 0(임시 포트) 수락 시 테스트·등록에 사용한다.</summary>
