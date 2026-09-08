@@ -16,6 +16,7 @@ Document vault 변경 기록 (코드 릴리스 노트 아님).
 - **테스트 135 → 146** — `RudpTlsTests` 11건: 핀닝 왕복(RSA·ECDSA)·TargetHost 일치/불일치·핀닝 불일치 거부·기본 거부·상한 슬롯 회수·중 끊김 슬롯 회수·전 방식 혼합·200KB 청킹·비분할 상한 거체
 - **Sandbox** — `Chat.RUDP --tls-selftest`(핀닝·전 방식·청킹)·`--bench [--tls]` 성능 게이트 추가. **벤치마크(512B 에코 왕복): 평문 1,790 msg/s vs TLS 1,703 msg/s ≈ 5% 오버헤드** — 게임 메시지 크기에서 BC 관리형 암호 비용은 전송 지연 대비 미미(4KB: 1.33 MB/s)
 - **볼트 동기화** — [[../04-Guides/Security|Security]] ❌→✅(RUDP 기밀성), [[../01-Overview/Feature-Spec|Feature-Spec]] F4-10, [[../03-Reference/Public-API|Public-API]](`RudpTlsOptions`·TLS 런타임 의미), [[../03-Reference/Configuration|Configuration]](`Tls` 행), [[../03-Reference/Packages|Packages]](BC 의존 규칙), [[../04-Guides/Getting-Started|Getting-Started]] §6 RUDP TLS 예시, [[../00-AI/CONTEXT|CONTEXT]] 갱신, 패키지 7종 **2.4.1 → 2.5.0**(미태그·미배포 — 릴리스는 별도 확인 후)
+- **2.5.0 배포 완료(후일 같은 날)** — 커밋 `aff1d3e` → 태그 ×3(`v2.5.0`·`tcp/v2.5.0`·`rudp/v2.5.0`) → Actions 4건 전부 성공(검증 ubuntu: Release 빌드 + 테스트 146 전수 + Sandbox 셀프테스트, 게시 3건 — "Your package was pushed"). NuGet 7종 2.5.0 업로드 확인
 
 ## 2026-09-08 (RUDP TLS 검토)
 
