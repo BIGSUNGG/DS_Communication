@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (2.5.1 릴리스 — 상용 하드닝)
+
+- **패치 릴리스 2.5.1** — 공개 API 변화 없음. 하기 같은 날 섹션의 상용 하드닝(수용 루프 생존성·TLS/plain 경로 스트림 생성 가드·`TcpConnector` 정리·`OnNetworkError` 로그 제한·폭풍 청urn 소크·문서 동기화)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest) 통과 확인 후 태그 `v2.5.1`·`tcp/v2.5.1`·`rudp/v2.5.1`
+
 ## 2026-09-09 (상용 하드닝 — 수용 루프 생존성·폭풍 청urn)
 
 - **TCP 수용 루프 생존성 결함 수정** — `TcpListener.AcceptLoopAsync`에서 소켓 옵션 적용(`NoDelay`)이 try 밖에 있어, 수용 직후 상대가 RST로 끊는 경합에서 예외가 나면 수용 루프가 조용히 죽어 **서버 전체가 연결을 받지 못하는 전면 장애**가 됐었다. 옵션 적용 실패는 해당 연결만 버리고 수용 계속으로 격리. 같은 클래스의 `HandshakeTlsAsync`는 `SslStream` 생성(GetStream 포함)이 try 밖이라 스트림 확보 실패 시 **상한 슬롯 미회수 + 클라이언트 누수 + 미관찰 태스크 예외**로 새었다 — 생성까지 실패 범위에 넣고 null 안전 정리

@@ -10,13 +10,13 @@ updated: 2026-09-08
 
 | 패키지 | TFM (목표) | 의존 | 상태 |
 | -------- | ------------ | ------ | ------ |
-| `Communication.Shared` | netstandard2.1 | (없음) | 구현 완료 — 테스트 포함, 2.4.1 배포 |
-| `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.4.1 배포 |
-| `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.4.1 배포 |
-| `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.4.1 배포 |
-| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** + **BouncyCastle.Cryptography 2.7.0**(TLS 옵션) | 구현 완료 — 테스트 포함, 2.5.0(2.4.1 + RUDP TLS) |
-| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.4.1 배포 |
-| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.4.1 배포 |
+| `Communication.Shared` | netstandard2.1 | (없음) | 구현 완료 — 테스트 포함, 2.5.1 배포 |
+| `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.5.1 배포(2.5.0 + 수용 루프 하드닝) |
+| `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.5.1 배포(2.5.0 + 수용 루프 하드닝) |
+| `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.5.1 배포(2.5.0 + 연결 정리 하드닝) |
+| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** + **BouncyCastle.Cryptography 2.7.0**(TLS 옵션) | 구현 완료 — 테스트 포함, 2.5.1 배포(2.5.0 + RUDP TLS·오류 로그 제한) |
+| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.5.1 배포(2.5.0 + 오류 로그 제한) |
+| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.5.1 배포(2.5.0 + 오류 로그 제한) |
 | `Communication.Network.TCP_IOCP` | netstandard2.1 | Shared | 미착수 |
 | `Communication.IPC.Stream` | netstandard2.1 | Shared | 후속 |
 | `Communication.IPC.SharedMemory` | netstandard2.1 | Shared | 후속 |
