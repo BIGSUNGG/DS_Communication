@@ -28,7 +28,7 @@ listener.Accepted += channel => { var session = new TcpSession(channel, ...); };
 listener.Start(...);
 ```
 
-`Accepted`는 수락 루프가 수락마다 최신 구독자를 읽는다 - `Start` 이후 구독자도 채널을 받는다. `TcpListener.Accepted`는 `IByteChannel`, `RudpListener.Accepted`는 `IMessageChannel`을 넘긴다(세션 생성은 언제나 앱 - [[0006-session-ownership-and-converter]]). **RUDP `Accepted`에서는 세션을 통지 시점에 동기 생성해야 한다** - 메시지 단위 채널은 구독 전 도착 메시지를 버퍼링하지 않아, 채널을 다른 스레드로 넘겨 생성을 미루면 그 사이 메시지가 유실된다(TCP는 스트림 버퍼링으로 동일 창구가 없다)..
+`Accepted`는 수락 루프가 수락마다 최신 구독자를 읽는다 - `Start` 이후 구독자도 채널을 받는다. `TcpListener.Accepted`는 `IByteChannel`, `RudpListener.Accepted`는 `IMessageChannel`을 넘긴다(세션 생성은 언제나 앱 - [[0006-session-ownership-and-converter]]). **RUDP `Accepted`에서는 세션을 통지 시점에 동기 생성해야 한다** - 메시지 단위 채널은 구독 전 도착 메시지를 버퍼링하지 않아, 채널을 다른 스레드로 넘겨 생성을 미루면 그 사이 메시지가 유실된다(TCP는 스트림 버퍼링으로 동일 창구가 없다).
 
 ## TCP keep-alive (사용자 설정)
 
