@@ -135,7 +135,8 @@ public class ChurnSoakTests
 
     /// <summary>
     /// 동시 접속 폭풍 회귀 — 한 wave에 16개 연결이 동시에 열리고 절반은 즉시 이탈(절반은 RST 강제),
-    /// 절반은 왕복 후 정상 정리된다. 매 wave 슬롯 0 회복 + 폭풍 뒤 서버 생존 + 방금 놓은 포트 즉시 재바인딩을 검증한다.
+    /// 절반은 왕복 후 정상 정리된다. 매 wave 슬롯 0 회복 + 폭풍 뒤 서버 생존 + 리스너 정지 후
+    /// 같은 포트 재바인딩(서버 선행 종료 소켓이 TIME_WAIT에 남으면 OS가 일시 거부한다 — 15초 한도 내 재시기)을 검증한다.
     /// 동시 RST 청urn은 수용 직후 끊긴 연결의 소켓 옵션 적용 경합(수용 루프 생존성)을 확률적으로 노출시킨다.
     /// </summary>
     [Fact]
@@ -157,6 +158,20 @@ public class ChurnSoakTests
 
         // 폭풍 뒤 생존 — 서버는 계속 수용·왕복해야 한다
         await EchoRoundAsync("127.0.0.1", port, "alive", 10000);
+
+        // 포트 재사용 — 리스너를 정지하고 방금 놓은 포트에 재바인딩 후 왕복한다. 서버가 먼저 닫은
+        // 소켓이 TIME_WAIT에 남으면 OS가 재바인딩을 일시 거부한다(SO_REUSEADDR 미설정) —
+        // 15초 한도 내 재시기로 회복을 기다리고, 못 얻으면 실패로 확정한다.
+        listener.Dispose();
+        TcpListener rebinder = StartOnPortWithRetry(IPAddress.Loopback, port, new TcpTransportOptions(), 15000);
+        try
+        {
+            await EchoRoundAsync("127.0.0.1", port, "rebind", 10000);
+        }
+        finally
+        {
+            rebinder.Dispose();
+        }
 
         return;
 
@@ -203,6 +218,31 @@ public class ChurnSoakTests
             await session.SendAndFlushAsync(tag);
             await WaitUntilAsync(() => collector!.Messages.Count > 0, timeoutMs);
             Assert.Equal(new[] { tag }, collector!.Messages);
+        }
+
+        static TcpListener StartOnPortWithRetry(IPAddress address, int port, TcpTransportOptions options, int timeoutMs)
+        {
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (true)
+            {
+                var candidate = new TcpListener(address, port);
+                candidate.Accepted += channel => _ = new TcpSession(channel, new StringConverter(), s => new TagEchoHandler(s));
+                try
+                {
+                    candidate.Start(options);
+                    return candidate;
+                }
+                catch (SocketException)
+                {
+                    candidate.Dispose();
+                    if (DateTime.UtcNow > deadline)
+                    {
+                        throw new TimeoutException($"포트 {port} 재바인딩이 {timeoutMs}ms 안에 성공하지 못했다(TIME_WAIT 등 소켓 점유).");
+                    }
+
+                    Thread.Sleep(200);
+                }
+            }
         }
     }
 

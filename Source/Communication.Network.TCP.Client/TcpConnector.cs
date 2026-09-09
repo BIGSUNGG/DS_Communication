@@ -114,7 +114,17 @@ public sealed class TcpConnector
         }
         else
         {
-            channel = new StreamByteChannel(client);
+            // GetStream 실패(Mono 계열 런타임의 관측 단절 소켓)도 연결 실패(false)로 확정한다 —
+            // 예외 방출·클라이언트 누수 없이(TLS 경로와 동일 계약).
+            try
+            {
+                channel = new StreamByteChannel(client);
+            }
+            catch (Exception)
+            {
+                client.Dispose();
+                return false;
+            }
         }
 
         // 소켓 옵션은 원본 소켓에 적용한다(TLS 스트림 아래 공유 소켓). 연결 확립 직후 끊김

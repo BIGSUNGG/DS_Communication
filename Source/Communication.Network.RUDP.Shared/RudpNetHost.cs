@@ -40,6 +40,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     private int _connectionCount; // 수락 예약 후 미회수 slot — MaxConnections 강제 기준
     private int _disposed;
     private long _lastPollErrorTick; // 반복 폴링 오류 로그 플러드 방지(초당 1회 기록)
+    private long _lastNetworkErrorTick; // 소켓 오류(ICMP unreachable 폭풍 등) 로그 플러드 방지(초당 1회 기록)
 
     internal RudpNetHost(RudpTransportOptions? options)
     {
@@ -358,7 +359,16 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
     }
 
     public void OnNetworkError(IPEndPoint endPoint, SocketError socketError)
-        => Trace.TraceError($"RUDP 소켓 오류 ({endPoint}): {socketError}");
+    {
+        // 대량 클라이언트 사멸 뒤 ICMP unreachable 폭풍이 로그를 도배하지 않도록 초당 1회만 기록한다
+        // (폴링 예외 제한과 동일 관례 — 드롭된 것은 기록으로만 남는다).
+        long now = DateTime.UtcNow.Ticks;
+        long last = Interlocked.Read(ref _lastNetworkErrorTick);
+        if (now - last >= TimeSpan.TicksPerSecond && Interlocked.CompareExchange(ref _lastNetworkErrorTick, now, last) == last)
+        {
+            Trace.TraceError($"RUDP 소켓 오류 ({endPoint}): {socketError}");
+        }
+    }
 
     public void OnNetworkLatencyUpdate(NetPeer peer, int latency)
     {

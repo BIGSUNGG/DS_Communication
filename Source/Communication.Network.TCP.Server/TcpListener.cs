@@ -177,7 +177,29 @@ public sealed class TcpListener : IDisposable
             }
 
             // Dispose 시 상한 슬롯 회수 — 세션이 채널(또는 세션 자신을) 정리하면 수에서 빠진다.
-            StreamByteChannel channel = new(client, () => Interlocked.Decrement(ref _connectionCount));
+            // GetStream()은 Mono/.NET Framework 계열 런타임에서 관측 단절 소켓에 throw할 수 있다 —
+            // 이 창구 실패도 연결 단위로 버린다(생성 실패 시 회수 훅이 미등록이므로 여기서 슬롯을 회수한다).
+            StreamByteChannel channel;
+            try
+            {
+                channel = new StreamByteChannel(client, () => Interlocked.Decrement(ref _connectionCount));
+            }
+            catch (Exception e)
+            {
+                Trace.TraceError($"수용 연결 스트림 생성 실패 — 연결 닫고 수용 계속: {e}");
+                try
+                {
+                    client.Dispose();
+                }
+                catch
+                {
+                    // 닫기 실패가 수용 루프를 막으면 안 된다.
+                }
+
+                Interlocked.Decrement(ref _connectionCount); // 예약 슬롯 회수(훅 미등록 — 정확히 1회)
+                continue;
+            }
+
             HandOff(channel);
         }
     }
