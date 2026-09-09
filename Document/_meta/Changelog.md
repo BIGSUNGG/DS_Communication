@@ -10,6 +10,10 @@ updated: 2026-09-09
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-09 (루트 문서 영어화 — README·TCP·RUDP)
+
+- **루트 문서 3종 영어 (재)작성** — `README.md`(소개·Quick Start·전 기능 사용법·보안 요약), `TCP.md`·`RUDP.md`(전송별 사용법 신설, 루트). 서브에이전트 writer/reviewer 루프로 Source 대조 검증. 코드 무변경 — 문서만 변경
+
 ## 2026-09-09 (2.5.1 릴리스 — 상용 하드닝)
 
 - **패치 릴리스 2.5.1** — 공개 API 변화 없음. 하기 같은 날 섹션의 상용 하드닝(수용 루프 생존성·TLS/plain 경로 스트림 생성 가드·`TcpConnector` 정리·`OnNetworkError` 로그 제한·폭풍 청urn 소크·문서 동기화)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest) 통과 확인 후 태그 `v2.5.1`·`tcp/v2.5.1`·`rudp/v2.5.1`
