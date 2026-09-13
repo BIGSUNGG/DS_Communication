@@ -10,6 +10,10 @@ updated: 2026-09-13
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-13 (2.6.0 릴리스 — 이연 항목 5건)
+
+- **마이너 릴리스 2.6.0** — TCP null-host 검증 통일(`false` → `ArgumentNullException`, 공개 동작 변화로 마이너 버전)을 비롯한 이연 5건(단일 비행 문서화·DTLS 송신 풀링·세마포어 폐기·폴링 백오프 — 직전 섹션 참조)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest)을 거쳐 태그 `v2.6.0`·`tcp/v2.6.0`·`rudp/v2.6.0`로 게시 — [[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]] 버전 표기·README 현재 버전 동기화. 테스트 152/152
+
 ## 2026-09-13 (이연 항목 5건 구현 — 단일 비행 문서화·null-host 통일·DTLS 최적화·세마포어 폐기·폴링 백오프)
 
 - **커넥터 단일 비행 문서화** — 인스턴스당 동시 `ConnectAsync` 1개 제약을 XML 문서·[[../03-Reference/Public-API|Public-API]]·루트 `TCP.md`·`RUDP.md`에 명시(동시 호출 비보호 — 재시도는 순차 진행 또는 인스턴스 신규 생성)

@@ -201,4 +201,4 @@ Details: [Document/04-Guides/Security.md](Document/04-Guides/Security.md) · TCP
 
 ## Release
 
-GitHub Actions (`nuget-publish.yml`): a `v*` tag publishes `Communication.Shared`, `tcp/v*` the three TCP packages, `rudp/v*` the three RUDP packages (current version 2.5.2).
+GitHub Actions (`nuget-publish.yml`): a `v*` tag publishes `Communication.Shared`, `tcp/v*` the three TCP packages, `rudp/v*` the three RUDP packages (current version 2.6.0).
