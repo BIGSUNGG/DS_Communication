@@ -3,7 +3,7 @@ project: DS_Communication
 type: reference
 status: draft
 tags: [reference, api]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Public API
@@ -15,8 +15,8 @@ updated: 2026-09-09
 ```text
 // Client
 Task<bool> ConnectAsync(..., CancellationToken cancellationToken = default);
-IByteChannel? Channel { get; }     // TCP / TCP_IOCP — Connect 성공 후
-IMessageChannel? Channel { get; }  // RUDP — Connect 성공 후
+IByteChannel? Channel { get; }     // TCP / TCP_IOCP — Connect 성공 후; 새 시도 시작 시 이전 값 제거(실패 시 null)
+IMessageChannel? Channel { get; }  // RUDP — Connect 성공 후; 새 시도 시작 시 이전 값 제거(실패 시 null)
 
 // 앱
 if (!await connector.ConnectAsync(host, port)) return;
@@ -62,7 +62,7 @@ class TcpTlsOptions
 
 - `Enabled = false` 또는 옵션 생략: keep-alive 변경 없음(또는 OS 기본).
 - Unity/netstandard2.1에서 일부 필드는 OS가 무시할 수 있음 — 문서/Configuration에 플랫폼 노트.
-- `Tls`는 하위호환 추가(기본 `null` = 평문 그대로). 서버는 `ServerCertificate`, 클라이언트는 옵션 자체로 TLS를 켠다 — 세부 계약·TLS 1.3 노트는 [[Configuration]] `TcpTlsOptions` 항.
+- `Tls`는 하위호환 추가(기본 `null` = 평문 그대로). 서버는 `ServerCertificate`, 클라이언트는 옵션 자체로 TLS를 켠다 — 세부 계약·TLS 1.3 노트는 [[../03-Reference/Configuration|Configuration]] `TcpTlsOptions` 항.
 
 ## ISession
 
@@ -144,7 +144,7 @@ sealed class RudpConnector
 {
     Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null,
                             CancellationToken cancellationToken = default);
-    IMessageChannel? Channel { get; }         // 성공 후; 실패 시 null
+    IMessageChannel? Channel { get; }         // 성공 후; 실패 시 null(재시도 시작 시 이전 채널 노출 제거 — 오래된 채널 재사용 방지)
 }
 
 class RudpTransportOptions

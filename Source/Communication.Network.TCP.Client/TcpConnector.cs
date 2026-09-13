@@ -23,6 +23,10 @@ public sealed class TcpConnector
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        // 재시도(재접속 루프)에서 이전 연결의 채널이 남아 있으면 실패 후에도 오래된(이미 정리된) 채널이
+        // 노출된다 — 문서 계약("실패 시 null")대로 시도 시작 시점에 비운다.
+        Channel = null;
+
         TcpClient client = new();
         try
         {

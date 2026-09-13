@@ -669,6 +669,60 @@ public class RudpLoopbackTests
     }
 
     /// <summary>
+    /// 재시도 후 <c>Channel</c>이 이전 연결의 채널로 남지 않는지·살아 있는 서버로의 재시도가 새 채널을
+    /// 돌려주는지 검증한다(TCP 쌍둥이와 동일 계약) — 재접속 루프에서 <c>Channel != null</c>을 근거로
+    /// 오래된 채널을 재사용하는 앱이 죽은 연결을 붙잡게 된다.
+    /// </summary>
+    [Fact]
+    public async Task Connect_FailedRetry_ClearsStaleChannel()
+    {
+        var connector = new RudpConnector();
+
+        // 1) 성공 — 채널 확보 후 정리(재접속 루프의 일반적인 흐름).
+        using (var listener = new RudpListener(IPAddress.Loopback, 0))
+        {
+            var serverSessions = new List<RudpSession>();
+            listener.Accepted += channel =>
+            {
+                RudpSession session = new(channel, new StringConverter(), s => new CollectHandler(s));
+                lock (serverSessions) serverSessions.Add(session);
+            };
+            listener.Start();
+
+            Assert.True(await connector.ConnectAsync("127.0.0.1", listener.LocalPort));
+            Assert.NotNull(connector.Channel);
+            IMessageChannel firstChannel = connector.Channel!;
+            firstChannel.Dispose(); // 클라이언트 채널은 내부 호스트까지 정리한다.
+
+            // 2) 같은 커넥터로 살아 있는 서버에 재시도 성공 — 시도 시작 시점 비움이 없으면 PeerAccepted의
+            // “Channel이 이미 있다” 가드가 오래된 채널을 보고 **새 채널을 폐기**해 재시도가 완료되지
+            // 않는다(실제 재접속 루프 결함). 계약대로면 새 연결의 새 채널을 얻는다.
+            Assert.True(await connector.ConnectAsync("127.0.0.1", listener.LocalPort)
+                .WaitAsync(TimeSpan.FromSeconds(4)));
+            Assert.NotNull(connector.Channel);
+            Assert.NotSame(firstChannel, connector.Channel); // 새 채널이어야 한다(오래된 채널 재사용 아님).
+
+            // 3) 블랙홀(응답 없는 UDP 소켓) + ConnectTimeout — 재시도 소진(PeerFailed) 경로에서도 같은 계약.
+            using var blackhole = new UdpClient();
+            blackhole.Client.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+            int blackholePort = ((IPEndPoint)blackhole.Client.LocalEndPoint!).Port;
+
+            Assert.False(await connector
+                .ConnectAsync("127.0.0.1", blackholePort, new RudpTransportOptions { ConnectTimeout = 400 })
+                .WaitAsync(TimeSpan.FromSeconds(4)));
+            Assert.Null(connector.Channel); // 이전 연결의 채널이 남아 있으면 안 된다.
+
+            lock (serverSessions)
+            {
+                foreach (RudpSession session in serverSessions)
+                {
+                    session.Dispose();
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// peer id는 회수 후 재사용된다(LiteNetLib id 풀). 끊긴 세션의 **늦은** Dispose가
     /// 같은 id를 물려받은 새 세션의 등록부 항목을 잘못 걷어내면 슬롯이 조기 반환돼
     /// MaxConnections 상한 강제가 무너진다 — 소유자 확인 회수가 이를 막는지 검증한다.

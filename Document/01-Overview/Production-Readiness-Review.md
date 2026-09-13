@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: stable
 tags: [review, production, readiness]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Production-Readiness Review — 상용 서버 라이브러리 투입 검토 (2026-09-09)
@@ -19,7 +19,7 @@ updated: 2026-09-09
 
 | 항목 | 결과 |
 | ------ | ------ |
-| 테스트 | 148/148 통과 (net10.0, 26초) — 고갈 공격 회귀 2건 + 폭풍 청urn 소크 2건(TCP 16동시×3 wave RST/FIN 혼합·RUDP 상한 거부 혼합·포트 재바인딩 — RUDP 즉시, TCP 정지 후 같은 포트 재시기) 포함 |
+| 테스트 | 150/150 통과 (net10.0) — 고갈 공격 회귀 2건 + 폭풍 청urn 소크 2건(TCP 16동시×3 wave RST/FIN 혼합·RUDP 상한 거부 혼합·포트 재바인딩 — RUDP 즉시, TCP 정지 후 같은 포트 재시기) + 커넥터 재시도 Channel 계약 회귀 2건(2026-09-09 추가) |
 | netstandard2.1 Release 빌드 | 오류 0 (Unity 2021.2+ API 레벨 호환 타깃) |
 | 동시성 설계 | 끊김 1회 래치·늦은 구독자 재생·SignalGate — 경쟁 경로 전부 가드 확인 |
 | 와이어 방어 | MaxFrameLength(기본 4MB)·FrameTimeout(30s)·선할당 없는 수신 버퍼·fail-closed 확인 |
@@ -32,6 +32,7 @@ updated: 2026-09-09
 4. **TCP 수락 강건성** — `MaxConnections` 초과 즉시 닫기 + Dispose 훅으로 슬롯 회수, TLS 핸드셰이크 15초 상한 + 정지 후 늦은 완료 폐기, 수락 예외 50ms 백오프 재시도.
 5. **RUDP 격리** — 호스트당 폴링 스레드 1개, 수락 전 슬롯 예약, peer id 재사용 소유자 확인 회수, 세션 생성 창구 래치, 비분할 방식 MTU 사전 거부, 클라이언트 역방향 접속 거부, 기본 키 시작 경고.
 6. **폴링 루프 생존성** — 폴링 예외 격리 + 동일 오류 초당 1회 로그 제한(도배 방지).
+7. **커넥터 재시도 계약(2026-09-09 고정)** — `TcpConnector`·`RudpConnector`의 `Channel`은 새 연결 시도 시작 시점에 이전 값을 비운다 — 실패한 재시도 후 오래된(이미 정리된) 채널이 노출되지 않아 재접속 루프가 죽은 연결을 재사용하지 않는다.
 
 ## 상용화 전 갭 (투입 판단에 남는 것)
 
@@ -55,4 +56,4 @@ updated: 2026-09-09
 
 ## 관련
 
-- [[Audit-Full-Scan]] · [[../04-Guides/Security|Security]] · [[Scope]]
+- [[Audit-Full-Scan]] · [[../04-Guides/Security|Security]] · [[../01-Overview/Scope|Scope]]

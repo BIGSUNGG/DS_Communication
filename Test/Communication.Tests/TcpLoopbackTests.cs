@@ -249,6 +249,33 @@ public class TcpLoopbackTests
         Assert.Fail("연속 5회 포트 선점 — 빈 포트 확보 실패");
     }
 
+    /// <summary>
+    /// 재시도 후 실패 시 <c>Channel</c>이 이전 연결의 채널로 남지 않는지 검증한다 — 재접속 루프(상용 클라이언트
+    /// 표준 패턴)에서 <c>Channel != null</c>을 근거로 오래된 채널을 재사용하는 앱이 죽은 연결을 붙잡게 되므로,
+    /// 실패 확정 시점에는 반드시 null이어야 한다(문서 계약 "실패 시 null").
+    /// </summary>
+    [Fact]
+    public async Task Connect_FailedRetry_ClearsStaleChannel()
+    {
+        var connector = new TcpConnector();
+
+        // 1) 성공 — 채널 확보 후 정리(재접속 루프의 일반적인 흐름).
+        using (var listener = new TcpListener(IPAddress.Loopback, 0))
+        {
+            listener.Accepted += channel => channel.Dispose(); // 세션 없이 즉시 정리(연결 성립만 확인)
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+
+            Assert.True(await connector.ConnectAsync("127.0.0.1", port));
+            Assert.NotNull(connector.Channel);
+            connector.Channel!.Dispose();
+        }
+
+        // 2) 같은 커넥터로 실패하는 재시도 — TEST-NET(비라우팅 예약) 주소 + ConnectTimeout으로 확정 실패.
+        Assert.False(await connector.ConnectAsync("192.0.2.1", 9, new TcpTransportOptions { ConnectTimeout = 1000 }));
+        Assert.Null(connector.Channel); // 이전 연결의 채널이 남아 있으면 안 된다.
+    }
+
     [Fact]
     public async Task Connect_Cancelled_ThrowsOperationCanceled()
     {

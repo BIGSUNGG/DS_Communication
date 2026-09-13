@@ -68,7 +68,7 @@ if (!await connector.ConnectAsync("127.0.0.1", 32000,
 using var session = new RudpSession(connector.Channel!, converter, s => new ChatHandler(s));
 ```
 
-Signature: `Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IMessageChannel?`) is set; on failure it stays `null`.
+Signature: `Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IMessageChannel?`) is set; on failure it stays `null`. A new attempt clears the previous `Channel` first, so a failed retry never leaves a stale (already cleaned-up) channel exposed to reconnect loops.
 
 - Failure modes resolved as `false`: connection rejected (wrong key or server cap), host unresolvable, retries exhausted or `ConnectTimeout` exceeded.
 - Cancellation throws `OperationCanceledException` and disposes the host (an in-flight UDP connect cannot be interrupted, so the wait is cancelled instead).

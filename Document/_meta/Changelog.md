@@ -3,12 +3,24 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-13 (리뷰 라운드 1 후속 — RUDP 회귀테스트 강화)
+
+- **`Connect_FailedRetry_ClearsStaleChannel` 강화(red/green 검증 완료)** — 리뷰 지적: 기존 블랙홀(PeerFailed) 실패 경로는 수정 전에도 `Channel`을 비웠으므로 회귀 검증력이 없었다. 성공 직후 살아 있는 서버로 재시도하는 단계를 추가했다 — 시작 시점 비움이 없으면 `PeerAccepted` 가드가 오래된 채널을 보고 **새 채널을 폐기**해 재시도가 완료되지 않는다(실제 재접속 루프 결함). 수정 라인 주석화 시 타임아웃 실패(RED, exit 1), 복원 후 통과(GREEN)로 검증력 입증 — 전체 스위트 150건 통과 유지(net10.0, 32초)
+- **해석 불가 호스트(`.invalid`) 재시도 경로 제외** — 이 환경에서 DNS 해석 실패 확정이 8초 상한을 초과해 환경 의존적 경로로 확인 — 결정적 루프백 재시도로 계약 위반을 입증하는 것으로 대체
+- **문서 정확화** — [[../00-AI/CONTEXT|CONTEXT]] 낡은 테스트 수(148→150) 갱신, 이번 라운드에서 편집된 노트 4종 frontmatter `updated` 갱신(2026-09-13), 선행 항목의 링크 수정 건수 정정(1건→2건)
+
+## 2026-09-09 (상용 하드닝 감사 — 커넥터 Channel 재시도 계약 고정)
+
+- **전수 재감사(34파일)**: 상용 Unity 전용 서버 관점(예외 안전·해제·경쟁·자원 봉쇄·와이어 방어)으로 Source 전 파일 재열독 — 기존 결함 대부분은 선행 루프에서 이미 수정된 상태로 확인. 신규 실결함 1건 수정:
+- **`TcpConnector`·`RudpConnector` `Channel` 재시도 계약 위반 수정** — 이전 연결 성공 후 실패하는 재시도에서 `Channel`이 오래된(이미 정리된) 채널을 가리킨 채 남았다(문서 계약 "실패 시 null" 위반). 재접속 루프가 `Channel != null`을 근거로 죽은 연결을 재사용할 수 있어 상용 재접속 시나리오에서 실질 결함. 시도 시작 시점에 `Channel`을 비워 계약을 전 경로에 강제. 회귀 테스트 2건(TCP: 성공 후 TEST-NET 실패 재시도, RUDP: 성공 후 블랙홀 실패 재시도) 추가 — 테스트 150건 통과 → [[../03-Reference/Public-API|Public-API]](Connect 계약)·루트 `TCP.md`·`RUDP.md` 동기화
+- 모호 링크 2건(`Configuration`·`Scope`) 상대 경로+별칭으로 교체(링크 규칙 준수)
 
 ## 2026-09-09 (NuGet 패키지 Description 영어화)
 
