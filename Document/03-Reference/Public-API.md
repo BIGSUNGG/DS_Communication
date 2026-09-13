@@ -30,6 +30,8 @@ listener.Start(...);
 
 `Accepted`는 수락 루프가 수락마다 최신 구독자를 읽는다 - `Start` 이후 구독자도 채널을 받는다. `TcpListener.Accepted`는 `IByteChannel`, `RudpListener.Accepted`는 `IMessageChannel`을 넘긴다(세션 생성은 언제나 앱 - [[0006-session-ownership-and-converter]]). **RUDP `Accepted`에서는 세션을 통지 시점에 동기 생성해야 한다** - 메시지 단위 채널은 구독 전 도착 메시지를 버퍼링하지 않아, 채널을 다른 스레드로 넘겨 생성을 미루면 그 사이 메시지가 유실된다(TCP는 스트림 버퍼링으로 동일 창구가 없다).
 
+**커넥터 단일 비행** — 커넥터 인스턴스당 한 번에 하나의 `ConnectAsync`만 진행한다(동시 호출은 비보호 — 재시도는 순차 진행하거나 인스턴스를 새로 만든다). 인자 검증은 양 스택 공통: `host`가 `null`이면 `ArgumentNullException`(직전 버전까지 TCP는 `false`를 반환했음 — 통일).
+
 ## TCP keep-alive (사용자 설정)
 
 TCP / TCP_IOCP Connector·Listener 생성 시 옵션으로 전달.
@@ -145,6 +147,7 @@ sealed class RudpConnector
     Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null,
                             CancellationToken cancellationToken = default);
     IMessageChannel? Channel { get; }         // 성공 후; 실패 시 null(재시도 시작 시 이전 채널 노출 제거 — 오래된 채널 재사용 방지)
+                                              // 단일 비행: 인스턴스당 1개 동시 시도만 · host == null → ArgumentNullException
 }
 
 class RudpTransportOptions

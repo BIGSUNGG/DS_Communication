@@ -722,6 +722,15 @@ public class RudpLoopbackTests
         }
     }
 
+    [Fact]
+    public async Task Connect_NullHost_ThrowsArgumentNullException()
+    {
+        // 인자 검증은 조용한 false가 아니라 예외로 — TcpConnector와 동일 계약(2026-09-13 통일).
+        var connector = new RudpConnector();
+        await Assert.ThrowsAsync<ArgumentNullException>(() => connector.ConnectAsync(null!, 9));
+        Assert.Null(connector.Channel);
+    }
+
     /// <summary>
     /// peer id는 회수 후 재사용된다(LiteNetLib id 풀). 끊긴 세션의 **늦은** Dispose가
     /// 같은 id를 물려받은 새 세션의 등록부 항목을 잘못 걷어내면 슬롯이 조기 반환돼

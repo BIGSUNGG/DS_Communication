@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,6 +97,10 @@ internal sealed class RudpTlsChannel : IMessageChannel, IRudpTransportEvents
                 // dtls.Send → transport.Send 호출 사슬이 동기다 — 락 안에서 설정·해제하면
                 // 레코드 하나에 정확히 이 메시지의 전송 방식이 담긴다(신뢰성이 몰래 바뀌지 않는다).
                 _transport.SetNextDelivery(method);
+
+                // 청크 버퍼는 호출당 1회 풀 대여(16,384B = 정확한 풀 버킷) — 청크당 할당 제거.
+                // _dtls.Send는 동기라 락을 나가기 전에 BC가 데이터를 모두 가져갔다(반납 안전).
+                byte[]? record = null;
                 try
                 {
                     for (int offset = 0; offset < payload.Length; offset += ChunkDataSize)
@@ -110,17 +115,21 @@ internal sealed class RudpTlsChannel : IMessageChannel, IRudpTransportEvents
                             flags &= unchecked((byte)~FlagEnd); // 아직 끝나지 않았다
                         }
 
-                        byte[] record = new byte[EnvelopeSize + take];
+                        record ??= ArrayPool<byte>.Shared.Rent(EnvelopeSize + ChunkDataSize);
                         record[0] = flags;
                         record[1] = (byte)(take >> 8);
                         record[2] = (byte)take;
                         payload.Span.Slice(offset, take).CopyTo(record.AsSpan(EnvelopeSize));
-                        _dtls.Send(record, 0, record.Length);
+                        _dtls.Send(record, 0, EnvelopeSize + take);
                     }
                 }
                 finally
                 {
                     _transport.SetNextDelivery(null);
+                    if (record is not null)
+                    {
+                        ArrayPool<byte>.Shared.Return(record);
+                    }
                 }
             }
 
@@ -157,6 +166,7 @@ internal sealed class RudpTlsChannel : IMessageChannel, IRudpTransportEvents
 
         _transport.Close(); // 펌프 깨우기 — 다음 Receive가 실패하며 펌프가 빠져나온다.
         _inner.Dispose(); // 슬롯 회수 + (클라이언트) 호스트까지 정리
+        _transport.Dispose(); // 대기 세마포어까지 폐기 — 늦은 펌프 대기가 매달리지 않게 즉시 실패로 끝낸다.
     }
 
     /// <summary>구독 직후 래치 회수 대행 — 세션 생성 창구의 단절을 소실하지 않는다.</summary>

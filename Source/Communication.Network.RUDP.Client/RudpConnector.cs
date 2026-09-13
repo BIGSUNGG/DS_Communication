@@ -11,6 +11,8 @@ namespace Communication.Network.RUDP;
 /// <remarks>
 /// 클라이언트는 peer가 하나뿐이므로 채널이 내부 호스트(폴링 스레드·NetManager)까지 소유한다 —
 /// 세션이나 채널을 Dispose하면 남는 자원 없이 정리된다. 들어오는 접속 요청은 거부된다.
+/// 커넥터 인스턴스당 <b>한 번에 하나의 <see cref="ConnectAsync"/>만</b> 진행한다(단일 비행) —
+/// 동시 호출은 보호되지 않는다. 재접속 루프는 시도를 순차적으로 하거나 인스턴스를 새로 만든다.
 /// </remarks>
 public sealed class RudpConnector
 {
@@ -18,6 +20,7 @@ public sealed class RudpConnector
     public IMessageChannel? Channel { get; private set; }
 
     /// <returns>연결 성공 여부. 실패(접속 거부·호스트 해석 불가·재시도 소진) 시 <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="host"/>가 <c>null</c>인 경우.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/>이 취소된 경우.</exception>
     public async Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null, CancellationToken cancellationToken = default)
     {

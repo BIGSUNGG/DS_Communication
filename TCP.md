@@ -69,7 +69,7 @@ if (!await connector.ConnectAsync("game.example.com", 32000)) return; // false =
 using var session = new TcpSession(connector.Channel!, converter, s => new ChatHandler(s));
 ```
 
-Signature: `Task<bool> ConnectAsync(string host, int port, TcpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IByteChannel?`) is set; on failure it stays `null`. A new attempt clears the previous `Channel` first, so a failed retry never leaves a stale (already cleaned-up) channel exposed to reconnect loops.
+Signature: `Task<bool> ConnectAsync(string host, int port, TcpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IByteChannel?`) is set; on failure it stays `null`. A new attempt clears the previous `Channel` first, so a failed retry never leaves a stale (already cleaned-up) channel exposed to reconnect loops. A connector instance supports **one in-flight `ConnectAsync` at a time** — concurrent calls are not guarded; run retries sequentially or create a new connector per attempt. A `null` `host` throws `ArgumentNullException`.
 
 - Cancellation throws `OperationCanceledException`; a `ConnectTimeout` instead returns `false`. These are independent.
 - With `Tls` set, the client-side handshake completes before `Channel` is exposed. Handshake failure (rejected certificate, protocol violation, timeout) resolves to `false`.

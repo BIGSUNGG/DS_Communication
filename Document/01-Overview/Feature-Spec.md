@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [overview, feature-spec]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Feature Spec — 레거시에서 이어받을 기능 명세
@@ -59,7 +59,7 @@ updated: 2026-09-09
 | F4-1 | TCP keep-alive | `SocketKeepAliveOptions { Enabled, IdleTime, Interval }` — 사용자 설정, 미설정은 OS 기본 ([[../03-Reference/Configuration]]) |
 | F4-2 | RUDP 신뢰성 선택 | 메시지별 전송 방식 선택 — `RudpSendOptions`(불변) + `RudpDeliveryMethod` 5값(레거시 `MessageSendContext`/`ReliableType` 대응). 기본 `ReliableOrdered`, 전송 방식별 공용 인스턴스로 송신 할당 0 ([[../03-Reference/Public-API]]) |
 | F4-3 | RUDP 수신 분배 | peer → 채널 등록부(`RudpNetHost`)가 `MessageReceived`로 분배(레거시 `RUDPNetworkReceiveDispatcher` 역할) |
-| F4-4 | RUDP poll | 호스트당 **전용 폴링 스레드 1개**, 간격 고정 1ms(옵션 아님). 스레드 수는 접속 수와 무관 — [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
+| F4-4 | RUDP poll | 호스트당 **전용 폴링 스레드 1개**, 간격: 접속 중 1ms·무접속 15ms 백오프(옵션 아님). 스레드 수는 접속 수와 무관 — [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 | F4-5 | RUDP MTU 가드 | 분할 불가 방식(`Sequenced`·`ReliableSequenced`·`Unreliable`)으로 MTU 초과 payload 송신 시 `ArgumentException` — 조용한 유실 대신 즉시 실패 (**신규**, 레거시 없음) |
 | F4-6 | 연결 시도 상한 | 침묵 호스트(반개방 경로·블랙홀)에 대한 연결 실패를 선언된 시간 안에 확정 — **TCP**: `TcpTransportOptions.ConnectTimeout`(기본 `null`=OS SYN 재시도 ≈21초), **RUDP**: `RudpTransportOptions.ConnectTimeout`(기본 `null`=LiteNetLib 재전송 ≈5초). 초과 시 `false`, 사용자 취소(`OperationCanceledException`)와는 독립 (**신규**) |
 | F4-7 | TCP TLS (SslStream) | `TcpTransportOptions.Tls`(2.1.0+) — 서버는 `ServerCertificate` 설정 시 수락 연결마다 **핸드셰이크 선행 완료**(실패·`HandshakeTimeout` 기본 15초 초과는 폐기 후 수락 계속, 상한 슬롯 회수), 클라이언트는 옵션 설정 시 핸드셰이크 후 채널(실패=`false`). 기본 `null`=평문. TLS 1.3: 클라이언트 검증 거부 후에도 서버 `Accepted` 발생 가능 (ADR [[0008-tcp-tls-sslstream]]) (**신규**) |
@@ -92,7 +92,7 @@ updated: 2026-09-09
 | `byte[] Serialize(object)` | `IBufferWriter`/`Span` | Known-Issues §3.1 · ADR 0006 |
 | 레거시 네임스페이스 별칭(`RUDP.Client` 등 프로젝트별) | 3분할은 유지하되 **네임스페이스는 스택당 하나**(`Communication.Network.RUDP`) + `InternalsVisibleTo` | [[../00-AI/CONVENTIONS]] · [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 | 라이브러리 재접속·하트비트 | 없음 — 앱 책임 | ADR 0003 · [[../01-Overview/Scope]] |
-| 생성자 노출 `pollIntervalMs` | 옵션 아님 — 고정 1ms 전용 폴링 스레드 | [[../03-Reference/Configuration]] |
+| 생성자 노출 `pollIntervalMs` | 옵션 아님 — 전용 폴링 스레드(접속 중 1ms·무접속 15ms 백오프) | [[../03-Reference/Configuration]] |
 | 레거시 `ReliableType`(byte enum) | `RudpDeliveryMethod` — LiteNetLib `DeliveryMethod`와 같은 이름·값, 공개면은 자체 enum | [[../05-Decisions/0007-rudp-three-way-split-and-polling]] |
 
 ## 구현 상태 (2026-09-05)

@@ -13,15 +13,21 @@ namespace Communication.Network.TCP;
 /// 성공 후 <see cref="Channel"/>을 노출한다.
 /// <c>TcpTransportOptions.Tls</c> 설정 시 연결 후 TLS 핸드셰이크까지 완료한 뒤 채널을 노출한다.
 /// </summary>
+/// <remarks>
+/// 커넥터 인스턴스당 <b>한 번에 하나의 <see cref="ConnectAsync"/>만</b> 진행한다(단일 비행) —
+/// 동시 호출은 보호되지 않는다. 재접속 루프는 시도를 순차적으로 하거나 인스턴스를 새로 만든다.
+/// </remarks>
 public sealed class TcpConnector
 {
     /// <summary>연결 성공 후 사용 가능한 채널. 실패 시 <c>null</c>.</summary>
     public IByteChannel? Channel { get; private set; }
 
     /// <returns>연결 성공 여부. 취소 시에는 <see cref="OperationCanceledException"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="host"/>가 <c>null</c>인 경우.</exception>
     public async Task<bool> ConnectAsync(string host, int port, TcpTransportOptions? options = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (host is null) throw new ArgumentNullException(nameof(host));
 
         // 재시도(재접속 루프)에서 이전 연결의 채널이 남아 있으면 실패 후에도 오래된(이미 정리된) 채널이
         // 노출된다 — 문서 계약("실패 시 null")대로 시도 시작 시점에 비운다.

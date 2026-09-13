@@ -277,6 +277,15 @@ public class TcpLoopbackTests
     }
 
     [Fact]
+    public async Task Connect_NullHost_ThrowsArgumentNullException()
+    {
+        // 인자 검증은 조용한 false가 아니라 예외로 — RudpConnector와 동일 계약.
+        var connector = new TcpConnector();
+        await Assert.ThrowsAsync<ArgumentNullException>(() => connector.ConnectAsync(null!, 9));
+        Assert.Null(connector.Channel);
+    }
+
+    [Fact]
     public async Task Connect_Cancelled_ThrowsOperationCanceled()
     {
         var connector = new TcpConnector();

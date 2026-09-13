@@ -68,7 +68,7 @@ if (!await connector.ConnectAsync("127.0.0.1", 32000,
 using var session = new RudpSession(connector.Channel!, converter, s => new ChatHandler(s));
 ```
 
-Signature: `Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IMessageChannel?`) is set; on failure it stays `null`. A new attempt clears the previous `Channel` first, so a failed retry never leaves a stale (already cleaned-up) channel exposed to reconnect loops.
+Signature: `Task<bool> ConnectAsync(string host, int port, RudpTransportOptions? options = null, CancellationToken cancellationToken = default)`. On success `Channel` (an `IMessageChannel?`) is set; on failure it stays `null`. A new attempt clears the previous `Channel` first, so a failed retry never leaves a stale (already cleaned-up) channel exposed to reconnect loops. A connector instance supports **one in-flight `ConnectAsync` at a time** — concurrent calls are not guarded; run retries sequentially or create a new connector per attempt. A `null` `host` throws `ArgumentNullException`.
 
 - Failure modes resolved as `false`: connection rejected (wrong key or server cap), host unresolvable, retries exhausted or `ConnectTimeout` exceeded.
 - Cancellation throws `OperationCanceledException` and disposes the host (an in-flight UDP connect cannot be interrupted, so the wait is cancelled instead).
@@ -211,7 +211,7 @@ Full contract: [ADR 0009](Document/05-Decisions/0009-rudp-tls-dtls.md) · [Docum
 
 ## Threading model: polling thread and dispatch queues
 
-- **One dedicated polling thread per host** (`RudpNetHost`): each `RudpListener` and each `RudpConnector` runs exactly one background thread that drains LiteNetLib `PollEvents()` on a fixed 1 ms interval. Thread count is independent of the number of connections; the interval is deliberately not an option.
+- **One dedicated polling thread per host** (`RudpNetHost`): each `RudpListener` and each `RudpConnector` runs exactly one background thread that drains LiteNetLib `PollEvents()`. While at least one connection exists it polls every 1 ms (game-traffic latency floor); with zero connections it backs off to 15 ms to cut idle CPU — a connection request during the idle window is accepted with at most 15 ms extra delay (negligible against handshake RTT). Thread count is independent of the number of connections; the interval is deliberately not an option.
 - Receive callbacks (`IMessageChannel.MessageReceived`) fire on that polling thread, and payloads are valid **only inside the callback** (the pipeline deserializes within it).
 - **Handlers never run on the polling thread.** Deserialized messages are handed to the per-session dispatch queue in `MessagePipeline` (`InlineDispatch` is forced to queued on this path), so one slow client's handler cannot stall other sessions' receives, accepts, or the cap enforcement.
 - LiteNetLib's `UnsyncedEvents` stays `false` (events are queued and drained by the polling thread) — this is the structural guarantee above; it is not exposed as an option.

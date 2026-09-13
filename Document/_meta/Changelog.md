@@ -10,6 +10,15 @@ updated: 2026-09-13
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-13 (이연 항목 5건 구현 — 단일 비행 문서화·null-host 통일·DTLS 최적화·세마포어 폐기·폴링 백오프)
+
+- **커넥터 단일 비행 문서화** — 인스턴스당 동시 `ConnectAsync` 1개 제약을 XML 문서·[[../03-Reference/Public-API|Public-API]]·루트 `TCP.md`·`RUDP.md`에 명시(동시 호출 비보호 — 재시도는 순차 진행 또는 인스턴스 신규 생성)
+- **null-host 검증 통일(공개 동작 변화)** — `TcpConnector.ConnectAsync(null)`이 `false`가 아니라 `ArgumentNullException`(RUDP와 통일). 회귀 테스트 2종 추가(TCP·RUDP)
+- **DTLS 송신 할당 제거** — `RudpTlsChannel.SendAsync` 청크 버퍼 ArrayPool화(청크당 할당 제거, 16,384B 정확한 풀 버킷), `RudpDtlsTransport.Send`의 `record.ToArray()` 이중 복사 제거(BC 내부 버퍼를 Memory로 직통 — 채널 송신 동기 완료 의존 주석). net6 BC Span 경로도 풀 대여로 할당 0
+- **`RudpDtlsTransport._available` 결정적 폐기** — `IDisposable` 구현(닫힘 + 세마포어 폐기), 랩 채널 Dispose·핸드셰이크 실패 경로 연결. 폐기 후 남은 펌프 대기는 즉시 실패로 종료(매달림 창 제거), 폐쇄 후 늦은 레코드는 신호 없이 폐기
+- **RUDP 폴링 무접속 백오프** — 접속 중 1ms 유지(게임 트래픽 지연 불변), 무접속 15ms(빈 서버 idle CPU 저감 — 연결 요청 수뜽 지연 ≤15ms는 핸드셰이크 RTT 대비 무시). [[../00-AI/GLOSSARY|GLOSSARY]]·[[../03-Reference/Configuration|Configuration]]·[[../01-Overview/Feature-Spec|Feature-Spec]]·[[../01-Overview/Audit-Full-Scan|Audit-Full-Scan]]·[[../05-Decisions/0007-rudp-three-way-split-and-polling|ADR 0007]]·루트 `RUDP.md` 동기화 + `ponytail:` 천장 주석 갱신
+- 테스트 150→152(null-host 2종). TLS 20종·전체 스위트 통과
+
 ## 2026-09-13 (2.5.2 릴리스 — 커넥터 Channel 재시도 계약 수정)
 
 - **패치 릴리스 2.5.2** — 공개 API 서명 변화 없음(문서화된 "실패 시 `Channel` = null" 계약을 코드에 이행). 커넥터 재시도 계약 수정(`TcpConnector`·`RudpConnector` 시도 시작 시점 `Channel = null` — 실패한 재시도 후 오래된 채널 노출 차단, RUDP 성공 재시도 시 `PeerAccepted` 가드의 새 채널 폐기·무한 대기 방지)과 회귀 테스트 2건(red/green 검증)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest)을 거쳐 태그 `v2.5.2`·`tcp/v2.5.2`·`rudp/v2.5.2`로 게시 — [[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]] 버전 표기·README 현재 버전 동기화

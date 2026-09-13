@@ -3,7 +3,7 @@ project: DS_Communication
 type: context
 status: draft
 tags: [ai, glossary]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Glossary
@@ -20,7 +20,7 @@ updated: 2026-09-09
 | `RudpSendOptions` | `SendOptions` 파생(불변). `RudpDeliveryMethod` 하나를 담고, 전송 방식별 공용 인스턴스 5개를 제공해 송신 할당 0. 기본 `ReliableOrdered`. |
 | `RudpDeliveryMethod` | RUDP 패킷 전송 방식 5값 — `ReliableUnordered`=0, `Sequenced`=1, `ReliableOrdered`=2, `ReliableSequenced`=3, `Unreliable`=4. LiteNetLib `DeliveryMethod`와 같은 이름·값이지만 공개면은 이 enum이다(내부 매핑). |
 | `RudpTransportOptions` | RUDP 전송 옵션 — `MaxConnections`·`DisconnectTimeout`·`ConnectionKey`·`IPv6`. |
-| RUDP 폴링 스레드 | 호스트(리스너/커넥터)당 **1개**의 전용 스레드. `PollEvents()`를 1ms 간격으로 드레인하며 접속 수와 무관하게 고정. 앱 핸들러는 세션별 디스패치 큐에서 돈다 — [[0007-rudp-three-way-split-and-polling]]. |
+| RUDP 폴링 스레드 | 호스트(리스너/커넥터)당 **1개**의 전용 스레드. `PollEvents()`를 드레인하며(접속 중 1ms·무접속 15ms 백오프) 접속 수와 무관하게 고정. 앱 핸들러는 세션별 디스패치 큐에서 돈다 — [[0007-rudp-three-way-split-and-polling]]. |
 | Converter | `Serialize(object, IBufferWriter<byte>)` / `Deserialize(ReadOnlySpan<byte>)`. |
 | Handler | `void HandleMessage`만. [[Handler]] |
 | Coalesce / SendAndFlush | 배치 Write / wire await. |

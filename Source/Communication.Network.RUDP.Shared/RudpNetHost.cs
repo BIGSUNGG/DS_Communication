@@ -26,8 +26,11 @@ namespace Communication.Network.RUDP;
 /// </remarks>
 internal sealed class RudpNetHost : INetEventListener, IDisposable
 {
-    // ponytail: 폴링 간격 고정 1ms. 수신 지연이 실제로 문제되면 RudpTransportOptions로 노출.
-    private const int PollIntervalMs = 1;
+    // ponytail: 접속 중엝 1ms 고정 폴링(게임 트래픽 지연 최소). 접속 0개일 때만 15ms 백오프로
+    //            빈 서버의 idle CPU를 낯춘다 — 연결 요청 수뜽 지연 ≤15ms는 핸드셰이크 RTT 대비 무시 가능.
+    //            idle에서도 낮은 지연이 필요해지면 RudpTransportOptions로 노출한다.
+    private const int ActivePollIntervalMs = 1;
+    private const int IdlePollIntervalMs = 15;
 
     private readonly NetManager _manager;
     private readonly ConcurrentDictionary<int, RudpMessageChannel> _channels = new();
@@ -145,7 +148,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
         if (pollThread != null && pollThread != Thread.CurrentThread)
         {
             pollThread.Interrupt();
-            pollThread.Join(500); // 폴링 간격이 1ms라 정상적으로는 즉시 끝난다.
+            pollThread.Join(500); // 폴링 간격이 최대 15ms라 정상적으로는 즉시 끝난다.
         }
     }
 
@@ -222,7 +225,8 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
 
             try
             {
-                Thread.Sleep(PollIntervalMs);
+                // 접속이 하나라도 있으면 항상 1ms(트래픽 지연 없음) — 백오프는 접속 0개(빈 호스트)에만.
+                Thread.Sleep(_channels.IsEmpty ? IdlePollIntervalMs : ActivePollIntervalMs);
             }
             catch (ThreadInterruptedException)
             {
@@ -313,6 +317,7 @@ internal sealed class RudpNetHost : INetEventListener, IDisposable
             {
                 Trace.TraceError($"RUDP TLS 핸드셰이크 실패 — 연결 정리: {e}");
                 transport.Close();
+                transport.Dispose(); // 대기 세마포어까지 폐기(펌프는 아직 시작 전 — 추가 대기자 없음).
                 if (!_isServer)
                 {
                     PeerFailed?.Invoke(); // 클라: 연결 실패 확정(커넥터 completion).

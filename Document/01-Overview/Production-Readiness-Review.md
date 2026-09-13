@@ -19,7 +19,7 @@ updated: 2026-09-13
 
 | 항목 | 결과 |
 | ------ | ------ |
-| 테스트 | 150/150 통과 (net10.0) — 고갈 공격 회귀 2건 + 폭풍 청urn 소크 2건(TCP 16동시×3 wave RST/FIN 혼합·RUDP 상한 거부 혼합·포트 재바인딩 — RUDP 즉시, TCP 정지 후 같은 포트 재시기) + 커넥터 재시도 Channel 계약 회귀 2건(2026-09-09 추가) |
+| 테스트 | 152/152 통과 (net10.0) — 고갈 공격 회귀 2건 + 폭풍 청urn 소크 2건(TCP 16동시×3 wave RST/FIN 혼합·RUDP 상한 거부 혼합·포트 재바인딩 — RUDP 즉시, TCP 정지 후 같은 포트 재시기) + 커넥터 재시도 Channel 계약 회귀 2건(2026-09-09 추가) |
 | netstandard2.1 Release 빌드 | 오류 0 (Unity 2021.2+ API 레벨 호환 타깃) |
 | 동시성 설계 | 끊김 1회 래치·늦은 구독자 재생·SignalGate — 경쟁 경로 전부 가드 확인 |
 | 와이어 방어 | MaxFrameLength(기본 4MB)·FrameTimeout(30s)·선할당 없는 수신 버퍼·fail-closed 확인 |

@@ -3,7 +3,7 @@ project: DS_Communication
 type: overview
 status: stable
 tags: [audit, full-scan, status]
-updated: 2026-09-09
+updated: 2026-09-13
 ---
 
 # Audit — 5개 영역 전수 스캔 (2026-09-09, 루프 사이클 13 시점)
@@ -33,7 +33,7 @@ updated: 2026-09-09
 잔여:
 
 - **마이크로벤치 부재** — 개선 주장(복사 감소 등)이 계약 핀으로만 입증되고 정량 수치는 없음. 선택 과제.
-- 폴링 간격 1ms 고정 — 조건부 보류(ponytail 마커, 실측 니즈 시 옵션화).
+- 폴링 간격 — 해결(2026-09-13): 접속 중 1ms·무접속 15ms 백오프. 게임 트래픽 지연은 그대로 1ms, 빈 호스트 idle CPU만 저감.
 
 ### 4. 코드 구조 — 처리됨
 

@@ -3,7 +3,7 @@ project: DS_Communication
 type: adr
 status: stable
 tags: [adr, rudp, litenetlib, threading]
-updated: 2026-09-05
+updated: 2026-09-13
 ---
 
 # ADR 0007: RUDP 3분할 · 전용 폴링 루프 1개 · DeliveryMethod 은닉
@@ -25,7 +25,7 @@ Accepted
 
 1. **RUDP도 TCP 선례를 따라 3분할**한다 — `Communication.Network.RUDP.Shared`(RudpSession·RudpMessageChannel·RudpSendOptions/RudpDeliveryMethod·RudpTransportOptions·내부 `RudpNetHost`), `.Server`(RudpListener), `.Client`(RudpConnector). 네임스페이스는 셋 다 `Communication.Network.RUDP` 유지. Server·Client는 RUDP.Shared의 `InternalsVisibleTo`로 내부 `RudpNetHost`를 공유한다.
 2. **LiteNetLib 2.1.4 고정**, `PackageReference`는 **RUDP.Shared에만** 둔다(Server·Client는 전이 참조). LiteNetLib 타입은 `RudpNetHost`·`RudpMessageChannel` 내부에서만 등장하고 **공개 API 시그니처에는 나타나지 않는다** — [[0005-rudp-litenetlib-interim]]의 은닉 원칙을 패키지 경계까지 강화.
-3. **수신 스레딩 = 호스트당 전용 폴링 스레드 1개.** `UnsyncedEvents=false`(기본)를 유지해 이벤트를 큐에 모으고, 백그라운드 스레드 1개가 `PollEvents()` + 1ms 대기 루프를 돈다. 스레드 수는 **클라이언트 수와 무관하게 고정**이다. 수신 payload는 `IMessageChannel.MessageReceived` → `MessagePipeline`의 **세션별 디스패치 큐**로 넘어가므로 앱 핸들러는 폴링 스레드에서 실행되지 않는다 — 느린 클라이언트 1개가 다른 접속의 수신을 막지 못한다. 폴링 간격은 고정 1ms(옵션으로 노출하지 않음).
+3. **수신 스레딩 = 호스트당 전용 폴링 스레드 1개.** `UnsyncedEvents=false`(기본)를 유지해 이벤트를 큐에 모으고, 백그라운드 스레드 1개가 `PollEvents()` + 대기 루프를 돈다(접속 중 1ms·무접속 15ms 백오프 — 2026-09-13). 스레드 수는 **클라이언트 수와 무관하게 고정**이다. 수신 payload는 `IMessageChannel.MessageReceived` → `MessagePipeline`의 **세션별 디스패치 큐**로 넘어가므로 앱 핸들러는 폴링 스레드에서 실행되지 않는다 — 느린 클라이언트 1개가 다른 접속의 수신을 막지 못한다. 폴링 간격은 접속 중 1ms·무접속 15ms 백오프(옵션으로 노출하지 않음) — 접속이 있는 동안 게임 트래픽 지연은 1ms 그대로다.
 4. **전송 옵션은 메시지별로 지정한다.** `RudpDeliveryMethod` enum은 LiteNetLib `DeliveryMethod`와 **같은 이름·같은 값**(ReliableUnordered=0, Sequenced=1, ReliableOrdered=2, ReliableSequenced=3, Unreliable=4)을 갖고, `RudpSendOptions : SendOptions`(불변)로 감싸 노출한다. 매핑은 `RudpMessageChannel` 내부 switch. 옵션 미지정 시 기본은 `ReliableOrdered`. 전송 방식별 **공용 정적 인스턴스 5개**를 제공해 송신 경로에서 옵션 할당을 0으로 만든다([[0004-send-options-and-handler-api]]의 「기본 송신은 할당 없음」 원칙).
 5. **MTU 가드**: 분할(fragmentation)이 불가능한 방식(Sequenced·ReliableSequenced·Unreliable)으로 `peer.GetMaxSinglePacketSize(method)`를 넘는 payload를 보내면 `SendAsync`가 `ArgumentException`을 던진다 — 조용한 유실 대신 즉시 실패. 분할 가능 방식(ReliableOrdered·ReliableUnordered)은 제한하지 않는다.
 6. **수락 공개면은 `RudpListener.Accepted(IMessageChannel)` 하나**(TCP와 완전 대칭, [[0006-session-ownership-and-converter]]의 「앱이 Session 생성」 유지). peer 접속·끊김 추적과 접속 수 관리는 리스너 내부에서만 한다. 상한은 `OnConnectionRequest`에서 **수락 전에 슬롯을 예약**해 같은 폴링 배치의 여러 요청이 `MaxConnections`를 함께 넘는 경쟁을 막는다(TCP의 수락 시점 예약과 동일 의도). 상한 초과·키 불일치는 `ConnectionRequest.Reject()`. 클라이언트 호스트는 들어오는 접속 요청을 무조건 거부한다(임시 포트 보호).
@@ -45,7 +45,7 @@ Accepted
 
 ### Negative
 
-- 폴링 간격 1ms 고정 — 초저지연 요구가 실측으로 확인되면 `RudpTransportOptions`로 노출해야 한다(코드에 `ponytail:` 주석으로 표시).
+- 폴링 간격 — 2026-09-13 무접속 백오프(15ms) 도입. idle에서도 낮은 지연이 필요해지면 `RudpTransportOptions`로 노출한다(코드에 `ponytail:` 주석으로 표시).
 - **분할 불가 방식의 MTU 초과 `ArgumentException`은 세션을 끊는다(잔존 한계).** `MessagePipeline`은 채널 `SendAsync`의 예외를 전부 채널 오류로 취급해 해당 항목의 flush를 예외 완료시키고 `Disconnected(Error)`로 끊는다(예외 객체는 `DisconnectedEventArgs.Exception`에 보존). **2026-09-05 후속 수정**: `MaxFrameLength` 초과 payload는 채널에 도달하기 전 파이프라인이 격리한다(송신: 보내기 전 항목 격리, 수신: 역직렬화 전 거부) — **대부분의 초대형 송신은 이 사전 검사에서 항목 격리로 끝나고 세션이 살아남는다**. 채널 예외 경로(MTU 가드)는 위의 하한이 여전히 적용된다.
 - 호스트당 폴링 스레드 + LiteNetLib 자체 스레드(논리·수신)가 상주한다 — 프로세스당 리스너/커넥터 인스턴스 수만큼만 늘고 접속 수와는 무관.
 
