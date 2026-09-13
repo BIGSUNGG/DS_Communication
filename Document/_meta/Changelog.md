@@ -3,12 +3,18 @@ project: DS_Communication
 type: overview
 status: draft
 tags: [meta, changelog]
-updated: 2026-09-13
+updated: 2026-09-14
 ---
 
 # Changelog
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
+
+## 2026-09-14 (하네스 전환 — UniNet PI 하네스 도입)
+
+- 기존 하네스 제거 — `.cursor/`(에이전트·훅·ds-document-vault 스킬), `.pi-glla/`, `.pi-subagents/` 삭제, 구 워크플로 기반 `AGENTS.md` 전면 교체. 결정 배경·내용: [[../05-Decisions/0010-harness-switch-to-pi|ADR 0010]]
+- UniNet과 동일한 PI 하네스 구축 — `.pi/`(reviewer 에이전트, doc-guard 훅, doc-sync·review-until-clean·review-structure·review-security·review-performance 스킬)
+- 하네스 구성표 [[../00-AI/HARNESS|HARNESS]] 신설, doc-sync 스킬·AGENTS.md는 기존 Vault 구조(00-AI·_meta·05-Decisions)를 읽고 쓰도록 적응. 코드·테스트·기존 문서 구조 불변
 
 ## 2026-09-13 (상용 투입 재검토 — 독립 검증)
 
