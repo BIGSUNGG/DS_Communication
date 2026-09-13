@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.RUDP.Server</PackageId>
-    <Version>2.5.2</Version>
+    <Version>2.6.0</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>Reliable-UDP server for DS_Communication: RudpListener accepts connections and hands channels to the application for session creation. Pairs with Communication.Network.RUDP.Shared/Client. Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>

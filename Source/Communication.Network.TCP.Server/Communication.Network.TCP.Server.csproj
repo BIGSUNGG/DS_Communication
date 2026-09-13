@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP.Server</PackageId>
-    <Version>2.5.2</Version>
+    <Version>2.6.0</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>TCP server for DS_Communication: TcpListener runs the accept loop and hands each connected channel to the application, which creates and owns sessions. Pairs with Communication.Network.TCP.Shared/Client. Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>

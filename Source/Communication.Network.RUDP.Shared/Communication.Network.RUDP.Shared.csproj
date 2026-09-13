@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.RUDP.Shared</PackageId>
-    <Version>2.5.2</Version>
+    <Version>2.6.0</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>Shared reliable-UDP transport layer for DS_Communication — no third-party types appear in the public API. Provides RudpSession, RudpMessageChannel with per-message RudpSendOptions/RudpDeliveryMethod (unreliable, reliable, reliable-ordered), and RudpTransportOptions with optional DTLS 1.2 encryption (BouncyCastle) and CRC32C integrity checking. One dedicated polling thread per host plus per-session dispatch queues keep load independent of connection count. Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
