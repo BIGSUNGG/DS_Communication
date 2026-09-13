@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP.Client</PackageId>
-    <Version>2.5.1</Version>
+    <Version>2.5.2</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>TCP client for DS_Communication: TcpConnector establishes the connection and exposes a byte channel; the application creates and owns sessions on top. Pairs with Communication.Network.TCP.Shared/Server. Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>

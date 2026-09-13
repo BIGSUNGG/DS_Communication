@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Shared</PackageId>
-    <Version>2.5.1</Version>
+    <Version>2.5.2</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>Transport-agnostic contracts for connection-oriented messaging: session lifecycle (ISession with DisconnectReason), IByteChannel/IMessageChannel abstractions, length-prefix framing, and a message pipeline (converter/handler over IBufferWriter/Span) with per-send SendOptions. All TCP/RUDP transports in the DS_Communication family build on these contracts. Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
