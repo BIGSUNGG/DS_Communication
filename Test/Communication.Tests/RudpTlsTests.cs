@@ -9,14 +9,14 @@ using Xunit;
 namespace Communication.Tests;
 
 /// <summary>
-/// RUDP TLS(DTLS 1.2) 경로 — 핀닝 성공·거부, TargetHost 일치·불일치, 기본 거부(fail-closed),
+/// RUDP TLS(DTLS 1.2) 경로 — 핀닝 성공·거부, TargetHost 옵트인 미설정 거부·옵트인 일치/불일치·만료 거부, 기본 거부(fail-closed),
 /// 핸드셰이크 상한·중 끊김 슬롯 회수, 전송 방식 혼합, 큰 payload 분할.
 /// 실 소켓·타이밍 마감 사용 — 다른 네트워크 클래스와 한 컬렉션에서 순차 실행(결정적 테스트).
 /// </summary>
 [Collection("network-loopback")]
 public class RudpTlsTests
 {
-    private static X509Certificate2 CreateRsaTestCertificate()
+    private static X509Certificate2 CreateRsaTestCertificate(DateTimeOffset? notBefore = null, DateTimeOffset? notAfter = null)
     {
         using RSA rsa = RSA.Create(2048);
         CertificateRequest request = new("CN=ds-communication-test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
@@ -24,7 +24,9 @@ public class RudpTlsTests
         request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
             new OidCollection { new("1.3.6.1.5.5.7.3.1") }, critical: false));
 
-        using X509Certificate2 ephemeral = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddMinutes(30));
+        using X509Certificate2 ephemeral = request.CreateSelfSigned(
+            notBefore ?? DateTimeOffset.UtcNow.AddMinutes(-5),
+            notAfter ?? DateTimeOffset.UtcNow.AddMinutes(30));
 
         // 키 소유 경로(BC PKCS8 내보내기)가 플랫폼 키 저장소와 무관하게 동작하도록 PFX로 재수입한다(TcpTlsTests와 동일 패턴).
         return new X509Certificate2(
@@ -142,7 +144,25 @@ public class RudpTlsTests
     }
 
     [Fact]
-    public async Task TargetHost_MatchesCertificateCn_Connects()
+    public async Task TargetHost_WithoutOptIn_RejectsByNameOnlyDefault()
+    {
+        using X509Certificate2 certificate = CreateRsaTestCertificate();
+        using RudpListener listener = StartEchoListener(ServerOptions(certificate));
+
+        // 2.7.0 기본 동작 — 이름 일치 단독은 기본 거부(fail-closed). 자체서명 인증서로
+        // CN만 맞춘 중간자가 통과하는 구멍(R2)을 막는다.
+        RudpConnector connector = new();
+        Assert.False(await connector.ConnectAsync("127.0.0.1", listener.LocalPort, new RudpTransportOptions
+        {
+            Tls = new RudpTlsOptions { TargetHost = "ds-communication-test" },
+        }));
+
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 0); // 서버 슬롯 회수
+        Assert.Equal(0, listener.ActiveConnectionCount);
+    }
+
+    [Fact]
+    public async Task TargetHost_OptIn_ValidCertificate_Connects()
     {
         using X509Certificate2 certificate = CreateRsaTestCertificate();
         using RudpListener listener = StartEchoListener(ServerOptions(certificate));
@@ -150,7 +170,7 @@ public class RudpTlsTests
         RudpConnector connector = new();
         Assert.True(await connector.ConnectAsync("127.0.0.1", listener.LocalPort, new RudpTransportOptions
         {
-            Tls = new RudpTlsOptions { TargetHost = "ds-communication-test" },
+            Tls = new RudpTlsOptions { TargetHost = "ds-communication-test", AllowNameOnlyCertificateMatch = true },
         }));
         using IDisposable _ = connector.Channel!;
 
@@ -162,6 +182,25 @@ public class RudpTlsTests
     }
 
     [Fact]
+    public async Task TargetHost_OptIn_ExpiredCertificate_RejectsConnection()
+    {
+        // 옵트인했어도 유효기간 검사는 강제 — 만료 인증서는 거부한다.
+        using X509Certificate2 certificate = CreateRsaTestCertificate(
+            DateTimeOffset.UtcNow.AddHours(-2),
+            DateTimeOffset.UtcNow.AddHours(-1));
+        using RudpListener listener = StartEchoListener(ServerOptions(certificate));
+
+        RudpConnector connector = new();
+        Assert.False(await connector.ConnectAsync("127.0.0.1", listener.LocalPort, new RudpTransportOptions
+        {
+            Tls = new RudpTlsOptions { TargetHost = "ds-communication-test", AllowNameOnlyCertificateMatch = true },
+        }));
+
+        await WaitUntilAsync(() => listener.ActiveConnectionCount == 0);
+        Assert.Equal(0, listener.ActiveConnectionCount);
+    }
+
+    [Fact]
     public async Task TargetHost_Mismatch_RejectsConnection()
     {
         using X509Certificate2 certificate = CreateRsaTestCertificate();
@@ -170,7 +209,8 @@ public class RudpTlsTests
         RudpConnector connector = new();
         Assert.False(await connector.ConnectAsync("127.0.0.1", listener.LocalPort, new RudpTransportOptions
         {
-            Tls = new RudpTlsOptions { TargetHost = "other-host" },
+            // 옵트인 상태여야 이름 불일치 경로까지 도달한다(미옵트인은 옵트인 게이트에서 먼저 거부).
+            Tls = new RudpTlsOptions { TargetHost = "other-host", AllowNameOnlyCertificateMatch = true },
         }));
 
         await WaitUntilAsync(() => listener.ActiveConnectionCount == 0); // 서버 슬롯 회수

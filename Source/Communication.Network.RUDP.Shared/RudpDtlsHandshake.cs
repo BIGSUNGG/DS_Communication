@@ -132,7 +132,7 @@ internal static class RudpDtlsHandshake
     }
 
     /// <summary>
-    /// 클라이언트 인증 — 핀닝 콜백 → TargetHost 이름 일치 → 둘 다 없으면 기본 거부(fail-closed).
+    /// 클라이언트 인증 — 핀닝 콜백 → TargetHost(이름 일치 — 옵트인 필요 + 유효기간 강제) → 기본 거부(fail-closed).
     /// OS 인증서 스토어 검증 계약이 없는 DTLS에서 무검증 수용은 중간자 공격을 연다.
     /// </summary>
     private sealed class RudpDtlsAuthentication : TlsAuthentication
@@ -169,7 +169,26 @@ internal static class RudpDtlsHandshake
 
             if (_options.TargetHost is { } targetHost)
             {
-                if (!MatchesHost(der, targetHost))
+                // 이름 일치는 신뢰 체인 없이 SAN/CN만 비교한다 — 같은 이름의 자체서명 인증서를 제시하는
+                // 중간자가 통과할 수 있어 2.7.0부터 기본 거부(fail-closed)다. 명시적 옵트인이 있어야 수용하며,
+                // 옵트인해도 유효기간 검사는 강제한다(Commercial-Risk-Scan R2 완화).
+                if (!_options.AllowNameOnlyCertificateMatch)
+                {
+                    throw new TlsFatalAlert(
+                        AlertDescription.certificate_unknown,
+                        "TargetHost 이름 일치 검증은 기본 거부됩니다 — RudpTlsOptions.AllowNameOnlyCertificateMatch=true로 명시적으로 동의하거나 RemoteCertificateValidation(핀닝)을 사용하십시오.");
+                }
+
+                BcX509Certificate parsed = new Org.BouncyCastle.X509.X509CertificateParser().ReadCertificate(der);
+                DateTime now = DateTime.UtcNow;
+                if (now < parsed.NotBefore || now > parsed.NotAfter)
+                {
+                    throw new TlsFatalAlert(
+                        AlertDescription.certificate_expired,
+                        $"서버 인증서가 유효기간({parsed.NotBefore:u} ~ {parsed.NotAfter:u}) 밖입니다.");
+                }
+
+                if (!MatchesHost(parsed, targetHost))
                 {
                     throw new TlsFatalAlert(AlertDescription.bad_certificate, $"인증서 이름이 대상 호스트 '{targetHost}'와 일치하지 않습니다.");
                 }
@@ -182,11 +201,9 @@ internal static class RudpDtlsHandshake
                 "서버 인증서 검증 수단이 없습니다 — RudpTlsOptions.RemoteCertificateValidation(핀닝) 또는 TargetHost를 설정하십시오.");
         }
 
-        /// <summary>SAN dNSName(우선)과 CN으로 대상 호스트명 일치 검사 — 대소문자 무시.</summary>
-        private static bool MatchesHost(byte[] certificateDer, string targetHost)
+        /// <summary>SAN dNSName(우선)과 CN으로 대상 호스트명 일치 검사 — 대소문자 무시. 파싱은 호출자가 이미 마쳤다.</summary>
+        private static bool MatchesHost(BcX509Certificate certificate, string targetHost)
         {
-            BcX509Certificate certificate = new Org.BouncyCastle.X509.X509CertificateParser().ReadCertificate(certificateDer);
-
             System.Collections.Generic.IList<System.Collections.Generic.IList<object>>? subjectAlternativeNames = certificate.GetSubjectAlternativeNames();
             if (subjectAlternativeNames is not null)
             {

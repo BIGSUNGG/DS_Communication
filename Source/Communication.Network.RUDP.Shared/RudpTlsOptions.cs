@@ -19,8 +19,8 @@ public delegate bool RudpRemoteCertificateValidation(byte[] serverCertificateDer
 /// </summary>
 /// <remarks>
 /// TCP의 <c>TcpTlsOptions</c>와 같은 계열이지만 검증 위임이 다르다: OS 인증서 스토어 검증이 없으므로
-/// 클라이언트는 <see cref="RemoteCertificateValidation"/>(핀닝) 또는 <see cref="TargetHost"/>(이름 일치) 중
-/// 하나를 반드시 설정해야 한다 — 미설정 시 서버 인증서를 **기본 거부**한다(fail-closed).
+/// 클라이언트는 <see cref="RemoteCertificateValidation"/>(핀닝) 또는 <see cref="TargetHost"/>(이름 일치 —
+/// <see cref="AllowNameOnlyCertificateMatch"/> 옵트인 필요) 중 하나를 반드시 설정해야 한다 — 미설정 시 서버 인증서를 **기본 거부**한다(fail-closed).
 /// BouncyCastle 타입은 공개면에 노출되지 않는다(ADR 0007 은닉 패턴과 동일).
 /// </remarks>
 public sealed class RudpTlsOptions
@@ -42,6 +42,7 @@ public sealed class RudpTlsOptions
     /// 클라이언트가 검증할 대상 호스트명 — 인증서 SAN(dNSName)·CN과 대소문자 무시 일치 검사.
     /// <see cref="RemoteCertificateValidation"/>이 설정돼 있으면 이 값은 무시된다.
     /// IP로 접속하는데 인증서가 호스트명으로 발급된 경우 등에 사용한다. **클라이언트에서만 쓰인다.**
+    /// 이름 일치 단독 수용은 <see cref="AllowNameOnlyCertificateMatch"/> 옵트인이 필요하다(기본 거부).
     /// </summary>
     /// <exception cref="ArgumentException">빈 문자열인 경우.</exception>
     public string? TargetHost
@@ -59,9 +60,18 @@ public sealed class RudpTlsOptions
     }
 
     /// <summary>
+    /// <see cref="TargetHost"/> 이름 일치(SAN/CN)만으로 서버 인증서를 수용할지 — 기본 <c>false</c>(기본 거부).
+    /// 이름 일치 검증은 신뢰 체인 확인 없이 이름만 비교하므로, 같은 이름으로 발급한 자체서명 인증서를
+    /// 제시하는 중간자 공격을 막지 못한다(2.7.0부터 기본 거부 — 저장소 fail-closed 철학 준수).
+    /// 옵트인해도 유효기간(NotBefore/NotAfter) 검사는 강제된다. 프로덕션에서는
+    /// <see cref="RemoteCertificateValidation"/>(핀닝) 사용을 권장한다.
+    /// </summary>
+    public bool AllowNameOnlyCertificateMatch { get; set; }
+
+    /// <summary>
     /// 서버 인증서 검증 콜백(**클라이언트 전용**) — 게임 전용 서버는 공개 CA·도메인이 없는 경우가 많아
     /// <see cref="RudpTlsOptions.GetSha256Fingerprint"/>로 비교하는 핀닝이 표준 경로다.
-    /// 미설정 시 <see cref="TargetHost"/> 이름 일치로, 둘 다 없으면 기본 거부한다.
+    /// 미설정 시 <see cref="TargetHost"/> 경로(옵트인 필요)로, 그것도 없으면 기본 거부한다.
     /// </summary>
     public RudpRemoteCertificateValidation? RemoteCertificateValidation { get; set; }
 
