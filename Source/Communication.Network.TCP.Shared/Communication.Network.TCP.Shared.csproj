@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Communication.Network.TCP.Shared</PackageId>
-    <Version>2.6.0</Version>
+    <Version>2.7.0</Version>
     <Authors>BIGSUNGG</Authors>
     <Description>Shared TCP transport layer for DS_Communication: TcpSession, StreamByteChannel and TcpTransportOptions with optional TLS (SslStream, handshake timeout enforced). Transports expose only a byte channel — the application creates and owns sessions, and disconnection surfaces solely as Session.Disconnected(DisconnectReason). Targets .NET Standard 2.1 — runs on modern .NET and Unity.</Description>
     <RepositoryUrl>https://github.com/BIGSUNGG/DS_Communication.git</RepositoryUrl>
