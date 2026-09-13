@@ -10,6 +10,10 @@ updated: 2026-09-13
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-13 (2.5.2 릴리스 — 커넥터 Channel 재시도 계약 수정)
+
+- **패치 릴리스 2.5.2** — 공개 API 서명 변화 없음(문서화된 "실패 시 `Channel` = null" 계약을 코드에 이행). 커넥터 재시도 계약 수정(`TcpConnector`·`RudpConnector` 시도 시작 시점 `Channel = null` — 실패한 재시도 후 오래된 채널 노출 차단, RUDP 성공 재시도 시 `PeerAccepted` 가드의 새 채널 폐기·무한 대기 방지)과 회귀 테스트 2건(red/green 검증)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest)을 거쳐 태그 `v2.5.2`·`tcp/v2.5.2`·`rudp/v2.5.2`로 게시 — [[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]] 버전 표기·README 현재 버전 동기화
+
 ## 2026-09-13 (리뷰 라운드 1 후속 — RUDP 회귀테스트 강화)
 
 - **`Connect_FailedRetry_ClearsStaleChannel` 강화(red/green 검증 완료)** — 리뷰 지적: 기존 블랙홀(PeerFailed) 실패 경로는 수정 전에도 `Channel`을 비웠으므로 회귀 검증력이 없었다. 성공 직후 살아 있는 서버로 재시도하는 단계를 추가했다 — 시작 시점 비움이 없으면 `PeerAccepted` 가드가 오래된 채널을 보고 **새 채널을 폐기**해 재시도가 완료되지 않는다(실제 재접속 루프 결함). 수정 라인 주석화 시 타임아웃 실패(RED, exit 1), 복원 후 통과(GREEN)로 검증력 입증 — 전체 스위트 150건 통과 유지(net10.0, 32초)
