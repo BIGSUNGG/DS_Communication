@@ -10,6 +10,10 @@ updated: 2026-09-13
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-13 (상용 투입 재검토 — 독립 검증)
+
+- [[../01-Overview/Commercial-Risk-Scan|Commercial-Risk-Scan]]에 독립 재검증 섹션 추가 — 별도 세션에서 R1–R13 전 항목을 소스 재대조, 주장·코드 불일치 0건. Release 빌드 오류 0·테스트 154/154(net10.0, 26초) 재확인. 결론(조건부 사용 가능·배포 체크리스트) 유지
+
 ## 2026-09-13 (2.7.0 릴리스 — R2 보안 강화)
 
 - **RUDP TLS TargetHost 옵트인(공개 동작 변화 → 마이너)** — 이름 일치(SAN/CN) 단독 수용을 `RudpTlsOptions.AllowNameOnlyCertificateMatch=true` 옵트인제로 전환(기본 거부, fail-closed). 같은 이름의 자체서명 인증서로 중간자가 통과하던 구멍([[../01-Overview/Commercial-Risk-Scan|Commercial-Risk-Scan]] R2) 폐쇄. 옵트인 경로에 인증서 유효기간(NotBefore/NotAfter) 검사 추가(만료 인증서 거부). 전 패키지 2.7.0 통일 버전, 태그 `v2.7.0`. 테스트 152 → 154(옵트인 미설정 거부·옵트인+만료 거부·옵트인+유효 성공 — 기존 일치/불일치 테스트는 옵트인 경로로 갱신) — [[../05-Decisions/0009-rudp-tls-dtls|ADR 0009]] 결정 3 갱신, Security·Configuration·Public-API·Packages·Feature-Spec(F4-10)·CONTEXT·Commercial-Risk-Scan(R2 완화)·README·RUDP.md 동기화
