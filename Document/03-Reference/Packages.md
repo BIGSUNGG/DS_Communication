@@ -10,13 +10,13 @@ updated: 2026-09-13
 
 | 패키지 | TFM (목표) | 의존 | 상태 |
 | -------- | ------------ | ------ | ------ |
-| `Communication.Shared` | netstandard2.1 | (없음) | 구현 완료 — 테스트 포함, 2.6.0 배포 |
-| `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
-| `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
-| `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
-| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** + **BouncyCastle.Cryptography 2.7.0**(TLS 옵션) | 구현 완료 — 테스트 포함, 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
-| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
-| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.6.0 배포(2.5.2 + null-host 검증 통일·DTLS 송신 풀링·폴링 백오프) |
+| `Communication.Shared` | netstandard2.1 | (없음) | 구현 완료 — 테스트 포함, 2.7.0 배포(통일 버전) |
+| `Communication.Network.TCP.Shared` | netstandard2.1 | Shared | 구현 완료 — 2.7.0 배포(2.6.0과 동일, 통일 버전) |
+| `Communication.Network.TCP.Server` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.7.0 배포(2.6.0과 동일, 통일 버전) |
+| `Communication.Network.TCP.Client` | netstandard2.1 | TCP.Shared | 구현 완료 — 2.7.0 배포(2.6.0과 동일, 통일 버전) |
+| `Communication.Network.RUDP.Shared` | netstandard2.1 | Shared + **LiteNetLib 2.1.4** + **BouncyCastle.Cryptography 2.7.0**(TLS 옵션) | 구현 완료 — 테스트 포함, 2.7.0 배포(2.6.0 + TargetHost 이름일치 옵트인·만료검사) |
+| `Communication.Network.RUDP.Server` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.7.0 배포(2.6.0과 동일, 통일 버전) |
+| `Communication.Network.RUDP.Client` | netstandard2.1 | RUDP.Shared | 구현 완료 — 2.7.0 배포(2.6.0과 동일, 통일 버전) |
 | `Communication.Network.TCP_IOCP` | netstandard2.1 | Shared | 미착수 |
 | `Communication.IPC.Stream` | netstandard2.1 | Shared | 후속 |
 | `Communication.IPC.SharedMemory` | netstandard2.1 | Shared | 후속 |

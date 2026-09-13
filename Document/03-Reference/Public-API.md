@@ -166,8 +166,9 @@ delegate bool RudpRemoteCertificateValidation(byte[] serverCertificateDer);
 sealed class RudpTlsOptions
 {
     X509Certificate2? ServerCertificate;             // 서버 전용 — 개인 키 포함 필수(RSA/ECDSA)
-    string? TargetHost;                              // 클라 전용 — SAN/CN 이름 일치 검증
-    RudpRemoteCertificateValidation? RemoteCertificateValidation;  // 클라 전용 — 핀닝(둘 다 없으면 기본 거부)
+    string? TargetHost;                              // 클라 전용 — SAN/CN 이름 일치 검증(옵트인 필요)
+    bool AllowNameOnlyCertificateMatch;              // 이름 일치 단독 수용 옵트인(2.7.0+, 기본 false — 만료검사는 강제)
+    RudpRemoteCertificateValidation? RemoteCertificateValidation;  // 클라 전용 — 핀닝(검증 수단 없으면 기본 거부)
     int HandshakeTimeout;                            // 핸드셰이크 상한(ms), 기본 15000 — 슬로로리스 방어
     static string GetSha256Fingerprint(byte[] certificateDer);      // 핀닝 비교용 지문(16진 콜론)
 }

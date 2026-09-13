@@ -10,6 +10,14 @@ updated: 2026-09-13
 
 Document vault 변경 기록 (코드 릴리스 노트 아님).
 
+## 2026-09-13 (2.7.0 릴리스 — R2 보안 강화)
+
+- **RUDP TLS TargetHost 옵트인(공개 동작 변화 → 마이너)** — 이름 일치(SAN/CN) 단독 수용을 `RudpTlsOptions.AllowNameOnlyCertificateMatch=true` 옵트인제로 전환(기본 거부, fail-closed). 같은 이름의 자체서명 인증서로 중간자가 통과하던 구멍([[../01-Overview/Commercial-Risk-Scan|Commercial-Risk-Scan]] R2) 폐쇄. 옵트인 경로에 인증서 유효기간(NotBefore/NotAfter) 검사 추가(만료 인증서 거부). 전 패키지 2.7.0 통일 버전, 태그 `v2.7.0`. 테스트 152 → 154(옵트인 미설정 거부·옵트인+만료 거부·옵트인+유효 성공 — 기존 일치/불일치 테스트는 옵트인 경로로 갱신) — [[../05-Decisions/0009-rudp-tls-dtls|ADR 0009]] 결정 3 갱신, Security·Configuration·Public-API·Packages·Feature-Spec(F4-10)·CONTEXT·Commercial-Risk-Scan(R2 완화)·README·RUDP.md 동기화
+
+## 2026-09-13 (상용화 리스크 재스캔)
+
+- [[../01-Overview/Commercial-Risk-Scan|Commercial-Risk-Scan]] 신규 — Source 전수 재열독 기반 리스크 13건 분류(높음 6·중간 5·낮음 2): TCP 침묵 연결 영구 점유(R1), RUDP TargetHost 이름만 검사(R2), RUDP 평문 기본·공개 키(R3), 인증 전 자원 소모(R4), RUDP 송신 바이트 백프레셔 부재(R5), 평문 RUDP 역직렬화 폴링 스레드 집중(R6) + 배포 권고 갱신. CONTEXT 관련 노트 연결
+
 ## 2026-09-13 (2.6.0 릴리스 — 이연 항목 5건)
 
 - **마이너 릴리스 2.6.0** — TCP null-host 검증 통일(`false` → `ArgumentNullException`, 공개 동작 변화로 마이너 버전)을 비롯한 이연 5건(단일 비행 문서화·DTLS 송신 풀링·세마포어 폐기·폴링 백오프 — 직전 섹션 참조)을 전 패키지 7종 통일 버전으로 게시. 게시 관문(CI verify: build+test+sandbox selftest)을 거쳐 태그 `v2.6.0`·`tcp/v2.6.0`·`rudp/v2.6.0`로 게시 — [[../03-Reference/Packages|Packages]]·[[../00-AI/CONTEXT|CONTEXT]] 버전 표기·README 현재 버전 동기화. 테스트 152/152

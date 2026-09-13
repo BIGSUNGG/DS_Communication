@@ -186,7 +186,9 @@ await connector.ConnectAsync(host, port, new RudpTransportOptions
     Tls = new RudpTlsOptions
     {
         RemoteCertificateValidation = der => RudpTlsOptions.GetSha256Fingerprint(der) == expected,
-        // or: TargetHost = "game.example.com"  (SAN/CN match; ignored when the callback is set)
+        // or: TargetHost = "game.example.com"  (SAN/CN match; requires AllowNameOnlyCertificateMatch = true
+        //                                          since 2.7.0; validity period is always enforced;
+        //                                          ignored when the pinning callback is set)
     },
 });
 ```
@@ -194,7 +196,8 @@ await connector.ConnectAsync(host, port, new RudpTransportOptions
 | Option | Default | Side | Semantics |
 | --- | --- | --- | --- |
 | `ServerCertificate` | `null` | listener | `X509Certificate2?` with private key required. Handshake failures/timeouts dispose the channel and reclaim the slot; accepting continues. |
-| `TargetHost` | `null` | client | SAN(dNSName)/CN case-insensitive name match. Empty string throws `ArgumentException`. |
+| `TargetHost` | `null` | client | SAN(dNSName)/CN case-insensitive name match. Empty string throws `ArgumentException`. **2.7.0+**: accepted only with `AllowNameOnlyCertificateMatch = true` (name-only matching cannot stop a self-signed MITM); the certificate validity period is enforced either way. |
+| `AllowNameOnlyCertificateMatch` | `false` | client | Opt-in to accept `TargetHost` name-only matching. `false` = rejected by default (fail-closed). Validity period (NotBefore/NotAfter) is still enforced when opted in. Prefer pinning in production. |
 | `RemoteCertificateValidation` | `null` | client | `RudpRemoteCertificateValidation?` receives the server certificate DER and returns `true` to continue. **Fail-closed**: with neither this nor `TargetHost` set, the server certificate is rejected by default. Never return `true` unconditionally. |
 | `HandshakeTimeout` | `15000` | both | DTLS handshake ceiling in ms (slowloris defense). Server: channel discarded + slot reclaimed. Client: connect failure. `0`/negative rejected. |
 | `GetSha256Fingerprint(byte[] certificateDer)` | — | static | SHA-256 fingerprint as colon-separated hex — the pinning comparison helper. |
